@@ -96,9 +96,17 @@ export class HybridDownloadCoordinator {
   ): Promise<HybridDownloadResult> {
     const settings = options?.settings ?? this.settingsStore.getSettings();
     const distributionState = options?.distributionState;
-    const policy = this.policyEvaluator.evaluate(version, settings, {
+    const evaluatedPolicy = this.policyEvaluator.evaluate(version, settings, {
       distributionState,
     });
+    const official = version.hybrid?.downloadSources?.find((source) => source.kind === 'official');
+    const region = official?.urls ? this.detectFallbackRegion().regionBucket : 'UNKNOWN';
+    const hasRegionalUrl = Boolean(region === 'CN'
+      ? official?.urls?.china
+      : region === 'INTERNATIONAL' ? official?.urls?.international : false);
+    const policy: HybridDownloadPolicy = evaluatedPolicy.useHybrid && hasRegionalUrl
+      ? { ...evaluatedPolicy, useHybrid: false, preferTorrent: false, seedEligible: false, reason: 'regional-http' }
+      : evaluatedPolicy;
     await this.prepare(settings, distributionState);
     let finalMode: VersionDownloadMode = policy.useHybrid ? 'shared-acceleration' : 'http-direct';
 
@@ -340,21 +348,31 @@ export class HybridDownloadCoordinator {
         : null;
     }
 
-    if (explicitSources.length === 1) {
+    const region = this.detectFallbackRegion();
+    const regionalOfficial = version.hybrid?.downloadSources?.find((source) => source.kind === 'official');
+    const regionalUrl = region.regionBucket === 'CN'
+      ? regionalOfficial?.urls?.china
+      : region.regionBucket === 'INTERNATIONAL'
+        ? regionalOfficial?.urls?.international
+        : undefined;
+    const selectedSources = regionalUrl
+      ? explicitSources.map((source) => source.kind === 'official' ? { ...source, url: regionalUrl } : source)
+      : explicitSources;
+
+    if (selectedSources.length === 1) {
       return {
-        attempts: explicitSources,
-        regionBucket: 'UNKNOWN',
-        detectionMethod: 'unavailable',
-        matchedRule: 'unavailable',
+        attempts: selectedSources,
+        ...region,
       };
     }
 
-    const region = this.detectFallbackRegion();
-    const preferredKinds: StructuredFallbackSourceKind[] = region.regionBucket === 'INTERNATIONAL'
+    const preferredKinds: StructuredFallbackSourceKind[] = regionalUrl
+      ? ['official', 'github-release']
+      : region.regionBucket === 'INTERNATIONAL'
       ? ['github-release', 'official']
       : ['official', 'github-release'];
     const attempts = preferredKinds
-      .map((kind) => explicitSources.find((source) => source.kind === kind))
+      .map((kind) => selectedSources.find((source) => source.kind === kind))
       .filter((source): source is FallbackSourceAttempt => Boolean(source));
 
     return {

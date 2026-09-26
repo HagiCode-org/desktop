@@ -546,6 +546,7 @@ describe('HybridDownloadCoordinator', () => {
         async discard() {},
       } as any,
     });
+
     const source = {
       async downloadPackage(version: Version, destinationPath: string) {
         attempts.push(version.downloadUrl ?? '');
@@ -571,6 +572,67 @@ describe('HybridDownloadCoordinator', () => {
     assert.deepEqual(attempts, [
       'https://github.com/HagiCode-org/hagicode/releases/download/v1.0.0/hagicode.zip',
       'https://official.example.com/hagicode.zip',
+    ]);
+  });
+
+  it('downloads from the matching official regional URL even when the index prefers China', async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'hybrid-download-regional-'));
+    const payload = 'regional-server-package';
+    const attempts: string[] = [];
+    let serviceRegion: 'CN' | 'INTERNATIONAL' = 'INTERNATIONAL';
+    const coordinator = new HybridDownloadCoordinator({
+      serviceRegionProvider: () => serviceRegion,
+      engine: {
+        async download() { throw new Error('regional packages must use the selected HTTP URL'); },
+        async stopAll() {},
+      },
+      settingsStore: { getSettings: () => baseSettings, updateSettings: () => baseSettings } as any,
+      cacheRetentionManager: {
+        async stopAllSeeding() {},
+        async prune() { return { totalBytes: 0, removedEntries: [], retainedEntries: [] }; },
+        async markTrusted(record: any) { return record; },
+        async discard() {},
+      } as any,
+    });
+    const version = createMultiSourceVersion(payload, {
+      downloadSources: [
+        {
+          kind: 'official',
+          label: 'Official',
+          url: 'https://server.dl.hagicode.com/server.zip',
+          urls: {
+            china: 'https://server.dl.hagicode.com/server.zip',
+            international: 'https://dl-server.hagicode.com/server.zip',
+          },
+          primary: true,
+          webSeed: true,
+        },
+        {
+          kind: 'github-release',
+          label: 'GitHub Release',
+          url: 'https://github.com/example/server.zip',
+          primary: false,
+          webSeed: true,
+        },
+      ],
+    });
+    const source = {
+      async downloadPackage(downloadVersion: Version, destinationPath: string) {
+        attempts.push(downloadVersion.downloadUrl ?? '');
+        await fs.writeFile(destinationPath, payload);
+      },
+      async listAvailableVersions() { return []; },
+    } as any;
+
+    const internationalResult = await coordinator.download(version, path.join(tempRoot, 'international.zip'), source);
+    serviceRegion = 'CN';
+    const chinaResult = await coordinator.download(version, path.join(tempRoot, 'china.zip'), source);
+
+    assert.equal(internationalResult.policy.reason, 'regional-http');
+    assert.equal(chinaResult.policy.reason, 'regional-http');
+    assert.deepEqual(attempts, [
+      'https://dl-server.hagicode.com/server.zip',
+      'https://server.dl.hagicode.com/server.zip',
     ]);
   });
 
