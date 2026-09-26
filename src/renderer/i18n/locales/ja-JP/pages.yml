@@ -8,7 +8,6 @@ settings:
     region: サービス地域
     language: Language Settings
     onboarding: オンボーディング
-    sharingAcceleration: ダウンロードと共有
     theme: Theme Settings
     runtimeData: Runtime Data
     updates: バックグラウンドアップデート
@@ -74,24 +73,6 @@ settings:
       resetting: ツアーをリセット中...
       resetSuccess: ホームページツアーがリセットされました
       resetError: 'ホームページツアーをリセットできませんでした: {{error}}'
-  sharingAcceleration:
-    title: ダウンロードと共有の高速化
-    description: トレントファーストダウンロード、信頼できるキャッシュの再利用、自動フォールバック動作を管理します。
-    enabledTitle: LAN/インターネット共有アクセラレーションを有効にする
-    enabledDescription: トレント メタデータを含むアセットはすべて、最初にトレントから開始され、必要に応じて自動的にフォールバックします。
-    uploadLimit: アップロード制限(Mbps)
-    cacheLimit: キャッシュ制限 (GiB)
-    retentionDays: 保存日数
-    thresholdHint: torrent メタデータを含むアセットは、古い 100 MB しきい値によって制限されなくなりました。
-    networkHint: 制限されたネットワークでは共有アクセラレーションを無効にします。ポータブルモードでは常に強制的にオフになります。
-    portableModeHint: ポータブル モードでは、共有アクセラレーションと外部シードが無効になり、ダウンロードは HTTP/WebSeed フォールバックで維持されます。
-    save: 設定の保存
-    saving: 保存中...
-    saveSuccess: 共有アクセラレーション設定が保存されました
-    saveError: 共有アクセラレーション設定を保存できませんでした
-    loadError: 共有アクセラレーション設定の読み込みに失敗しました
-    modeHint: 'モード: トレントが最初、失敗した場合は自動フォールバック。'
-    scopeHint: '外部シードは、引き続き最新のデスクトップと最新のサーバーに重点を置きます。デフォルトのキャッシュ制限: 5 GiB。'
   updates:
     title: バックグラウンドアップデート
     description: 自動チェック、バックグラウンドでの事前ダウンロード、検証されたアーカイブの保存を管理します。
@@ -312,33 +293,20 @@ versionManagement:
     updates: このビルドの更新は、アプリ内バージョンのアクションではなく、パッケージ化されたディストリビューションによって管理されます。
   downloadStage:
     queued: キューに入れられました
-    backfilling: フォールバック埋め戻し
-    fetchingTorrent: トレントを取得しています
-    sharedDownloading: トレントファーストダウンロード
+    downloading: 直接ダウンロード中
   downloadMode:
-    shared: まずはトレント
-    fallback: フォールバック埋め戻し
-    direct: HTTP/WebSeed
+    fallback: '別の直接配信元を試す'
+    direct: '直接ダウンロード'
   installTelemetry:
     mode: モード
     stage: ステージ
-    peers: ピア
-    sharedBytes: 共有バイト
-    fallbackBytes: フォールバックバイト
     verified: 確認済み
-    flow: 'フロー: torrent の取得 -> Torrent ファースト ダウンロード -> フォールバック バックフィル (必要な場合) -> 検証 -> 抽出 -> 完了'
+    flow: 'フロー：直接ダウンロード -> ダイジェスト検証 -> 展開 -> 完了'
     flowActive: '電流の流れ: {{stage}}'
   progressMessage:
     queued: Queued
-    direct-http: HTTP/WebSeedを超えるダウンロード中
-    fetching-torrent-metadata: トレントメタデータの取得
-    torrent-metadata-ready: Torrent の準備が完了し、共有アクセラレーションを開始します
-    torrent-first-started: Torrent ファーストダウンロードが開始されました
-    shared-acceleration-active: 共有アクセラレーションがアクティブです
-    source-fallback-active: フォールバックバックフィルがアクティブです
-    torrent-unavailable-fallback: トレントが利用できないため、自動的にフォールバックに切り替わります
-    portable-mode-http-fallback: ポータブル モードではフォールバック ダウンロードが強制されます
-    legacy-http-fallback: トレントメタデータなし、HTTP/WebSeed のみを使用
+    direct-http: パッケージを直接ダウンロードしています
+    source-fallback-active: 別の直接配信元を試行中
     no-sha256-required: 追加の検証は必要ありません
     sha256-verifying: パッケージの整合性の検証
     sha256-verified: 検証完了

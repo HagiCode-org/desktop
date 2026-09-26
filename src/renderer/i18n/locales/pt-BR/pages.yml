@@ -8,7 +8,6 @@ settings:
     region: Região do serviço
     language: Language Settings
     onboarding: Integração
-    sharingAcceleration: Baixar e compartilhar
     theme: Theme Settings
     runtimeData: Runtime Data
     updates: Atualizações em segundo plano
@@ -74,24 +73,6 @@ settings:
       resetting: Redefinindo passeio...
       resetSuccess: O tour pela página inicial foi redefinido
       resetError: 'Falha ao redefinir o tour da página inicial: {{error}}'
-  sharingAcceleration:
-    title: Aceleração de download e compartilhamento
-    description: Gerencie downloads de torrents, reutilização de cache confiável e comportamento de fallback automático.
-    enabledTitle: Ativar aceleração de compartilhamento de LAN/Internet
-    enabledDescription: Qualquer ativo com metadados de torrent começa primeiro no torrent e retorna automaticamente quando necessário.
-    uploadLimit: Limite de upload (Mbps)
-    cacheLimit: Limite de cache (GiB)
-    retentionDays: Dias de retenção
-    thresholdHint: Ativos com metadados de torrent não são mais limitados pelo antigo limite de 100 MB.
-    networkHint: Desative a aceleração de compartilhamento em redes restritas; o modo portátil sempre força o desligamento.
-    portableModeHint: O modo portátil desativa a aceleração de compartilhamento e propagação externa e, em seguida, mantém os downloads em HTTP/WebSeed substituto.
-    save: Salvar configurações
-    saving: Salvando...
-    saveSuccess: Compartilhando configurações de aceleração salvas
-    saveError: Falha ao salvar as configurações de aceleração de compartilhamento
-    loadError: Falha ao carregar as configurações de aceleração de compartilhamento
-    modeHint: 'Modo: torrent primeiro, fallback automático em caso de falha.'
-    scopeHint: 'A propagação externa permanece focada no desktop e no servidor mais recentes. Limite de cache padrão: 5 GiB.'
   updates:
     title: Atualizações em segundo plano
     description: Gerencie verificações automáticas, pré-downloads em segundo plano e retenção de arquivos verificados.
@@ -312,33 +293,20 @@ versionManagement:
     updates: As atualizações para esta compilação são gerenciadas pela distribuição em pacote, em vez de ações de versão no aplicativo.
   downloadStage:
     queued: Na fila
-    backfilling: Preenchimento substituto
-    fetchingTorrent: Buscando torrent
-    sharedDownloading: Download do torrent primeiro
+    downloading: Baixando diretamente
   downloadMode:
-    shared: Torrent primeiro
-    fallback: Preenchimento substituto
-    direct: HTTP/WebSeed
+    fallback: 'Tentar outra fonte direta'
+    direct: 'Download direto'
   installTelemetry:
     mode: Modo
     stage: Palco
-    peers: Pares
-    sharedBytes: Bytes compartilhados
-    fallbackBytes: Bytes substitutos
     verified: Verificado
-    flow: 'Fluxo: Buscar torrent -> Download do primeiro torrent -> Preenchimento substituto (se necessário) -> Verificar -> Extrair -> Concluir'
+    flow: 'Fluxo: Download direto -> Verificar resumo -> Extrair -> Concluir'
     flowActive: 'Fluxo atual: {{stage}}'
   progressMessage:
     queued: Queued
-    direct-http: Baixando mais de HTTP/WebSeed
-    fetching-torrent-metadata: Buscando metadados de torrent
-    torrent-metadata-ready: Torrent pronto, iniciando aceleração compartilhada
-    torrent-first-started: O primeiro download do torrent foi iniciado
-    shared-acceleration-active: Aceleração compartilhada ativa
-    source-fallback-active: Preenchimento substituto ativo
-    torrent-unavailable-fallback: Torrent indisponível, alterado para fallback automaticamente
-    portable-mode-http-fallback: O modo portátil força o download alternativo
-    legacy-http-fallback: Sem metadados de torrent, usando apenas HTTP/WebSeed
+    direct-http: Baixando o pacote diretamente
+    source-fallback-active: Tentando outra fonte direta
     no-sha256-required: Nenhuma verificação extra necessária
     sha256-verifying: Verificando a integridade do pacote
     sha256-verified: Verificação concluída

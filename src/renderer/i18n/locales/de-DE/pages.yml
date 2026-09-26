@@ -8,7 +8,6 @@ settings:
     region: Dienstregion
     language: Language Settings
     onboarding: Onboarding
-    sharingAcceleration: Herunterladen und Teilen
     theme: Theme Settings
     runtimeData: Runtime Data
     updates: Hintergrundaktualisierungen
@@ -74,24 +73,6 @@ settings:
       resetting: Tour wird zurückgesetzt...
       resetSuccess: Homepage-Tour wurde zurückgesetzt
       resetError: 'Homepage-Tour konnte nicht zurückgesetzt werden: {{error}}'
-  sharingAcceleration:
-    title: Download- und Sharing-Beschleunigung
-    description: Verwalten Sie Torrent-First-Downloads, vertrauenswürdige Cache-Wiederverwendung und automatisches Fallback-Verhalten.
-    enabledTitle: Aktivieren Sie die LAN-/Internet-Sharing-Beschleunigung
-    enabledDescription: Jedes Asset mit Torrent-Metadaten startet zuerst beim Torrent und greift bei Bedarf automatisch zurück.
-    uploadLimit: Upload-Limit (Mbps)
-    cacheLimit: Cache-Limit (GiB)
-    retentionDays: Aufbewahrungstage
-    thresholdHint: Assets mit Torrent-Metadaten unterliegen nicht mehr dem alten Schwellenwert von 100 MB.
-    networkHint: Deaktivieren Sie die Freigabebeschleunigung in eingeschränkten Netzwerken. Der tragbare Modus erzwingt immer die Deaktivierung.
-    portableModeHint: Der tragbare Modus deaktiviert die Freigabebeschleunigung und das externe Seeding und hält die Downloads dann auf HTTP/WebSeed Fallback.
-    save: Einstellungen speichern
-    saving: Sparen...
-    saveSuccess: Freigabebeschleunigungseinstellungen gespeichert
-    saveError: Die Einstellungen für die Freigabebeschleunigung konnten nicht gespeichert werden
-    loadError: Die Einstellungen für die Freigabebeschleunigung konnten nicht geladen werden
-    modeHint: 'Modus: Torrent zuerst, automatischer Fallback bei Fehler.'
-    scopeHint: 'Das externe Seeding konzentriert sich weiterhin auf den neuesten Desktop und den neuesten Server. Standard-Cache-Limit: 5 GiB.'
   updates:
     title: Hintergrundaktualisierungen
     description: Verwalten Sie automatische Prüfungen, Vorab-Downloads im Hintergrund und überprüfte Archivaufbewahrung.
@@ -312,33 +293,20 @@ versionManagement:
     updates: Updates für diesen Build werden von der Paketverteilung und nicht von In-App-Versionsaktionen verwaltet.
   downloadStage:
     queued: In der Warteschlange
-    backfilling: Ersatzverfüllung
-    fetchingTorrent: Torrent abrufen
-    sharedDownloading: Zuerst Torrent herunterladen
+    downloading: Direkter Download
   downloadMode:
-    shared: Zuerst Torrent
-    fallback: Fallback-Backfill
-    direct: HTTP/WebSeed
+    fallback: 'Andere direkte Quelle versuchen'
+    direct: 'Direkter Download'
   installTelemetry:
     mode: Modus
     stage: Bühne
-    peers: Kollegen
-    sharedBytes: Geteilte Bytes
-    fallbackBytes: Fallback-Bytes
     verified: Verifiziert
-    flow: 'Ablauf: Torrent abrufen -> Erster Torrent-Download -> Fallback-Backfill (falls erforderlich) -> Überprüfen -> Extrahieren -> Abschließen'
+    flow: 'Ablauf: Direkter Download -> Digest prüfen -> Entpacken -> Abschließen'
     flowActive: 'Aktueller Durchfluss: {{stage}}'
   progressMessage:
     queued: Queued
-    direct-http: Download über HTTP/WebSeed
-    fetching-torrent-metadata: Torrent-Metadaten abrufen
-    torrent-metadata-ready: Torrent bereit, gemeinsame Beschleunigung wird gestartet
-    torrent-first-started: Torrent-First-Download gestartet
-    shared-acceleration-active: Gemeinsame Beschleunigung aktiv
-    source-fallback-active: Fallback-Backfill aktiv
-    torrent-unavailable-fallback: Torrent nicht verfügbar, automatisch auf Fallback umgeschaltet
-    portable-mode-http-fallback: Der tragbare Modus erzwingt einen Fallback-Download
-    legacy-http-fallback: Keine Torrent-Metadaten, nur HTTP/WebSeed verwenden
+    direct-http: Paket wird direkt heruntergeladen
+    source-fallback-active: Andere direkte Quelle wird erneut versucht
     no-sha256-required: Keine zusätzliche Verifizierung erforderlich
     sha256-verifying: Überprüfung der Paketintegrität
     sha256-verified: Verifizierung abgeschlossen

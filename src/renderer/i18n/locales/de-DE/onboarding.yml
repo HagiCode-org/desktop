@@ -15,9 +15,8 @@ welcome:
   processTitle: 'Die Ersteinrichtung besteht aus {{count}} Schritten:'
   steps:
     welcome: Überprüfen Sie die Einrichtung und was als nächstes passieren wird
-    download: Laden Sie das neueste Hagicode Server-Paket herunter
+    download: Laden Sie das neueste Hagicode Server-Paket direkt herunter und überprüfen Sie den Digest
     launch: Starten Sie den Dienst und bestätigen Sie, dass er ausgeführt wird
-    sharingAcceleration: Bestätigen Sie, ob die gemeinsame Beschleunigung standardmäßig aktiviert bleiben soll
     legalConsent: Bestätigen Sie die aktuellen Überarbeitungen der EULA und der Datenschutzrichtlinie und überprüfen Sie dann die offiziellen Seiten in Ihrem Browser
     languageSelection: Zuerst die Desktop-Sprache für die Einrichtung auswählen
   skip: Einrichtung überspringen
@@ -211,16 +210,6 @@ dependencyCheck:
     collapse: Details ausblenden
     currentVersion: Aktuelle Version
     requiredVersion: Erforderliche Version
-sharingAcceleration:
-  title: Download- und Sharing-Beschleunigung
-  description: Standardmäßig aktiviert. Neueste Desktop-/Server-Assets mit Torrent-Metadaten beginnen zuerst beim Torrent und greifen automatisch zurück.
-  toggleTitle: LAN-/Internet-Sharing-Beschleunigung aktivieren (Standard)
-  toggleDescription: Sie können es hier zunächst deaktivieren und später in den Einstellungen anpassen.
-  bullets:
-    latest: Das externe Seeding konzentriert sich weiterhin auf die neuesten Desktop- und Serverressourcen
-    fallback: Wenn der Torrent-Sidecar fehlt oder der Handshake fehlschlägt, wird der Fallback-Backfill automatisch gestartet
-    disable: Deaktivieren Sie es jetzt, wenn Ihr Netzwerk eingeschränkt ist oder Sie keine Freigabe wünschen
-    portable: Der tragbare Modus erzwingt die Deaktivierung dieser Funktion und führt niemals ein implizites Seeding durch
 dependencyPreparation:
   title: Abhängigkeiten vorbereiten
   description: Installieren Sie die für HagiCode Desktop erforderlichen Befehlszeilenabhängigkeiten und wählen Sie mindestens einen Agent CLI zur Verwendung mit Codierungssitzungen aus.

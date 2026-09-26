@@ -15,9 +15,8 @@ welcome:
   processTitle: 'La première configuration comporte {{count}} étapes:'
   steps:
     welcome: Passez en revue la configuration et ce qui va se passer ensuite
-    download: Téléchargez le dernier package Hagicode Server
+    download: Téléchargez directement le dernier package Hagicode Server et vérifiez son empreinte
     launch: Démarrez le service et confirmez qu'il est en cours d'exécution
-    sharingAcceleration: Confirmez si l'accélération partagée doit rester activée par défaut
     legalConsent: Confirmez les révisions actuelles du CLUF et de la politique de confidentialité, puis consultez les pages officielles dans votre navigateur.
     languageSelection: Choisir d'abord la langue du Desktop pour l'installation
   skip: Ignorer la configuration
@@ -208,16 +207,6 @@ dependencyCheck:
     collapse: Masquer les détails
     currentVersion: Version actuelle
     requiredVersion: Version requise
-sharingAcceleration:
-  title: Accélération du téléchargement et du partage
-  description: Activé par défaut. Les dernières ressources de bureau/serveur avec des métadonnées torrent démarrent d'abord à partir du torrent et reviennent automatiquement.
-  toggleTitle: Activer l'accélération du partage LAN/Internet (par défaut)
-  toggleDescription: Vous pouvez d'abord le désactiver ici et l'ajuster plus tard dans Paramètres.
-  bullets:
-    latest: L'amorçage externe reste concentré sur les derniers actifs de bureau et de serveur.
-    fallback: Si le side-car torrent est manquant ou si la négociation échoue, le remplissage de secours démarre automatiquement
-    disable: Désactivez-le maintenant si votre réseau est restreint ou si vous ne souhaitez pas partager
-    portable: Le mode portable force la désactivation de cette fonctionnalité et ne lance jamais implicitement
 dependencyPreparation:
   title: Préparer les dépendances
   description: Installez les dépendances de ligne de commande requises par HagiCode Desktop et sélectionnez au moins un agent CLI à utiliser avec les sessions de codage.

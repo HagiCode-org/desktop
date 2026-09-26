@@ -15,9 +15,8 @@ welcome:
   processTitle: 初回セットアップには {{count}} つの手順があります。
   steps:
     welcome: セットアップと次に何が起こるかを確認してください
-    download: 最新の Hagicode Server パッケージをダウンロード
+    download: 最新の Hagicode Server パッケージを直接ダウンロードし、ダイジェストを検証します
     launch: サービスを開始し、実行されていることを確認します
-    sharingAcceleration: 共有アクセラレーションをデフォルトで有効にしておくかどうかを確認する
     legalConsent: 現在の EULA とプライバシー ポリシーの改訂を確認し、ブラウザで公式ページを確認してください
     languageSelection: セットアップで使う Desktop の言語を選択する
   skip: セットアップをスキップ
@@ -211,16 +210,6 @@ dependencyCheck:
     collapse: 詳細を隠す
     currentVersion: 現在のバージョン
     requiredVersion: 必要なバージョン
-sharingAcceleration:
-  title: ダウンロードと共有の高速化
-  description: デフォルトで有効になっています。トレント メタデータを含む最新のデスクトップ/サーバー アセットは、まずトレントから開始され、自動的にフォールバックします。
-  toggleTitle: LAN/インターネット共有アクセラレーションを有効にする (デフォルト)
-  toggleDescription: 最初にここで無効にし、後で [設定] で調整できます。
-  bullets:
-    latest: 外部シードは最新のデスクトップおよび最新のサーバー資産に重点を置き続けます
-    fallback: torrent サイドカーが見つからない場合、またはハンドシェイクが失敗した場合、フォールバック バックフィルが自動的に開始されます
-    disable: ネットワークが制限されている場合、または共有したくない場合は、今すぐ無効にしてください
-    portable: ポータブル モードではこの機能が強制的にオフになり、暗黙的にシードされることはありません
 dependencyPreparation:
   title: 依存関係の準備
   description: HagiCode Desktop に必要なコマンドラインの依存関係をインストールし、コーディング セッションで使用するエージェント CLI を少なくとも 1 つ選択します。

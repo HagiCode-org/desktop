@@ -15,9 +15,8 @@ welcome:
   processTitle: 'La configuración inicial tiene {{count}} pasos:'
   steps:
     welcome: Revise la configuración y lo que sucederá a continuación.
-    download: Descargue el último paquete Hagicode Server
+    download: Descargue directamente el último paquete Hagicode Server y verifique su resumen
     launch: Inicie el servicio y confirme que se está ejecutando.
-    sharingAcceleration: Confirme si la aceleración compartida debe permanecer habilitada de forma predeterminada
     legalConsent: Confirme las revisiones actuales del EULA y la Política de privacidad, luego revise las páginas oficiales en su navegador
     languageSelection: Primero elige el idioma de Desktop para la instalación
   skip: Saltar configuración
@@ -211,16 +210,6 @@ dependencyCheck:
     collapse: Ocultar detalles
     currentVersion: Versión actual
     requiredVersion: Versión requerida
-sharingAcceleration:
-  title: Aceleración de descarga y uso compartido
-  description: Habilitado de forma predeterminada. Los recursos de escritorio/servidor más recientes con metadatos de torrent comienzan primero desde torrent y retroceden automáticamente.
-  toggleTitle: Habilitar aceleración para compartir LAN/Internet (predeterminado)
-  toggleDescription: Puede desactivarlo aquí primero y ajustarlo más tarde en Configuración.
-  bullets:
-    latest: La siembra externa se mantiene centrada en los últimos activos de escritorio y servidor más recientes
-    fallback: Si falta el sidecar de torrent o falla el protocolo de enlace, el relleno alternativo se inicia automáticamente
-    disable: Desactívala ahora si tu red está restringida o no quieres compartir
-    portable: El modo portátil desactiva esta función y nunca genera implícitamente
 dependencyPreparation:
   title: Preparar dependencias
   description: Instale las dependencias de la línea de comandos requeridas por HagiCode Desktop y seleccione al menos un Agente CLI para usar con sesiones de codificación.

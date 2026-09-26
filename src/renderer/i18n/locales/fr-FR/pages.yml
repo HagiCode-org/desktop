@@ -8,7 +8,6 @@ settings:
     region: Région de service
     language: Language Settings
     onboarding: Intégration
-    sharingAcceleration: Télécharger et partager
     theme: Theme Settings
     runtimeData: Runtime Data
     updates: Mises à jour en arrière-plan
@@ -74,24 +73,6 @@ settings:
       resetting: Réinitialisation de la visite...
       resetSuccess: La visite de la page d'accueil a été réinitialisée
       resetError: 'Échec de la réinitialisation de la visite guidée de la page d''accueil: {{error}}'
-  sharingAcceleration:
-    title: Accélération du téléchargement et du partage
-    description: Gérez les téléchargements torrent d'abord, la réutilisation du cache fiable et le comportement de secours automatique.
-    enabledTitle: Activer l'accélération du partage LAN/Internet
-    enabledDescription: Tout actif contenant des métadonnées torrent démarre d'abord à partir du torrent et revient automatiquement en cas de besoin.
-    uploadLimit: Limite de téléchargement (Mbps)
-    cacheLimit: Limite de cache (Gio)
-    retentionDays: Jours de rétention
-    thresholdHint: Les ressources contenant des métadonnées torrent ne sont plus limitées par l'ancien seuil de 100 MB.
-    networkHint: Désactivez l'accélération du partage sur les réseaux restreints; le mode portable le force toujours à le désactiver.
-    portableModeHint: Le mode portable désactive l'accélération du partage et l'amorçage externe, puis conserve les téléchargements en mode de repli.
-    save: Enregistrer les paramètres
-    saving: Sauvegarde...
-    saveSuccess: Paramètres d'accélération de partage enregistrés
-    saveError: Échec de l'enregistrement des paramètres d'accélération du partage
-    loadError: Échec du chargement des paramètres d'accélération du partage
-    modeHint: 'Mode: torrent en premier, repli automatique en cas d''échec.'
-    scopeHint: "L'amorçage externe reste concentré sur le dernier ordinateur de bureau et le dernier serveur. Limite de cache par défaut: 5\_Gio."
   updates:
     title: Mises à jour en arrière-plan
     description: Gérez les vérifications automatiques, les prétéléchargements en arrière-plan et la conservation vérifiée des archives.
@@ -312,33 +293,20 @@ versionManagement:
     updates: Les mises à jour de cette version sont gérées par la distribution packagée au lieu des actions de version intégrées à l'application.
   downloadStage:
     queued: En file d'attente
-    backfilling: Remplissage de secours
-    fetchingTorrent: Récupération du torrent
-    sharedDownloading: Téléchargement torrent d'abord
+    downloading: Téléchargement direct
   downloadMode:
-    shared: Torrent d’abord
-    fallback: Remblai de secours
-    direct: HTTP/WebSeed
+    fallback: 'Essayer une autre source directe'
+    direct: 'Téléchargement direct'
   installTelemetry:
     mode: Mode
     stage: Scène
-    peers: Pairs
-    sharedBytes: Octets partagés
-    fallbackBytes: Octets de secours
     verified: Vérifié
-    flow: 'Flux: Récupérer le torrent -> Téléchargement du torrent en premier -> Remplissage de secours (si nécessaire) -> Vérifier -> Extraire -> Terminer'
+    flow: 'Flux : Téléchargement direct -> Vérification de l’empreinte -> Extraction -> Terminé'
     flowActive: 'Flux de courant: {{stage}}'
   progressMessage:
     queued: Queued
-    direct-http: Téléchargements supérieurs à HTTP/WebSeed
-    fetching-torrent-metadata: Récupérer les métadonnées du torrent
-    torrent-metadata-ready: Torrent prêt, démarrage de l'accélération partagée
-    torrent-first-started: Le téléchargement du torrent a commencé
-    shared-acceleration-active: Accélération partagée active
-    source-fallback-active: Remplissage de secours actif
-    torrent-unavailable-fallback: Torrent indisponible, passage automatique en secours
-    portable-mode-http-fallback: Le mode portable force le téléchargement de secours
-    legacy-http-fallback: Pas de métadonnées torrent, en utilisant uniquement HTTP/WebSeed
+    direct-http: Téléchargement direct du package
+    source-fallback-active: Nouvelle tentative depuis une autre source directe
     no-sha256-required: Aucune vérification supplémentaire requise
     sha256-verifying: Vérification de l'intégrité du paquet
     sha256-verified: Vérification terminée

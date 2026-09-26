@@ -16,9 +16,8 @@ welcome:
   steps:
     languageSelection: 先选择引导与界面使用的语言
     welcome: 了解本次引导会完成的准备工作
-    download: 下载最新的 Hagicode Server 包
+    download: 直接下载最新的 Hagicode Server 包并验证其摘要
     launch: 启动服务并确认运行正常
-    sharingAcceleration: 确认是否开启共享加速，默认已为您开启
     legalConsent: 确认当前 EULA 与隐私政策版本并在浏览器中阅读正式文档
   skip: 跳过引导
   start: 开始安装
@@ -218,16 +217,6 @@ dependencyCheck:
     collapse: 隐藏详情
     currentVersion: 当前版本
     requiredVersion: 要求版本
-sharingAcceleration:
-  title: 下载与共享加速
-  description: 默认开启。凡提供种子元数据之 latest desktop/server，先走种子；失败自动回源。
-  toggleTitle: 开启局域网/互联网共享加速（默认）
-  toggleDescription: 此处可先关闭，后续仍可在设置页调整。
-  bullets:
-    latest: 对外共享主范围仅 latest desktop 与 latest server
-    fallback: 种子 sidecar 不可用或握手失败时，会自动回源补块
-    disable: 若网络受限或不愿共享，可现在关闭
-    portable: portable mode 下此能力强制关闭，不会隐式做种
 dependencyPreparation:
   title: 准备依赖项
   description: 你可以在这里安装 HagiCode Desktop 托管的命令行依赖项，并为后续编码会话选择 Agent CLI；如果暂时不安装，也可以直接点击下一步。

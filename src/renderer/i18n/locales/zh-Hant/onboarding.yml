@@ -15,9 +15,8 @@ welcome:
   processTitle: 首次安裝共 {{count}} 個步驟：
   steps:
     welcome: 了解本次引導會完成的準備工作
-    download: 下載最新的 Hagicode Server 包
+    download: 直接下載最新的 Hagicode Server 套件並驗證其摘要
     launch: 啟動服務並確認運作正常
-    sharingAcceleration: 確認是否開啟共用加速，預設已為您開啟
     legalConsent: 確認當前 EULA 與隱私權政策版本並在瀏覽器中閱讀正式文檔
     languageSelection: 先選擇引導與介面使用的語言
   skip: 跳過引導
@@ -211,16 +210,6 @@ dependencyCheck:
     collapse: 隱藏詳情
     currentVersion: 目前版本
     requiredVersion: 要求版本
-sharingAcceleration:
-  title: 下載與分享加速
-  description: 預設開啟。凡提供種子元資料之 latest desktop/server，先走種子；失敗自動回源。
-  toggleTitle: 開啟區域網路/網際網路共享加速（預設）
-  toggleDescription: 此處可先關閉，後續仍可在設定頁調整。
-  bullets:
-    latest: 對外共享主範圍僅 latest desktop 與 latest server
-    fallback: 種子 sidecar 不可用或握手失敗時，會自動回源補塊
-    disable: 若網路受限或不願共享，可現在關閉
-    portable: portable mode 下此能力強制關閉，不會隱式做種
 dependencyPreparation:
   title: 準備依賴項
   description: 安裝 HagiCode Desktop 必要的命令列依賴項，並選擇至少一個用於編碼會話的 Agent CLI。

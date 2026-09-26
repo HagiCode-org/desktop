@@ -8,7 +8,6 @@ settings:
     region: 服務區域
     language: Language Settings
     onboarding: 啟動精靈
-    sharingAcceleration: 下載與分享加速
     theme: Theme Settings
     runtimeData: 執行時資料
     updates: 後台更新
@@ -74,24 +73,6 @@ settings:
       resetting: 重置導覽中...
       resetSuccess: 首頁導覽已重置
       resetError: '重置首頁導覽失敗: {{error}}'
-  sharingAcceleration:
-    title: 下載與分享加速
-    description: 管理種子優先下載、可信任快取與自動回源策略。
-    enabledTitle: 開啟區域網路/網際網路共享加速
-    enabledDescription: 只要資產提供 torrent metadata，安裝即優先走種子；失敗會自動回源。
-    uploadLimit: 上傳上限 (Mbps)
-    cacheLimit: 快取上限 (GiB)
-    retentionDays: 快取保留時間 (天)
-    thresholdHint: 已提供 torrent metadata 的資產不再受 100 MB 門檻限制。
-    networkHint: 若網路受限，可關閉共用加速；portable mode 會強制停用。
-    portableModeHint: portable mode 下共用加速與對外做種皆停用，下載固定走 HTTP/WebSeed 回源。
-    save: 儲存設定
-    saving: 儲存中...
-    saveSuccess: 下載與共享加速設定已儲存
-    saveError: 儲存下載與共用加速設定失敗
-    loadError: 讀取下載與共用加速設定失敗
-    modeHint: 模式：種子優先，失敗自動回源。
-    scopeHint: 對外共享主範圍：latest desktop 與 latest server。預設快取上限 5 GiB。
   updates:
     title: 後台更新
     description: 管理自動檢查、背景預下載與已驗證歸檔保留策略。
@@ -312,33 +293,20 @@ versionManagement:
     updates: 此建置的更新由外部分發管道負責，不透過應用程式內版本管理執行。
   downloadStage:
     queued: 等待開始
-    backfilling: 回源補塊中
-    fetchingTorrent: 取得種子
-    sharedDownloading: 共享加速下載中
+    downloading: 正在直接下載
   downloadMode:
-    shared: 種子優先
-    fallback: 回源補塊
-    direct: HTTP/WebSeed
+    fallback: '嘗試其他直連來源'
+    direct: '直接下載'
   installTelemetry:
     mode: 下載模式
     stage: 當前階段
-    peers: 已連接節點
-    sharedBytes: 共享獲取
-    fallbackBytes: 回源獲取
     verified: 校驗透過
-    flow: 階段：取得種子 -> 共享加速 -> 回源補塊(如需) -> 校驗 -> 解壓縮 -> 完成
+    flow: '流程：直接下載 -> 驗證摘要 -> 解壓縮 -> 完成'
     flowActive: 目前流程：{{stage}}
   progressMessage:
     queued: Queued
-    direct-http: HTTP/WebSeed 下載中
-    fetching-torrent-metadata: 取得種子中
-    torrent-metadata-ready: 種子已就緒，開始共享加速
-    torrent-first-started: 種子優先下載已啟動
-    shared-acceleration-active: 共享加速下載中
-    source-fallback-active: 回源補塊中
-    torrent-unavailable-fallback: 種子不可用，已自動回源
-    portable-mode-http-fallback: portable mode：固定回源下載
-    legacy-http-fallback: 資產未提供種子，改走 HTTP/WebSeed
+    direct-http: 正在直接下載套件
+    source-fallback-active: 正在嘗試其他直連來源
     no-sha256-required: 無需額外校驗
     sha256-verifying: 校驗包完整性中
     sha256-verified: 校驗完成

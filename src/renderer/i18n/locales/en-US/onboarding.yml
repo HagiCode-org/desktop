@@ -16,9 +16,8 @@ welcome:
   steps:
     languageSelection: Choose the Desktop language used during setup
     welcome: Review the setup and what will happen next
-    download: Download the latest Hagicode Server package
+    download: Download the latest Hagicode Server package directly and verify its digest
     launch: Start the service and confirm it is running
-    sharingAcceleration: Confirm whether shared acceleration should stay enabled by default
     legalConsent: Confirm the current EULA and Privacy Policy revisions, then review the official pages in your browser
   skip: Skip Setup
   start: Get Started
@@ -218,16 +217,6 @@ dependencyCheck:
     collapse: Hide details
     currentVersion: Current Version
     requiredVersion: Required Version
-sharingAcceleration:
-  title: Download & Sharing Acceleration
-  description: Enabled by default. Latest desktop/server assets with torrent metadata start from torrent first and fall back automatically.
-  toggleTitle: Enable LAN/Internet sharing acceleration (default)
-  toggleDescription: You can disable it here first and adjust it later in Settings.
-  bullets:
-    latest: External seeding stays focused on latest desktop and latest server assets
-    fallback: If the torrent sidecar is missing or the handshake fails, fallback backfill starts automatically
-    disable: Disable it now if your network is restricted or you do not want to share
-    portable: Portable mode forces this feature off and never seeds implicitly
 legal:
   title: End User License Agreement and Privacy Policy
   descriptionFull: Before downloading HagiCode Server, confirm the current EULA and Privacy Policy revisions. The official documents open in your default browser.

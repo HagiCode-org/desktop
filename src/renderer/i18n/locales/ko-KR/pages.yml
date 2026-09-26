@@ -8,7 +8,6 @@ settings:
     region: 서비스 지역
     language: Language Settings
     onboarding: 온보딩
-    sharingAcceleration: 다운로드 및 공유
     theme: Theme Settings
     runtimeData: Runtime Data
     updates: 배경 업데이트
@@ -74,24 +73,6 @@ settings:
       resetting: 둘러보기 재설정 중...
       resetSuccess: 홈페이지 둘러보기가 재설정되었습니다.
       resetError: '홈페이지 둘러보기 재설정 실패: {{error}}'
-  sharingAcceleration:
-    title: 다운로드 및 공유 가속화
-    description: 토렌트 우선 다운로드, 신뢰할 수 있는 캐시 재사용 및 자동 대체 동작을 관리합니다.
-    enabledTitle: LAN/인터넷 공유 가속 활성화
-    enabledDescription: 토렌트 메타데이터가 있는 모든 자산은 먼저 토렌트에서 시작하고 필요할 때 자동으로 대체됩니다.
-    uploadLimit: 업로드 제한(Mbps)
-    cacheLimit: 캐시 한도(GiB)
-    retentionDays: 보관 일수
-    thresholdHint: 토렌트 메타데이터가 있는 자산은 더 이상 이전 100 MB 임계값으로 제한되지 않습니다.
-    networkHint: 제한된 네트워크에서 공유 가속을 비활성화합니다. 휴대용 모드는 항상 강제로 꺼집니다.
-    portableModeHint: 휴대용 모드는 가속 공유 및 외부 시딩을 비활성화한 다음 HTTP/WebSeed 대체에서 다운로드를 유지합니다.
-    save: 설정 저장
-    saving: 저장 중...
-    saveSuccess: 공유 가속 설정이 저장되었습니다.
-    saveError: 공유 가속 설정을 저장하지 못했습니다.
-    loadError: 공유 가속 설정을 로드하지 못했습니다.
-    modeHint: '모드: 토렌트 우선, 실패 시 자동 대체.'
-    scopeHint: '외부 시딩은 최신 데스크톱 및 최신 서버에 계속 집중됩니다. 기본 캐시 제한: 5GiB.'
   updates:
     title: 배경 업데이트
     description: 자동 검사, 백그라운드 사전 다운로드, 확인된 아카이브 보존을 관리합니다.
@@ -312,33 +293,20 @@ versionManagement:
     updates: 이 빌드의 업데이트는 인앱 버전 작업 대신 패키지 배포로 관리됩니다.
   downloadStage:
     queued: 대기 중
-    backfilling: 대체 채우기
-    fetchingTorrent: 토렌트를 가져오는 중
-    sharedDownloading: 토렌트 우선 다운로드
+    downloading: 직접 다운로드 중
   downloadMode:
-    shared: 토렌트 먼저
-    fallback: 대체 채우기
-    direct: HTTP/WebSeed
+    fallback: '다른 직접 다운로드 소스 시도'
+    direct: '직접 다운로드'
   installTelemetry:
     mode: 모드
     stage: 무대
-    peers: 동료
-    sharedBytes: 공유 바이트
-    fallbackBytes: 대체 바이트
     verified: 확인됨
-    flow: '흐름: 토렌트 가져오기 -> 토렌트 우선 다운로드 -> 대체 백필(필요한 경우) -> 확인 -> 추출 -> 완료'
+    flow: '흐름: 직접 다운로드 -> 다이제스트 확인 -> 압축 해제 -> 완료'
     flowActive: '전류 흐름: {{stage}}'
   progressMessage:
     queued: Queued
-    direct-http: HTTP/WebSeed 이상 다운로드 중
-    fetching-torrent-metadata: 토렌트 메타데이터를 가져오는 중
-    torrent-metadata-ready: 토렌트 준비 완료, 공유 가속 시작 중
-    torrent-first-started: 토렌트 우선 다운로드 시작됨
-    shared-acceleration-active: 공유 가속 활성화
-    source-fallback-active: 대체 백필 활성
-    torrent-unavailable-fallback: 토렌트를 사용할 수 없습니다. 자동으로 대체 모드로 전환되었습니다.
-    portable-mode-http-fallback: 휴대용 모드에서는 대체 다운로드를 강제합니다.
-    legacy-http-fallback: 토렌트 메타데이터 없음, HTTP/WebSeed만 사용
+    direct-http: 패키지를 직접 다운로드하는 중
+    source-fallback-active: 다른 직접 다운로드 소스를 재시도하는 중
     no-sha256-required: 추가 확인이 필요하지 않습니다
     sha256-verifying: 패키지 무결성 확인
     sha256-verified: 확인 완료

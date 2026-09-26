@@ -8,7 +8,6 @@ settings:
     region: Región del servicio
     language: Language Settings
     onboarding: Incorporación
-    sharingAcceleration: Descargar y compartir
     theme: Theme Settings
     runtimeData: Runtime Data
     updates: Actualizaciones de fondo
@@ -74,24 +73,6 @@ settings:
       resetting: Restableciendo recorrido...
       resetSuccess: El recorrido por la página de inicio se ha restablecido
       resetError: 'No se pudo restablecer el recorrido por la página de inicio: {{error}}'
-  sharingAcceleration:
-    title: Aceleración de descarga y uso compartido
-    description: Administre las descargas de torrents, la reutilización de caché confiable y el comportamiento de respaldo automático.
-    enabledTitle: Habilitar la aceleración de uso compartido de LAN/Internet
-    enabledDescription: Cualquier activo con metadatos de torrent comienza primero desde torrent y retrocede automáticamente cuando es necesario.
-    uploadLimit: Límite de carga (Mbps)
-    cacheLimit: Límite de caché (GiB)
-    retentionDays: Días de retención
-    thresholdHint: Los activos con metadatos de torrent ya no están sujetos al antiguo umbral de 100 MB.
-    networkHint: Deshabilite la aceleración para compartir en redes restringidas; El modo portátil siempre lo fuerza a desactivarse.
-    portableModeHint: El modo portátil desactiva la aceleración de uso compartido y la propagación externa, luego mantiene las descargas en reserva HTTP/WebSeed.
-    save: Guardar configuración
-    saving: Guardando...
-    saveSuccess: Compartir configuración de aceleración guardada
-    saveError: No se pudo guardar la configuración de aceleración para compartir
-    loadError: No se pudo cargar la configuración de aceleración compartida
-    modeHint: 'Modo: torrent primero, respaldo automático en caso de falla.'
-    scopeHint: 'La propagación externa se mantiene centrada en el último escritorio y servidor más reciente. Límite de caché predeterminado: 5 GiB.'
   updates:
     title: Actualizaciones de fondo
     description: Administre comprobaciones automáticas, descargas previas en segundo plano y retención de archivos verificados.
@@ -312,33 +293,20 @@ versionManagement:
     updates: Las actualizaciones para esta compilación las administra la distribución empaquetada en lugar de las acciones de la versión en la aplicación.
   downloadStage:
     queued: En cola
-    backfilling: Relleno alternativo
-    fetchingTorrent: Obteniendo torrent
-    sharedDownloading: Descarga de torrent primero
+    downloading: Descargando directamente
   downloadMode:
-    shared: Torrente primero
-    fallback: Relleno alternativo
-    direct: HTTP/WebSeed
+    fallback: 'Probar otra fuente directa'
+    direct: 'Descarga directa'
   installTelemetry:
     mode: Modo
     stage: etapa
-    peers: Compañeros
-    sharedBytes: Bytes compartidos
-    fallbackBytes: Bytes de reserva
     verified: Verificado
-    flow: 'Flujo: Obtener torrent -> Primera descarga de torrent -> Relleno alternativo (si es necesario) -> Verificar -> Extraer -> Completar'
+    flow: 'Flujo: Descarga directa -> Verificar resumen -> Extraer -> Completar'
     flowActive: 'Flujo de corriente: {{stage}}'
   progressMessage:
     queued: Queued
-    direct-http: Descargando más de HTTP/WebSeed
-    fetching-torrent-metadata: Obteniendo metadatos de torrent
-    torrent-metadata-ready: Torrent listo, iniciando aceleración compartida
-    torrent-first-started: Se inició la primera descarga de torrent
-    shared-acceleration-active: Aceleración compartida activa
-    source-fallback-active: Reabastecimiento de reserva activo
-    torrent-unavailable-fallback: Torrent no disponible, cambiado a respaldo automáticamente
-    portable-mode-http-fallback: El modo portátil fuerza la descarga alternativa
-    legacy-http-fallback: Sin metadatos de torrent, usando solo HTTP/WebSeed
+    direct-http: Descargando el paquete directamente
+    source-fallback-active: Probando otra fuente directa
     no-sha256-required: No se requiere verificación adicional
     sha256-verifying: Verificar la integridad del paquete
     sha256-verified: Verificación completada
