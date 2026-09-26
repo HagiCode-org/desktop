@@ -176,12 +176,10 @@ jobs:
                 data = json.loads(result_path.read_text(encoding="utf-8"))
                 summary_lines.extend([
                     f"- Index uploaded: `{'yes' if data.get('indexUploaded') else 'no'}`",
-                    f"- Published asset count: `{data.get('eligibleAssetCount', 0)}`",
-                    f"- Sidecar success count: `{data.get('sidecarSuccessCount', 0)}`",
-                    f"- HTTP-only fallback count: `{data.get('httpOnlyFallbackCount', 0)}`",
-                    f"- Uploaded blob count: `{data.get('uploadedBlobCount', 0)}`",
-                    f"- Skipped blob count: `{data.get('skippedBlobCount', 0)}`",
-                    f"- Missing blob count: `{data.get('missingBlobCount', 0)}`",
+                    f"- Published archives: `{data.get('publishedArchiveCount', len(data.get('publishedArtifacts', [])))}`",
+                    f"- Uploaded archive objects: `{data.get('uploadedBlobCount', 0)}`",
+                    f"- Skipped archive objects: `{data.get('skippedBlobCount', 0)}`",
+                    f"- Missing archive objects: `{data.get('missingBlobCount', 0)}`",
                 ])
                 if data.get("errorMessage"):
                     summary_lines.append(f"- Error: `{data['errorMessage']}`")

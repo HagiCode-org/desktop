@@ -288,11 +288,10 @@ jobs:
         if summary_path.exists():
             data = json.loads(summary_path.read_text(encoding="utf-8"))
             lines.extend([
-                f"- Eligible assets: `{data.get('eligibleAssetCount', 0)}`",
-                f"- Sidecar success: `{data.get('sidecarSuccessCount', 0)}`",
-                f"- HTTP-only fallback: `{data.get('httpOnlyFallbackCount', 0)}`",
-                f"- Uploaded blobs: `{data.get('uploadedBlobCount', 0)}`",
-                f"- Skipped blobs: `{data.get('skippedBlobCount', 0)}`",
+                f"- Published archives: `{data.get('publishedArchiveCount', len(data.get('publishedArtifacts', [])))}`",
+                f"- Uploaded archive objects: `{data.get('uploadedBlobCount', 0)}`",
+                f"- Skipped archive objects: `{data.get('skippedBlobCount', 0)}`",
+                f"- Missing archive objects: `{data.get('missingBlobCount', 0)}`",
             ])
             if data.get("errorMessage"):
                 lines.append(f"- Error: `{data['errorMessage']}`")
