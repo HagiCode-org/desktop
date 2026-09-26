@@ -17,15 +17,14 @@ This document provides detailed information about developing and debugging HagiC
 
 HagiCode Desktop supports multiple update sources for fetching application versions. By default, the application uses the official HTTP index source for both development and production builds.
 
-### Default Update Source
+### Official Regional Update Sources
 
-The default update source is configured to use the official HagiCode server:
+Desktop offers two official HTTP index sources:
 
-- **Type**: HTTP Index
-- **URL**: `https://index.hagicode.com/server/index.json`
-- **Name**: HagiCode 官方源
+- **China mainland**: `https://index.hagicode.com/server/index.json`
+- **International**: `https://dl-server.hagicode.com/index.json`
 
-This unified configuration ensures consistent version availability across development and production environments.
+The mainland source remains the default for new installations. Existing active/default selections and custom sources are preserved when upgrading; both official choices appear in the package-source selector and use the same version-list and installation flow.
 
 ### Environment Variable Override
 
