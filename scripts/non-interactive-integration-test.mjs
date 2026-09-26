@@ -2,23 +2,26 @@
 
 import fs from "node:fs";
 import fsp from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import AdmZip from "adm-zip";
+import {
+  findDesktopManagedNodePm2Assets,
+} from "./desktop-managed-runtime-assets.js";
 
 const projectRoot = process.cwd();
 const pkgRoot = path.join(projectRoot, "pkg");
 const runtimeVerifyArgs = ["runtime", "verify"];
+const runtimeLifecycleArgs = ["runtime", "lifecycle"];
+const integrationWorkRoot = path.join(projectRoot, "build", "non-interactive-integration");
 const defaultCommandTimeoutMs = 240_000;
 const interestingDiagnosticBasenames = new Set([
   "non-interactive-startup.log",
   "launch-contract.json",
   "state.json",
+  "backend-process.json",
   ".env",
-  "ecosystem.config.js",
-  "ecosystem.config.cjs",
 ]);
 
 function log(message) {
@@ -455,9 +458,8 @@ async function extractDmgArtifact(dmgArtifact, stagedRoot) {
 }
 
 async function copyArtifactToPathWithSpaces() {
-  const tempRoot = await fsp.mkdtemp(
-    path.join(os.tmpdir(), "hagicode cli integration "),
-  );
+  await fsp.mkdir(integrationWorkRoot, { recursive: true });
+  const tempRoot = await fsp.mkdtemp(path.join(integrationWorkRoot, "hagicode cli integration "));
   const stagedRoot = path.join(tempRoot, "Desktop artifact with spaces");
   await fsp.mkdir(stagedRoot, { recursive: true });
 
@@ -769,33 +771,28 @@ function assertPathContainsSpaces(candidatePath, label) {
   }
 }
 
-function assertPathOmitsSpaces(candidatePath, label) {
-  if (candidatePath?.includes(" ")) {
-    fail(
-      `Expected ${label} to avoid spaces after aliasing.\nPath: ${candidatePath ?? "<missing>"}`,
-    );
-  }
+export function findPackagedResourcesRoots(artifactRoot) {
+  const candidates = [
+    path.join(artifactRoot, "resources"),
+    path.join(artifactRoot, "Contents", "Resources"),
+    ...walkFiles(artifactRoot)
+      .filter((targetPath) => /[\\/]Contents[\\/]Resources[\\/]app\.asar$/i.test(targetPath))
+      .map((targetPath) => path.dirname(targetPath)),
+  ];
+  return [...new Set(candidates.filter((candidate) => pathExists(candidate)))];
 }
 
-function assertLaunchAliasPath(candidatePath, label, runtimeContext) {
-  if (!candidatePath) {
-    fail(`Expected ${label} to be present.`);
-  }
-  if (!pathExists(candidatePath)) {
-    fail(`Expected ${label} to exist.\nPath: ${candidatePath}`);
-  }
+export function findPackagedDesktopManagedNodePm2Assets(artifactRoot) {
+  return findPackagedResourcesRoots(artifactRoot).flatMap((resourcesRoot) => [
+    ...findDesktopManagedNodePm2Assets(resourcesRoot),
+    ...findDesktopManagedNodePm2Assets(path.join(resourcesRoot, "extra", "runtime")),
+  ]);
+}
 
-  const resolvedPath = fs.realpathSync(candidatePath);
-  assertPathWithinRoot(
-    resolvedPath,
-    runtimeContext.dataHome,
-    `${label} realpath`,
-  );
-
-  if (process.platform !== "win32") {
-    assertPathOmitsSpaces(candidatePath, label);
-    const aliasRoot = path.join("/tmp", "hagicode-desktop-path-alias");
-    assertPathWithinRoot(candidatePath, aliasRoot, `${label} alias path`);
+export function assertPackagedDesktopManagedNodePm2AssetsAbsent(artifactRoot) {
+  const assets = findPackagedDesktopManagedNodePm2Assets(artifactRoot);
+  if (assets.length > 0) {
+    fail(`Packaged Desktop contains forbidden managed Node/PM2 assets: ${assets.join(", ")}`);
   }
 }
 
@@ -808,7 +805,7 @@ async function readIntegrationDiagnostics(userDataDir) {
       return (
         baseName.endsWith(".log") ||
         interestingDiagnosticBasenames.has(baseName) ||
-        targetPath.includes(`${path.sep}.pm2${path.sep}`)
+        targetPath.includes(`${path.sep}backend-process`)
       );
     })
     .sort();
@@ -861,7 +858,34 @@ function assertRuntimeVerificationOutput(
     );
   }
   assertPathContainsSpaces(programHome, "runtime program home");
+  return programHome;
+}
 
+function assertRuntimeLifecycleOutput(output, programHome) {
+  const skipped = parseOutputValue(output, "backend lifecycle skipped");
+  if (skipped === "true") {
+    const skipReason = parseOutputValue(output, "backend lifecycle skip reason");
+    if (!skipReason || !skipReason.includes("does not contain a portable backend payload")) {
+      fail(`Packaged backend lifecycle was skipped for an unexpected reason: ${skipReason ?? "<missing>"}`);
+    }
+    assertOutputValue(output, "result", "success");
+    return;
+  }
+
+  assertOutputValue(output, "backend lifecycle skipped", "false");
+  assertOutputValue(output, "backend lifecycle owner", "Desktop-owned .NET child process");
+  assertOutputValue(output, "backend start success", "true");
+  assertOutputValue(output, "backend status after start", "running");
+  assertOutputValue(output, "backend restart success", "true");
+  assertOutputValue(output, "backend status after restart", "running");
+  assertOutputValue(output, "backend stop success", "true");
+  assertOutputValue(output, "backend status after stop", "stopped");
+  assertOutputValue(output, "auxiliary service management", "external");
+  const dotnetExecutable = parseOutputValue(output, "backend dotnet executable");
+  if (!dotnetExecutable) {
+    fail("Runtime lifecycle output did not include the managed .NET executable path.");
+  }
+  assertPathWithinRoot(dotnetExecutable, programHome, ".NET executable");
 }
 
 async function runScenario({
@@ -898,22 +922,23 @@ async function main() {
   const helpers = await loadDesktopManagedPathHelpers();
   const { tempRoot, artifactRoot, source } =
     await copyArtifactToPathWithSpaces();
-  const executablePath = findDesktopExecutable(artifactRoot);
-  if (!executablePath) {
-    fail(
-      `Unable to locate Desktop executable under staged artifact root: ${artifactRoot}`,
-    );
-  }
-
-  const userDataDir = path.join(tempRoot, "Managed npm user data with spaces");
-  await fsp.mkdir(userDataDir, { recursive: true });
-  const diagnosticLogPath = path.join(
-    userDataDir,
-    "non-interactive-startup.log",
-  );
+  const userDataDir = path.join(tempRoot, "Desktop user data with spaces");
   let caughtError = null;
 
   try {
+    assertPackagedDesktopManagedNodePm2AssetsAbsent(artifactRoot);
+    const executablePath = findDesktopExecutable(artifactRoot);
+    if (!executablePath) {
+      fail(
+        `Unable to locate Desktop executable under staged artifact root: ${artifactRoot}`,
+      );
+    }
+    await fsp.mkdir(userDataDir, { recursive: true });
+    const diagnosticLogPath = path.join(
+      userDataDir,
+      "non-interactive-startup.log",
+    );
+
     log(`source artifact: ${source}`);
     log(`staged artifact root: ${artifactRoot}`);
     log(`desktop executable: ${executablePath}`);
@@ -943,18 +968,30 @@ async function main() {
       );
     }
 
-    log("stage 1/1: runtime verification");
+    log("stage 1/2: packaged .NET runtime verification");
+    let programHome;
     await runScenario({
       name: "runtime verification",
       executablePath,
       userDataDir,
       commandArgs: runtimeVerifyArgs,
       onSuccess: async (result) => {
-        assertRuntimeVerificationOutput(result.stdout, {
+        programHome = assertRuntimeVerificationOutput(result.stdout, {
           artifactRoot,
           userDataDir,
           helpers,
         });
+      },
+    });
+
+    log("stage 2/2: Desktop-owned direct .NET backend lifecycle");
+    await runScenario({
+      name: "direct backend lifecycle",
+      executablePath,
+      userDataDir,
+      commandArgs: runtimeLifecycleArgs,
+      onSuccess: async (result) => {
+        assertRuntimeLifecycleOutput(result.stdout, programHome);
       },
     });
 
