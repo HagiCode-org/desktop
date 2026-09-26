@@ -8,7 +8,7 @@ from typing import Any
 from .artifacts import read_json, resolve_index_output_path, write_camel_json
 from .azure_index import IndexGenerationResult, generate_index_from_blobs_with_metadata
 from .github_release import GitHubReleaseClient
-from .hybrid_metadata import PublishedArtifact, build_hybrid_metadata
+from .artifact_metadata import PublishedArtifact, build_artifact_metadata
 from .params import (
     BuildParams,
     require_github_token,
@@ -34,9 +34,6 @@ class ReleasePublishSummary:
     error_message: str = ""
     index_json: str = ""
     index_uploaded: bool = False
-    eligible_asset_count: int = 0
-    sidecar_success_count: int = 0
-    http_only_fallback_count: int = 0
     uploaded_blob_count: int = 0
     skipped_blob_count: int = 0
     missing_blob_count: int = 0
@@ -48,6 +45,10 @@ class ReleasePublishSummary:
     stale_deleted_blob_names: list[str] = field(default_factory=list)
     stale_delete_failed_blob_names: list[str] = field(default_factory=list)
 
+    @property
+    def published_archive_count(self) -> int:
+        return len(self.published_artifacts)
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "shardId": self.shard_id,
@@ -55,9 +56,7 @@ class ReleasePublishSummary:
             "errorMessage": self.error_message,
             "indexJson": self.index_json,
             "indexUploaded": self.index_uploaded,
-            "eligibleAssetCount": self.eligible_asset_count,
-            "sidecarSuccessCount": self.sidecar_success_count,
-            "httpOnlyFallbackCount": self.http_only_fallback_count,
+            "publishedArchiveCount": self.published_archive_count,
             "uploadedBlobCount": self.uploaded_blob_count,
             "skippedBlobCount": self.skipped_blob_count,
             "missingBlobCount": self.missing_blob_count,
@@ -121,9 +120,6 @@ def merge_publish_results(manifest: dict[str, Any]) -> ReleasePublishSummary:
         if not raw.get("success", False):
             raise ValueError(f"shard 发布失败，阻止根索引上传: {shard_id}")
         seen_shard_ids.add(shard_id.lower())
-        merged.eligible_asset_count += int(raw.get("eligibleAssetCount") or 0)
-        merged.sidecar_success_count += int(raw.get("sidecarSuccessCount") or 0)
-        merged.http_only_fallback_count += int(raw.get("httpOnlyFallbackCount") or 0)
         merged.uploaded_blob_count += int(raw.get("uploadedBlobCount") or 0)
         merged.skipped_blob_count += int(raw.get("skippedBlobCount") or 0)
         merged.missing_blob_count += int(raw.get("missingBlobCount") or 0)
@@ -156,17 +152,11 @@ def _artifact_from_dict(raw: dict[str, Any]) -> PublishedArtifact:
         size=int(raw.get("size") or 0),
         last_modified=str(raw.get("lastModified") or ""),
         direct_url=str(raw.get("directUrl") or ""),
-        torrent_sidecar_local_path=raw.get("torrentSidecarLocalPath"),
-        torrent_path=raw.get("torrentPath"),
-        torrent_url=raw.get("torrentUrl"),
-        info_hash=raw.get("infoHash"),
         sha256=raw.get("sha256"),
-        web_seeds=list(raw.get("webSeeds") or []),
-        download_sources=list(raw.get("downloadSources") or []),
-        meets_threshold=bool(raw.get("meetsThreshold")),
-        hybrid_eligible=bool(raw.get("hybridEligible")),
-        legacy_http_fallback=bool(raw.get("legacyHttpFallback", True)),
-        fallback_reason=raw.get("fallbackReason"),
+        download_sources=[
+            {key: value for key, value in source.items() if key != "webSeed"}
+            for source in (raw.get("downloadSources") or [])
+        ],
     )
 
 
@@ -190,6 +180,7 @@ def filter_eligible_files(
     source_filtered = [
         path
         for path in file_paths
+        if not path.lower().endswith(".torrent")
         if not is_github_generated_source_archive(Path(path).name, repo_name, release_tag)
         and not is_github_generated_source_archive(Path(path).name, repo_name, effective_version)
     ]
@@ -274,23 +265,19 @@ def orchestrate_publish(
     """Upload artifacts (+ optional index) via R2 storage."""
     summary = ReleasePublishSummary()
     container_base_url = storage.public_base_url.rstrip("/") + "/"
-    policy_enabled_files = filter_policy_enabled_files(downloaded_files)
-    metadata_result = build_hybrid_metadata(
+    policy_enabled_files = filter_policy_enabled_files(
+        [path for path in downloaded_files if not path.lower().endswith(".torrent")]
+    )
+    metadata_result = build_artifact_metadata(
         policy_enabled_files,
         storage.version_prefix,
         container_base_url,
         github_repository,
     )
-    summary.eligible_asset_count = metadata_result.eligible_artifact_count
-    summary.sidecar_success_count = metadata_result.sidecar_success_count
-    summary.http_only_fallback_count = metadata_result.http_only_fallback_count
     summary.diagnostics.extend(item.to_dict() for item in metadata_result.diagnostics)
     summary.published_artifacts.extend(metadata_result.artifacts)
 
     files_to_upload = list(policy_enabled_files)
-    for artifact in metadata_result.artifacts:
-        if artifact.torrent_sidecar_local_path:
-            files_to_upload.append(artifact.torrent_sidecar_local_path)
     # unique case-insensitive
     seen: set[str] = set()
     unique_files: list[str] = []
@@ -330,25 +317,6 @@ def orchestrate_publish(
             summary.error_message = f"{label} 产物上传失败: {upload_result.error_message}"
         return summary
 
-    uploaded_names = {name.lower() for name in upload_result.uploaded_blob_names + upload_result.skipped_blob_names}
-    for artifact in summary.published_artifacts:
-        if artifact.hybrid_eligible and artifact.torrent_path:
-            if artifact.torrent_path.lower() not in uploaded_names:
-                artifact.hybrid_eligible = False
-                artifact.legacy_http_fallback = True
-                artifact.fallback_reason = "sidecar-upload-missing"
-                summary.diagnostics.append(
-                    {
-                        "artifactName": artifact.name,
-                        "code": "sidecar-upload-missing",
-                        "message": f"torrent sidecar 未成功上传到 {label}，已降级为 HTTP-only。",
-                        "stage": "UploadMissing",
-                    }
-                )
-
-    summary.sidecar_success_count = sum(1 for item in summary.published_artifacts if item.hybrid_eligible)
-    summary.http_only_fallback_count = sum(1 for item in summary.published_artifacts if item.legacy_http_fallback)
-
     if not upload_index:
         summary.success = True
         return summary
@@ -362,9 +330,6 @@ def orchestrate_publish(
         github_repository=github_repository or "HagiCode-org/desktop",
     )
     summary.diagnostics.extend(index_result.diagnostics)
-    summary.http_only_fallback_count = max(
-        summary.http_only_fallback_count, index_result.http_only_fallback_count
-    )
     if not index_result.index_json:
         summary.error_message = "生成 index.json 失败"
         return summary
@@ -395,12 +360,10 @@ def report_publish_summary(summary: ReleasePublishSummary) -> None:
     print("[PYBUILD] === Publish summary ===")
     print(f"[PYBUILD]   shard: {summary.shard_id}")
     print(f"[PYBUILD]   success: {summary.success}")
-    print(f"[PYBUILD]   eligible assets: {summary.eligible_asset_count}")
-    print(f"[PYBUILD]   sidecar success: {summary.sidecar_success_count}")
-    print(f"[PYBUILD]   HTTP-only fallback: {summary.http_only_fallback_count}")
-    print(f"[PYBUILD]   uploaded blobs: {summary.uploaded_blob_count}")
-    print(f"[PYBUILD]   skipped blobs: {summary.skipped_blob_count}")
-    print(f"[PYBUILD]   missing blobs: {summary.missing_blob_count}")
+    print(f"[PYBUILD]   published archives: {summary.published_archive_count}")
+    print(f"[PYBUILD]   uploaded archive objects: {summary.uploaded_blob_count}")
+    print(f"[PYBUILD]   skipped archive objects: {summary.skipped_blob_count}")
+    print(f"[PYBUILD]   missing archive objects: {summary.missing_blob_count}")
     print(f"[PYBUILD]   stale deleted blobs: {len(summary.stale_deleted_blob_names)}")
     print(f"[PYBUILD]   stale delete failed blobs: {len(summary.stale_delete_failed_blob_names)}")
     if summary.diagnostics:
@@ -415,8 +378,7 @@ def report_publish_summary(summary: ReleasePublishSummary) -> None:
 def report_index_diagnostics(result: IndexGenerationResult) -> None:
     print("[PYBUILD] === Index summary ===")
     print(f"[PYBUILD]   versions: {result.version_count}")
-    print(f"[PYBUILD]   assets: {result.asset_count}")
-    print(f"[PYBUILD]   HTTP-only fallback: {result.http_only_fallback_count}")
+    print(f"[PYBUILD]   direct assets: {result.asset_count}")
     for item in result.diagnostics:
         print(
             f"[PYBUILD]   - [{item.get('stage')}] {item.get('artifactName')}: "
@@ -509,9 +471,6 @@ def run_publish_to_r2(repo_root: Path, params: BuildParams) -> int:
                 github_repository=params.effective_github_repository,
             )
             summary.diagnostics.extend(index_result.diagnostics)
-            summary.http_only_fallback_count = max(
-                summary.http_only_fallback_count, index_result.http_only_fallback_count
-            )
             report_index_diagnostics(index_result)
             if not index_result.index_json:
                 summary.error_message = "生成 index.json 失败"
@@ -529,6 +488,9 @@ def run_publish_to_r2(repo_root: Path, params: BuildParams) -> int:
             print("[PYBUILD] skip index upload")
             if not summary.error_message:
                 summary.success = True
+
+        if params.upload_index:
+            print(f"[PYBUILD] index uploaded: {'yes' if summary.index_uploaded else 'no'}")
 
         if not summary.success and not summary.error_message:
             summary.error_message = f"{label} 发布失败"

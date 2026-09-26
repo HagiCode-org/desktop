@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import tempfile
 import unittest
@@ -7,7 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from pybuild.native.types import PublishResult
-from pybuild.native.hybrid_metadata import PublishedArtifact
+from pybuild.native.artifact_metadata import PublishedArtifact
 from pybuild.native.publish import (
     ReleasePublishSummary,
     apply_retention_cleanup,
@@ -32,9 +33,6 @@ class PublishTests(unittest.TestCase):
                     {
                         "shardId": "shard-001",
                         "success": True,
-                        "eligibleAssetCount": 1,
-                        "sidecarSuccessCount": 0,
-                        "httpOnlyFallbackCount": 1,
                         "uploadedBlobCount": 1,
                         "skippedBlobCount": 0,
                         "missingBlobCount": 0,
@@ -61,10 +59,7 @@ class PublishTests(unittest.TestCase):
                     {
                         "shardId": "shard-002",
                         "success": True,
-                        "eligibleAssetCount": 1,
-                        "sidecarSuccessCount": 1,
-                        "httpOnlyFallbackCount": 0,
-                        "uploadedBlobCount": 2,
+                        "uploadedBlobCount": 1,
                         "skippedBlobCount": 0,
                         "missingBlobCount": 0,
                         "publishedArtifacts": [
@@ -75,10 +70,20 @@ class PublishTests(unittest.TestCase):
                                 "size": 2,
                                 "lastModified": "t",
                                 "directUrl": "u",
+                                "sha256": "legacy-digest",
+                                "torrentUrl": "https://example/b.dmg.torrent",
+                                "infoHash": "legacy-info-hash",
+                                "downloadSources": [
+                                    {
+                                        "kind": "official",
+                                        "url": "u",
+                                        "webSeed": True,
+                                    }
+                                ],
                             }
                         ],
                         "diagnostics": [],
-                        "uploadedBlobNames": ["v1/b.dmg", "v1/b.dmg.torrent"],
+                        "uploadedBlobNames": ["v1/b.dmg"],
                         "skippedBlobNames": [],
                         "missingBlobNames": [],
                     }
@@ -93,8 +98,16 @@ class PublishTests(unittest.TestCase):
             )
             self.assertTrue(merged.success)
             self.assertEqual(merged.shard_id, "finalize")
-            self.assertEqual(merged.eligible_asset_count, 2)
             self.assertEqual(len(merged.published_artifacts), 2)
+            summary = merged.to_dict()
+            self.assertEqual(summary["publishedArchiveCount"], 2)
+            self.assertNotIn("sidecarSuccessCount", summary)
+            self.assertNotIn("httpOnlyFallbackCount", summary)
+            legacy_artifact = summary["publishedArtifacts"][1]
+            self.assertEqual(legacy_artifact["sha256"], "legacy-digest")
+            self.assertNotIn("torrentUrl", legacy_artifact)
+            self.assertNotIn("infoHash", legacy_artifact)
+            self.assertNotIn("webSeed", legacy_artifact["downloadSources"][0])
 
     def test_orchestrate_publish_upload_only(self) -> None:
         from pybuild.native.storage_publish import StorageContext
@@ -126,7 +139,51 @@ class PublishTests(unittest.TestCase):
             self.assertTrue(summary.success)
             self.assertEqual(summary.uploaded_blob_count, 1)
             self.assertEqual(len(summary.published_artifacts), 1)
-            self.assertTrue(summary.published_artifacts[0].legacy_http_fallback)
+            self.assertEqual(summary.published_archive_count, 1)
+
+    def test_large_archive_publish_is_direct_only_and_retains_digest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            archive = Path(tmp) / "HagiCode-1.0.0-win.exe"
+            with archive.open("wb") as handle:
+                handle.truncate(100 * 1024 * 1024 + 1)
+                handle.seek(0)
+                handle.write(b"direct archive bytes")
+            sidecar = Path(f"{archive}.torrent")
+            sidecar.write_bytes(b"historical sidecar must not be republished")
+            storage = StorageContext(
+                public_base_url="https://desktop.dl.hagicode.com",
+                version_prefix="v1.0.0",
+            )
+            fake_result = PublishResult(
+                success=True,
+                uploaded_blob_names=["v1.0.0/HagiCode-1.0.0-win.exe"],
+                uploaded_blobs=["https://desktop.dl.hagicode.com/v1.0.0/HagiCode-1.0.0-win.exe"],
+            )
+            with patch(
+                "pybuild.native.publish.storage_upload_artifacts",
+                return_value=fake_result,
+            ) as upload:
+                summary = orchestrate_publish(
+                    [str(archive), str(sidecar)],
+                    storage,
+                    upload_index=False,
+                    minify_index_json=True,
+                    github_repository="HagiCode-org/desktop",
+                )
+
+            upload.assert_called_once_with([str(archive)], storage)
+            self.assertTrue(summary.success)
+            self.assertEqual(summary.published_archive_count, 1)
+            artifact = summary.published_artifacts[0]
+            self.assertGreater(artifact.size, 100 * 1024 * 1024)
+            self.assertEqual(
+                artifact.sha256,
+                hashlib.sha256(archive.read_bytes()).hexdigest(),
+            )
+            self.assertNotIn("torrentUrl", artifact.to_dict())
+            self.assertNotIn("infoHash", artifact.to_dict())
+            self.assertTrue(sidecar.exists())
+            self.assertNotIn("sidecarSuccessCount", summary.to_dict())
 
     def test_orchestrate_publish_filters_disabled_release_assets(self) -> None:
         from pybuild.native.storage_publish import StorageContext

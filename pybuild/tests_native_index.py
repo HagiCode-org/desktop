@@ -1,20 +1,23 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import tempfile
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
 
 from pybuild.native.types import BlobInfo
 from pybuild.native.azure_index import (
     build_channels_object,
     build_index_result,
     extract_channel_from_version,
+    run_generate_r2_index,
     select_index_retention,
 )
-from pybuild.native.hybrid_metadata import PublishedArtifact
-from pybuild.native.torrent import bencode, generate_torrent_sidecar
+from pybuild.native.artifact_metadata import PublishedArtifact, build_artifact_metadata
 
 
 class IndexTests(unittest.TestCase):
@@ -23,11 +26,12 @@ class IndexTests(unittest.TestCase):
         self.assertEqual(extract_channel_from_version("1.2.3-beta.1"), "beta")
         self.assertEqual(extract_channel_from_version("2.0.0-rc.1"), "preview")
 
-    def test_build_index_document_fields(self) -> None:
+    def test_build_index_document_fields_with_and_without_historical_sidecars(self) -> None:
         now = datetime(2024, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
         blobs = [
             BlobInfo(name="v1.0.0/app-win.exe", size=100, last_modified=now),
             BlobInfo(name="v1.0.0/app-win.exe.torrent", size=10, last_modified=now),
+            BlobInfo(name="v1.0.0/app-linux.tar.gz", size=50, last_modified=now),
             BlobInfo(name="v1.0.0-beta.1/app-mac.dmg", size=200, last_modified=now),
             BlobInfo(name="app-unversioned.exe", size=300, last_modified=now),
         ]
@@ -39,24 +43,15 @@ class IndexTests(unittest.TestCase):
                 size=100,
                 last_modified=now.isoformat(),
                 direct_url="https://desktop.dl.hagicode.com/v1.0.0/app-win.exe",
-                torrent_path="v1.0.0/app-win.exe.torrent",
-                torrent_url="https://desktop.dl.hagicode.com/v1.0.0/app-win.exe.torrent",
-                info_hash="abc",
                 sha256="def",
-                web_seeds=["https://desktop.dl.hagicode.com/v1.0.0/app-win.exe"],
                 download_sources=[
                     {
                         "kind": "official",
                         "label": "Official",
                         "url": "https://desktop.dl.hagicode.com/v1.0.0/app-win.exe",
                         "primary": True,
-                        "webSeed": True,
                     }
                 ],
-                meets_threshold=True,
-                hybrid_eligible=True,
-                legacy_http_fallback=False,
-                fallback_reason=None,
             )
         ]
         result = build_index_result(
@@ -83,9 +78,16 @@ class IndexTests(unittest.TestCase):
             for asset in version["assets"]
             if asset["name"] == "app-win.exe"
         )
-        self.assertEqual(win["infoHash"], "abc")
         self.assertEqual(win["sha256"], "def")
-        self.assertTrue(win["torrentUrl"])
+        self.assertEqual(win["directUrl"], "https://desktop.dl.hagicode.com/v1.0.0/app-win.exe")
+        self.assertNotIn("torrentUrl", win)
+        self.assertNotIn("infoHash", win)
+        self.assertNotIn("webSeeds", win)
+        self.assertNotIn("webSeed", win["downloadSources"][0])
+        stable = next(version for version in result.document["versions"] if version["version"] == "v1.0.0")
+        linux = next(asset for asset in stable["assets"] if asset["name"] == "app-linux.tar.gz")
+        self.assertIn("directUrl", linux)
+        self.assertNotIn("sha256", linux)
 
         channels = build_channels_object(result.document["versions"])
         self.assertIn("stable", channels)
@@ -115,10 +117,9 @@ class IndexTests(unittest.TestCase):
         self.assertIn("cloudflare", kinds)
         cf = next(s for s in sources if s["kind"] == "cloudflare")
         self.assertEqual(cf["url"], "https://dl-desktop-cf.hagicode.com/v1.0.0/app-win.exe")
-        self.assertTrue(cf["webSeed"])
+        self.assertNotIn("webSeed", cf)
         self.assertFalse(cf["primary"])
-        # webSeeds includes cloudflare URL
-        self.assertIn("https://dl-desktop-cf.hagicode.com/v1.0.0/app-win.exe", asset["webSeeds"])
+        self.assertNotIn("webSeeds", asset)
 
     def test_build_index_result_without_cloudflare(self) -> None:
         """未配置 cloudflare base URL 时仅 official 源，无 downloadUrls。"""
@@ -141,8 +142,9 @@ class IndexTests(unittest.TestCase):
         kinds = [s["kind"] for s in sources]
         self.assertIn("official", kinds)
         self.assertNotIn("cloudflare", kinds)
+        self.assertNotIn("webSeeds", asset)
 
-    def test_r2_retention_prunes_to_latest_three_and_stale_sidecars(self) -> None:
+    def test_r2_retention_prunes_whole_stale_versions_with_or_without_sidecars(self) -> None:
         now = datetime(2024, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
         blobs = [
             BlobInfo(name="v1.4.0/app.exe", size=1, last_modified=now),
@@ -150,17 +152,19 @@ class IndexTests(unittest.TestCase):
             BlobInfo(name="v1.2.0/app.exe", size=1, last_modified=now),
             BlobInfo(name="v1.1.0/app.exe", size=1, last_modified=now),
             BlobInfo(name="v1.1.0/app.exe.torrent", size=1, last_modified=now),
+            BlobInfo(name="v1.0.0/app.exe", size=1, last_modified=now),
         ]
 
         retention = select_index_retention(blobs, "v1.4.0")
         result = build_index_result(retention.retained_blobs, "", [], "https://cdn.example")
 
         self.assertEqual(retention.retained_versions, ["v1.4.0", "v1.3.0", "v1.2.0"])
-        self.assertEqual(retention.stale_versions, ["v1.1.0"])
+        self.assertEqual(retention.stale_versions, ["v1.1.0", "v1.0.0"])
         self.assertEqual(
             retention.stale_object_keys,
-            ["v1.1.0/app.exe", "v1.1.0/app.exe.torrent"],
+            ["v1.1.0/app.exe", "v1.1.0/app.exe.torrent", "v1.0.0/app.exe"],
         )
+        self.assertIn("v1.2.0/app.exe", [blob.name for blob in retention.retained_blobs])
         self.assertIsNotNone(result.document)
         assert result.document is not None
         self.assertEqual(len(result.document["versions"]), 3)
@@ -181,29 +185,87 @@ class IndexTests(unittest.TestCase):
         self.assertEqual(retention.retained_versions, ["v1.5.0", "v1.4.0", "v1.2.0"])
         self.assertEqual(retention.stale_versions, ["v1.3.0"])
 
-    def test_torrent_sidecar_roundtrip_bytes(self) -> None:
+    def test_large_archive_digest_is_associated_without_creating_sidecar(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            source = Path(tmp) / "payload.bin"
-            source.write_bytes(b"hello-world" * 1000)
-            sidecar = Path(tmp) / "payload.bin.torrent"
-            result = generate_torrent_sidecar(
-                source_path=source,
-                sidecar_path=sidecar,
-                display_name="payload.bin",
-                web_seeds=["https://example.com/payload.bin"],
+            source = Path(tmp) / "large-release.zip"
+            with source.open("wb") as handle:
+                handle.truncate(100 * 1024 * 1024 + 1)
+                handle.seek(0)
+                handle.write(b"large direct archive")
+            result = build_artifact_metadata(
+                [str(source)],
+                "v1.0.0",
+                "https://desktop.dl.hagicode.com",
+                "HagiCode-org/desktop",
             )
-            self.assertTrue(sidecar.is_file())
-            self.assertEqual(len(result.info_hash), 40)
-            # info dict bencode deterministic
-            info = bencode(
-                {
-                    "length": source.stat().st_size,
-                    "name": "payload.bin",
-                    "piece length": 1024 * 1024,
-                    "pieces": b"",
-                }
+            self.assertEqual(len(result.artifacts), 1)
+            artifact = result.artifacts[0]
+            self.assertGreater(artifact.size, 100 * 1024 * 1024)
+            self.assertEqual(artifact.sha256, hashlib.sha256(source.read_bytes()).hexdigest())
+            self.assertEqual(artifact.path, "v1.0.0/large-release.zip")
+            self.assertEqual(
+                artifact.direct_url,
+                "https://desktop.dl.hagicode.com/v1.0.0/large-release.zip",
             )
-            self.assertTrue(info.startswith(b"d"))
+            self.assertFalse(source.with_name("large-release.zip.torrent").exists())
+            self.assertNotIn("torrentUrl", artifact.to_dict())
+            self.assertNotIn("infoHash", artifact.to_dict())
+            indexed = build_index_result(
+                [
+                    BlobInfo(
+                        name=artifact.path,
+                        size=artifact.size,
+                        last_modified=datetime.now(tz=timezone.utc),
+                    )
+                ],
+                "",
+                result.artifacts,
+                public_base_url="https://desktop.dl.hagicode.com",
+            )
+            assert indexed.document is not None
+            indexed_asset = indexed.document["versions"][0]["assets"][0]
+            self.assertEqual(indexed_asset["sha256"], artifact.sha256)
+            self.assertEqual(indexed_asset["directUrl"], artifact.direct_url)
+            self.assertNotIn("torrentUrl", indexed_asset)
+            self.assertNotIn("infoHash", indexed_asset)
+
+    def test_generate_r2_index_passes_direct_publish_metadata_once(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output_path = Path(tmp) / "index.json"
+            storage = object()
+            params = SimpleNamespace(
+                effective_github_repository="HagiCode-org/desktop",
+                minify_index_json=True,
+            )
+            index_result = SimpleNamespace(
+                index_json="{}",
+                document={},
+                version_count=1,
+                asset_count=1,
+                diagnostics=[],
+            )
+            with (
+                patch("pybuild.native.artifacts.resolve_index_output_path", return_value=output_path),
+                patch("pybuild.native.azure_index.open_storage_context", return_value=storage),
+                patch(
+                    "pybuild.native.publish.load_merged_publish_summary",
+                    return_value=SimpleNamespace(published_artifacts=[]),
+                ),
+                patch(
+                    "pybuild.native.azure_index.generate_index_from_blobs_with_metadata",
+                    return_value=index_result,
+                ) as generate_index,
+                patch("pybuild.native.azure_index.validate_index_file", return_value=True),
+            ):
+                self.assertEqual(run_generate_r2_index(Path(tmp), params), 0)
+
+            generate_index.assert_called_once_with(
+                storage,
+                output_path,
+                [],
+                minify=True,
+                github_repository="HagiCode-org/desktop",
+            )
 
 
 if __name__ == "__main__":

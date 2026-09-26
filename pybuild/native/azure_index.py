@@ -11,7 +11,7 @@ from typing import Any
 from .types import BlobInfo
 from .azure_blob import validate_index_file
 from .storage_publish import StorageContext, list_objects as storage_list_objects, open_storage_context, storage_label
-from .hybrid_metadata import KIND_OFFICIAL, PublishedArtifact
+from .artifact_metadata import KIND_OFFICIAL, PublishedArtifact
 from .params import resolve_github_repository_name
 from .path_utils import build_blob_url, extract_version, is_github_generated_source_archive, resolve_public_base_url
 
@@ -22,7 +22,6 @@ class IndexGenerationResult:
     document: dict[str, Any] | None = None
     version_count: int = 0
     asset_count: int = 0
-    http_only_fallback_count: int = 0
     missing_published_artifact_paths: list[str] = field(default_factory=list)
     diagnostics: list[dict[str, Any]] = field(default_factory=list)
     retention: "IndexRetentionResult | None" = None
@@ -145,7 +144,6 @@ def build_indexed_download_sources(metadata: PublishedArtifact | None, direct_ur
                 "label": "Official",
                 "url": direct_url,
                 "primary": True,
-                "webSeed": True,
             }
         ]
     sources = metadata.download_sources or [
@@ -154,7 +152,6 @@ def build_indexed_download_sources(metadata: PublishedArtifact | None, direct_ur
             "label": "Official",
             "url": direct_url,
             "primary": True,
-            "webSeed": True,
         }
     ]
     dedup: dict[str, dict[str, Any]] = {}
@@ -164,31 +161,10 @@ def build_indexed_download_sources(metadata: PublishedArtifact | None, direct_ur
             continue
         key = f"{source.get('kind')}|{url}".lower()
         if key not in dedup:
-            dedup[key] = source
+            dedup[key] = {key: value for key, value in source.items() if key != "webSeed"}
     ordered = list(dedup.values())
     ordered.sort(key=lambda item: (0 if item.get("primary") else 1, str(item.get("kind") or "").lower()))
     return ordered
-
-
-def build_indexed_web_seeds(
-    metadata: PublishedArtifact | None,
-    download_sources: list[dict[str, Any]],
-    direct_url: str,
-) -> list[str]:
-    seeds: list[str] = []
-    if metadata is None:
-        for source in download_sources:
-            if source.get("webSeed"):
-                url = source.get("url", "")
-                if url and url not in seeds:
-                    seeds.append(url)
-        return seeds
-    for url in list(metadata.web_seeds) + [source["url"] for source in download_sources if source.get("webSeed")]:
-        if url and url not in seeds:
-            seeds.append(url)
-    if not seeds:
-        seeds.append(direct_url)
-    return seeds
 
 
 def build_index_result(
@@ -215,11 +191,9 @@ def build_index_result(
     version_list: list[dict[str, Any]] = []
     diagnostics: list[dict[str, Any]] = []
     total_assets = 0
-    http_only_fallback_count = 0
 
     for version in sorted(version_map.keys(), key=str.lower, reverse=True):
         group = version_map[version]
-        blobs_by_name = {blob.name: blob for blob in group}
         artifact_blobs = [
             blob
             for blob in group
@@ -244,9 +218,6 @@ def build_index_result(
                 "lastModified": last_modified,
                 "directUrl": direct_url,
             }
-            sidecar_blob_name = f"{blob.name}.torrent"
-            has_sidecar_blob = sidecar_blob_name in blobs_by_name
-            can_publish_hybrid = bool(metadata and metadata.hybrid_eligible and has_sidecar_blob)
             indexed_download_sources = build_indexed_download_sources(metadata, direct_url)
             if cf_container_base_url:
                 cf_url = build_blob_url(cf_container_base_url, blob.name)
@@ -255,42 +226,12 @@ def build_index_result(
                     "label": "Cloudflare",
                     "url": cf_url,
                     "primary": False,
-                    "webSeed": True,
                 }
                 indexed_download_sources.append(cloudflare_source)
-            indexed_web_seeds = build_indexed_web_seeds(metadata, indexed_download_sources, direct_url)
             if indexed_download_sources:
                 asset["downloadSources"] = indexed_download_sources
-            if indexed_web_seeds:
-                asset["webSeeds"] = indexed_web_seeds
-            if can_publish_hybrid and metadata:
-                asset["torrentUrl"] = metadata.torrent_url
-                asset["infoHash"] = metadata.info_hash
+            if metadata and metadata.sha256:
                 asset["sha256"] = metadata.sha256
-            else:
-                http_only_fallback_count += 1
-                if has_sidecar_blob and not (metadata and metadata.hybrid_eligible):
-                    diagnostics.append(
-                        {
-                            "artifactName": asset["name"],
-                            "code": "historical-http-only" if metadata is None else "missing-hybrid-metadata",
-                            "message": (
-                                "发现 sidecar 但缺少发布期元数据，已保留 HTTP-only 兼容输出。"
-                                if metadata is None
-                                else "hybrid 元数据不完整，已保留 HTTP-only 兼容输出。"
-                            ),
-                            "stage": "MetadataBuild",
-                        }
-                    )
-                elif not has_sidecar_blob and metadata and metadata.hybrid_eligible:
-                    diagnostics.append(
-                        {
-                            "artifactName": asset["name"],
-                            "code": "sidecar-missing-from-blob",
-                            "message": "索引生成时未找到已声明的 torrent sidecar blob，已降级为 HTTP-only。",
-                            "stage": "UploadMissing",
-                        }
-                    )
             indexed_assets.append(asset)
 
         version_list.append(
@@ -312,7 +253,6 @@ def build_index_result(
         document=document,
         version_count=len(version_list),
         asset_count=total_assets,
-        http_only_fallback_count=http_only_fallback_count,
         diagnostics=diagnostics,
     )
     return result
@@ -470,7 +410,6 @@ def run_generate_r2_index(repo_root: Path, params: Any) -> int:
         published,
         minify=params.minify_index_json,
         github_repository=params.effective_github_repository,
-        storage=storage,
     )
     report_index_diagnostics(index_result)
     if not index_result.index_json:
