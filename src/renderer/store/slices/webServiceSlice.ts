@@ -1,5 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { InstallWebServicePackageOptions } from '../../../types/version-install.js';
+import type { VersionDownloadProgress } from '../../../types/version-download.js';
 
 /**
  * Enum representing the different states of the version installation process
@@ -76,16 +77,7 @@ export interface PackageInfo {
   isInstalled: boolean;
 }
 
-export interface InstallProgress {
-  stage: 'queued' | 'fetching-torrent' | 'downloading' | 'backfilling' | 'verifying' | 'extracting' | 'switching' | 'completed' | 'error';
-  progress: number;
-  message: string;
-  mode?: 'http-direct' | 'shared-acceleration' | 'source-fallback';
-  peers?: number;
-  p2pBytes?: number;
-  fallbackBytes?: number;
-  verified?: boolean;
-}
+export type InstallProgress = VersionDownloadProgress;
 
 export interface StartupFailurePayload {
   summary: string;

@@ -5,7 +5,6 @@ import { LanguageSelector } from '@/components/settings';
 import { DebugOptionsSettings } from '@/components/settings/DebugOptionsSettings';
 import { OnboardingSettings } from '@/components/settings/OnboardingSettings';
 import { RuntimeDataPathSettings } from '@/components/settings/RuntimeDataPathSettings';
-import { SharingAccelerationSettings } from '@/components/settings/SharingAccelerationSettings';
 import { VersionUpdateSettings } from '@/components/settings/VersionUpdateSettings';
 import type { SettingsTabComponentProps } from '../../types';
 
@@ -23,10 +22,6 @@ export function RuntimeDataSettingsTab() {
 
 export function DebugOptionsSettingsTab() {
   return <DebugOptionsSettings />;
-}
-
-export function SharingAccelerationSettingsTab({ distributionState }: SettingsTabComponentProps) {
-  return <SharingAccelerationSettings distributionState={distributionState} />;
 }
 
 export function LanguageSettingsTab() {

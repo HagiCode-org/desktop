@@ -14,7 +14,7 @@ import { clipboardChannels } from '../types/clipboard.js';
 import type { PromptGuidanceResponse } from '../types/prompt-guidance.js';
 import type { DistributionMode, DistributionModeState } from '../types/distribution-mode.js';
 import type { DesktopVersionInfoPayload } from '../types/version-info.js';
-import type { SharingAccelerationSettings, SharingAccelerationSettingsInput, VersionDownloadProgress } from '../types/sharing-acceleration.js';
+import type { VersionDownloadProgress } from '../types/version-download.js';
 import type { SystemDiagnosticBridge } from '../types/system-diagnostic.js';
 import { systemDiagnosticChannels } from '../types/system-diagnostic.js';
 import type {
@@ -299,11 +299,6 @@ interface ElectronAPI {
   presetGetAllProviders: () => Promise<any[]>;
   presetGetCacheStats: () => Promise<any>;
 
-  sharingAcceleration: {
-    get: () => Promise<SharingAccelerationSettings | null>;
-    set: (settings: SharingAccelerationSettingsInput & { enabled: boolean }) => Promise<SharingAccelerationSettings | null>;
-    recordOnboardingChoice: (enabled: boolean) => Promise<SharingAccelerationSettings | null>;
-  };
   clipboard: {
     readText: () => Promise<string>;
     writeText: (text: string) => Promise<void>;
@@ -832,11 +827,6 @@ const electronAPI: ElectronAPI = {
   presetGetAllProviders: () => ipcRenderer.invoke('preset:get-all-providers'),
   presetGetCacheStats: () => ipcRenderer.invoke('preset:get-cache-stats'),
 
-  sharingAcceleration: {
-    get: () => ipcRenderer.invoke('sharing-acceleration:get'),
-    set: (settings) => ipcRenderer.invoke('sharing-acceleration:set', settings),
-    recordOnboardingChoice: (enabled) => ipcRenderer.invoke('sharing-acceleration:record-onboarding-choice', enabled),
-  },
   clipboard: clipboardBridge,
   systemDiagnostic: systemDiagnosticBridge,
   hagiNode: hagiNodeBridge,

@@ -8,7 +8,6 @@ export type SettingsTabId =
   | 'updates'
   | 'runtimeData'
   | 'debugOptions'
-  | 'sharingAcceleration'
   | 'region'
   | 'language';
 

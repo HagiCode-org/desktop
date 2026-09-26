@@ -13,6 +13,7 @@ export default function DownloadedVersionsTab({
   switching,
   uninstalling,
   isInstalling,
+  installingVersionId,
   installProgress,
   getInstallProgressText,
   renderInstallTelemetry,
@@ -46,6 +47,7 @@ export default function DownloadedVersionsTab({
           <div className="space-y-3">
             {installedVersions.map((version) => {
               const compatibility = getDesktopCompatibility(version);
+              const isInstallingCurrentVersion = isInstalling && installingVersionId === version.id;
               return (
                 <div key={version.id} className="overflow-hidden rounded-2xl border border-border/70 bg-background/60">
                   <div className="p-4">
@@ -61,16 +63,35 @@ export default function DownloadedVersionsTab({
                         </div>
                       </div>
                       <div className="flex flex-wrap items-center justify-end gap-2">
-                        {isInstalling && installProgress ? (
-                          <div className="flex items-center gap-2 rounded-lg bg-secondary px-3 py-1.5">
-                            <div className="h-2 w-24 overflow-hidden rounded-full bg-muted"><div className="h-full bg-primary transition-all duration-300 ease-out" style={{ width: `${installProgress.progress}%` }} /></div>
-                            <span className="min-w-[50px] text-xs text-muted-foreground">{['downloading', 'backfilling', 'extracting'].includes(installProgress.stage) ? `${installProgress.progress}%` : getInstallProgressText()}</span>
-                          </div>
-                        ) : (
-                          <button onClick={() => onReinstall(version.id)} disabled={isInstalling || switching === version.id} className="flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-sm text-secondary-foreground transition-colors hover:bg-secondary/80 disabled:cursor-not-allowed disabled:opacity-50" title={t('versionManagement.actions.reinstallPackage')}>
-                            <RefreshCw className="h-4 w-4" />{t('versionManagement.actions.reinstall')}
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => onReinstall(version.id)}
+                          disabled={!isInstallingCurrentVersion && (isInstalling || switching === version.id)}
+                          aria-disabled={isInstallingCurrentVersion || undefined}
+                          aria-label={isInstallingCurrentVersion ? getInstallProgressText() : t('versionManagement.actions.reinstall')}
+                          className="flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-sm text-secondary-foreground transition-colors hover:bg-secondary/80 disabled:cursor-not-allowed disabled:opacity-50"
+                          title={t('versionManagement.actions.reinstallPackage')}
+                        >
+                          {isInstallingCurrentVersion && installProgress ? (
+                            <>
+                              <div
+                                role="progressbar"
+                                aria-label={getInstallProgressText()}
+                                aria-valuemin={0}
+                                aria-valuemax={100}
+                                aria-valuenow={installProgress.percentage}
+                                className="h-2 w-24 overflow-hidden rounded-full bg-muted"
+                              >
+                                <div className="h-full bg-primary transition-all duration-300 ease-out" style={{ width: `${installProgress.percentage}%` }} />
+                              </div>
+                              <span className="min-w-[50px] text-xs" aria-live="polite">
+                                {['downloading', 'extracting'].includes(installProgress.stage) ? `${installProgress.percentage}%` : getInstallProgressText()}
+                              </span>
+                            </>
+                          ) : (
+                            <><RefreshCw className="h-4 w-4" />{t('versionManagement.actions.reinstall')}</>
+                          )}
+                        </button>
                         <button onClick={() => onOpenLogs(version.id)} className="flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-sm text-secondary-foreground transition-colors hover:bg-secondary/80" title={t('versionManagement.actions.openLogs')}>
                           <FolderOpen className="h-4 w-4" />{t('versionManagement.actions.openLogs')}
                         </button>

@@ -379,7 +379,14 @@ export const installWebServicePackage = createAsyncThunk(
       return await doInstallPackage(version, options, dispatch);
     } catch (error) {
       console.error('Install package error:', error);
-      dispatch(setInstallProgress({ stage: 'error', progress: 0, message: i18n.t('pages:versionManagement.toast.installFailedDescription') }));
+      dispatch(setInstallProgress({
+        stage: 'error',
+        mode: 'http-direct',
+        current: 0,
+        total: 0,
+        percentage: 0,
+        message: i18n.t('pages:versionManagement.toast.installFailedDescription'),
+      }));
       dispatch(setInstallingVersionId(null));
       dispatch(setError(error instanceof Error ? error.message : 'Unknown error occurred'));
       dispatch(setInstallState(InstallState.Error));
@@ -460,14 +467,28 @@ async function doInstallPackage(
   options: InstallWebServicePackageOptions | undefined,
   dispatch: any,
 ) {
-  dispatch(setInstallProgress({ stage: 'queued', progress: 0, message: 'queued' }));
+  dispatch(setInstallProgress({
+    stage: 'queued',
+    mode: 'http-direct',
+    current: 0,
+    total: 0,
+    percentage: 0,
+    message: 'queued',
+  }));
   dispatch(setError(null));
 
   const result = await window.electronAPI.installWebServicePackage(version, options);
 
   if (result.success) {
     dispatch(setInstallState(InstallState.Completed));
-    dispatch(setInstallProgress({ stage: 'completed', progress: 100, message: 'Installation completed successfully' }));
+    dispatch(setInstallProgress({
+      stage: 'completed',
+      mode: 'http-direct',
+      current: 1,
+      total: 1,
+      percentage: 100,
+      message: 'installation-complete',
+    }));
     // Refresh package info
     await dispatch(checkPackageInstallation());
     // Refresh version
@@ -492,7 +513,14 @@ async function doInstallPackage(
     return result;
   } else {
     dispatch(setInstallState(InstallState.Error));
-    dispatch(setInstallProgress({ stage: 'error', progress: 0, message: i18n.t('pages:versionManagement.toast.installFailedDescription') }));
+    dispatch(setInstallProgress({
+      stage: 'error',
+      mode: 'http-direct',
+      current: 0,
+      total: 0,
+      percentage: 0,
+      message: i18n.t('pages:versionManagement.toast.installFailedDescription'),
+    }));
     dispatch(setError('Failed to install package'));
 
     // Show error toast

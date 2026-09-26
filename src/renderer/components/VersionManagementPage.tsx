@@ -315,9 +315,7 @@ export default function VersionManagementPage({ distributionState }: VersionMana
 
     const stageTexts: Record<string, string> = {
       'queued': t('versionManagement.downloadStage.queued'),
-      'fetching-torrent': t('versionManagement.downloadStage.fetchingTorrent'),
-      'downloading': t('versionManagement.downloadStage.sharedDownloading'),
-      'backfilling': t('versionManagement.downloadStage.backfilling'),
+      'downloading': t('versionManagement.downloadStage.downloading'),
       'extracting': t('versionManagement.extracting'),
       'verifying': t('versionManagement.verifying'),
       'switching': t('versionManagement.switching'),
@@ -337,17 +335,8 @@ export default function VersionManagementPage({ distributionState }: VersionMana
   };
 
   const getDownloadModeLabel = (mode?: string) => {
-    if (mode === 'shared-acceleration') return t('versionManagement.downloadMode.shared');
     if (mode === 'source-fallback') return t('versionManagement.downloadMode.fallback');
     return t('versionManagement.downloadMode.direct');
-  };
-
-  const formatBytes = (bytes?: number) => {
-    if (!bytes || bytes <= 0) return '0 B';
-    const units = ['B', 'KB', 'MB', 'GB'];
-    const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-    const value = bytes / 1024 ** exponent;
-    return `${value.toFixed(value >= 100 ? 0 : 1)} ${units[exponent]}`;
   };
 
   const getInstallStageFlow = () => {
@@ -356,9 +345,7 @@ export default function VersionManagementPage({ distributionState }: VersionMana
     }
 
     const stageTexts: Record<string, string> = {
-      'fetching-torrent': t('versionManagement.downloadStage.fetchingTorrent'),
-      'downloading': t('versionManagement.downloadStage.sharedDownloading'),
-      'backfilling': t('versionManagement.downloadStage.backfilling'),
+      'downloading': t('versionManagement.downloadStage.downloading'),
       'verifying': t('versionManagement.verifying'),
       'extracting': t('versionManagement.extracting'),
       'switching': t('versionManagement.switching'),
@@ -381,9 +368,9 @@ export default function VersionManagementPage({ distributionState }: VersionMana
         <div className="flex flex-wrap items-center gap-3">
           <span>{t('versionManagement.installTelemetry.mode')}: {getDownloadModeLabel(webServiceInstallProgress.mode)}</span>
           <span>{t('versionManagement.installTelemetry.stage')}: {getInstallProgressText()}</span>
-          <span>{t('versionManagement.installTelemetry.peers')}: {webServiceInstallProgress.peers ?? 0}</span>
-          <span>{t('versionManagement.installTelemetry.sharedBytes')}: {formatBytes(webServiceInstallProgress.p2pBytes)}</span>
-          <span>{t('versionManagement.installTelemetry.fallbackBytes')}: {formatBytes(webServiceInstallProgress.fallbackBytes)}</span>
+          {webServiceInstallProgress.stage === 'downloading' && (
+            <span>{webServiceInstallProgress.percentage}%</span>
+          )}
           {webServiceInstallProgress.verified && (
             <span className="text-primary">{t('versionManagement.installTelemetry.verified')}</span>
           )}
@@ -596,6 +583,7 @@ export default function VersionManagementPage({ distributionState }: VersionMana
             switching={switching}
             uninstalling={uninstalling}
             isInstalling={isInstallingFromState}
+            installingVersionId={installingVersionId}
             installProgress={webServiceInstallProgress}
             getVersionStatus={getVersionStatus}
             formatDate={formatDate}

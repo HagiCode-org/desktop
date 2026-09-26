@@ -50,8 +50,11 @@ describe('webServiceSlice startup failure dialog state', () => {
     const selectingTarget = reducer(undefined, setInstallingVersionId('version-1'));
     const progressing = reducer(selectingTarget, setInstallProgress({
       stage: 'downloading',
-      progress: 42,
-      message: 'shared-acceleration-active',
+      mode: 'http-direct',
+      current: 42,
+      total: 100,
+      percentage: 42,
+      message: 'direct-http',
     }));
     const cleared = reducer(progressing, setInstallingVersionId(null));
 

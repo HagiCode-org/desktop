@@ -212,8 +212,8 @@ function registerRealtimeListeners(): void {
       type: 'webService/setInstallProgress',
       payload: {
         ...progress,
-        progress: typeof progress?.progress === 'number' ? progress.progress : progress?.percentage ?? 0,
-        message: progress?.message || progress?.stage || 'installing',
+        percentage: typeof progress?.percentage === 'number' ? progress.percentage : 0,
+        message: progress?.message || progress?.stage || 'direct-http',
       },
     });
   });

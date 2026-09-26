@@ -10,8 +10,7 @@ export enum OnboardingStep {
   LanguageSelection = 0,
   Welcome = 1,
   LegalConsent = 2,
-  SharingAcceleration = 3,
-  Download = 4,
+  Download = 3,
 }
 
 export type LegalDocumentType = 'eula' | 'privacy-policy';
@@ -101,11 +100,6 @@ export interface DownloadProgress {
   speed: number; // bytes per second
   remainingSeconds: number;
   version: string;
-  stage?: 'queued' | 'fetching-torrent' | 'downloading' | 'backfilling' | 'verifying' | 'extracting' | 'completed' | 'error';
-  mode?: 'http-direct' | 'shared-acceleration' | 'source-fallback';
-  peers?: number;
-  p2pBytes?: number;
-  fallbackBytes?: number;
   verified?: boolean;
 }
 

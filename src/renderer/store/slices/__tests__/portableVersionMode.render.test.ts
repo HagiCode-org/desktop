@@ -7,12 +7,8 @@ const appPath = path.resolve(process.cwd(), 'src/renderer/App.tsx');
 const sidebarPath = path.resolve(process.cwd(), 'src/renderer/components/SidebarNavigation.tsx');
 const dashboardPath = path.resolve(process.cwd(), 'src/renderer/components/SystemManagementView.tsx');
 const versionPagePath = path.resolve(process.cwd(), 'src/renderer/components/VersionManagementPage.tsx');
-const settingsPagePath = path.resolve(process.cwd(), 'src/renderer/components/SettingsPage.tsx');
-const settingsIndexPath = path.resolve(process.cwd(), 'src/renderer/components/settings/index.ts');
-const settingsHookPath = path.resolve(process.cwd(), 'src/renderer/features/settings/hooks/useSettingsTab.ts');
 const builtInTabsPath = path.resolve(process.cwd(), 'src/renderer/features/settings/components/tabs/builtInTabs.tsx');
 const updateSettingsPath = path.resolve(process.cwd(), 'src/renderer/components/settings/VersionUpdateSettings.tsx');
-const sharingSettingsPath = path.resolve(process.cwd(), 'src/renderer/components/settings/SharingAccelerationSettings.tsx');
 const onboardingWizardPath = path.resolve(process.cwd(), 'src/renderer/components/onboarding/OnboardingWizard.tsx');
 
 describe('portable version renderer integration', () => {
@@ -81,20 +77,6 @@ describe('portable version renderer integration', () => {
     assert.match(source, /shouldShowVersionUpdateReminder \? \(\s*<motion\.div[\s\S]*?\[HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE\]: 'update-reminder'/);
   });
 
-  it('hides the sharing acceleration settings entry in portable mode while keeping the standard mode helper', async () => {
-    const [settingsPageSource, settingsIndexSource, settingsHookSource] = await Promise.all([
-      fs.readFile(settingsPagePath, 'utf-8'),
-      fs.readFile(settingsIndexPath, 'utf-8'),
-      fs.readFile(settingsHookPath, 'utf-8'),
-    ]);
-
-    assert.match(settingsIndexSource, /shouldShowSharingAccelerationSettings\(distributionState: Pick<DistributionModeState, 'fusionMode'>\)/);
-    assert.match(settingsIndexSource, /return !distributionState\.fusionMode;/);
-    assert.match(settingsPageSource, /const showSharingAccelerationSettings = shouldShowSharingAccelerationSettings\(distributionState\)/);
-    assert.match(settingsHookSource, /if \(showSharingAccelerationSettings\) \{/);
-    assert.match(settingsHookSource, /id: 'sharingAcceleration'/);
-  });
-
   it('passes fusion distribution state into background update settings and keeps managed update copy there', async () => {
     const [builtInTabsSource, updateSettingsSource] = await Promise.all([
       fs.readFile(builtInTabsPath, 'utf-8'),
@@ -107,21 +89,12 @@ describe('portable version renderer integration', () => {
     assert.match(updateSettingsSource, /settings\.updates\.managedInstall\.title/);
   });
 
-  it('passes distribution state into settings and keeps a portable-mode fallback notice inside the sharing card', async () => {
-    const appSource = await fs.readFile(appPath, 'utf-8');
-    const sharingSettingsSource = await fs.readFile(sharingSettingsPath, 'utf-8');
-
-    assert.match(appSource, /<SettingsPage distributionState=\{distributionState\} \/>/);
-    assert.match(sharingSettingsSource, /const isPortableMode = distributionState\.fusionMode;/);
-    assert.match(sharingSettingsSource, /settings\.sharingAcceleration\.portableModeHint/);
-    assert.match(sharingSettingsSource, /disabled=\{loading \|\| saving \|\| isPortableMode\}/);
-  });
-
-  it('uses distribution state when computing onboarding progress so fusion mode skips sharing acceleration', async () => {
+  it('keeps fusion mode in onboarding progress while all modes omit the removed acceleration step', async () => {
     const source = await fs.readFile(onboardingWizardPath, 'utf-8');
 
     assert.match(source, /selectOnboardingDistributionState/);
     assert.match(source, /const distributionState = useSelector\(\(state: RootState\) => selectOnboardingDistributionState\(state\)\);/);
     assert.match(source, /getOnboardingSequence\(mode, distributionState\)/);
+    assert.doesNotMatch(source, /SharingAcceleration|sharingAcceleration/);
   });
 });

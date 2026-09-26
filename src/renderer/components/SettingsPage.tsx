@@ -5,7 +5,6 @@ import {
   SettingsTabContent,
   useSettingsTab,
 } from '@/features/settings';
-import { shouldShowSharingAccelerationSettings } from './settings';
 import type { DistributionModeState } from '../../types/distribution-mode';
 
 interface SettingsPageProps {
@@ -14,14 +13,12 @@ interface SettingsPageProps {
 
 export default function SettingsPage({ distributionState }: SettingsPageProps) {
   const { t } = useTranslation('pages');
-  const showSharingAccelerationSettings = shouldShowSharingAccelerationSettings(distributionState);
   const {
     activeTab,
     setActiveTab,
     tabs,
   } = useSettingsTab({
     distributionState,
-    showSharingAccelerationSettings,
   });
   const activeTabConfig = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
 

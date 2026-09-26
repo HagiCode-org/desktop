@@ -440,9 +440,7 @@ export default function SystemManagementView({
 
     const stageLabels: Record<string, string> = {
       queued: t('versionManagement.downloadStage.queued', { ns: 'pages' }),
-      'fetching-torrent': t('versionManagement.downloadStage.fetchingTorrent', { ns: 'pages' }),
-      downloading: t('versionManagement.downloadStage.sharedDownloading', { ns: 'pages' }),
-      backfilling: t('versionManagement.downloadStage.backfilling', { ns: 'pages' }),
+      downloading: t('versionManagement.downloadStage.downloading', { ns: 'pages' }),
       verifying: t('versionManagement.verifying', { ns: 'pages' }),
       extracting: t('versionManagement.extracting', { ns: 'pages' }),
       switching: t('versionManagement.switching', { ns: 'pages' }),
@@ -497,7 +495,7 @@ export default function SystemManagementView({
     if (installState === InstallState.StoppingService) {
       return 16;
     }
-    return Math.max(0, Math.min(100, installProgress?.progress ?? 0));
+    return Math.max(0, Math.min(100, installProgress?.percentage ?? 0));
   })();
 
   return (

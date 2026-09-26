@@ -29,7 +29,6 @@ import { fetchActiveVersion } from '../../store/thunks/webServiceThunks';
 import { changeLanguage } from '../../store/thunks/i18nThunks';
 import WelcomeIntro from './steps/WelcomeIntro';
 import LegalConsentStep, { type LegalConsentStepHandle } from './steps/LegalConsentStep';
-import SharingAccelerationStep from './steps/SharingAccelerationStep';
 import PackageDownload from './steps/PackageDownload';
 import LanguageSelectionStep from './steps/LanguageSelectionStep';
 import OnboardingProgress from './OnboardingProgress';
@@ -52,8 +51,6 @@ function getStepLabel(t: ReturnType<typeof useTranslation<'onboarding'>>['t'], s
       return t('welcome.title');
     case OnboardingStep.LegalConsent:
       return t('legal.title');
-    case OnboardingStep.SharingAcceleration:
-      return t('sharingAcceleration.title');
     case OnboardingStep.Download:
       return t('download.title');
     default:
@@ -77,7 +74,6 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const onboardingError = useSelector((state: RootState) => state.onboarding.error);
   const locale = useSelector((state: RootState) => state.i18n.currentLanguage);
 
-  const [sharingStepReady, setSharingStepReady] = useState(false);
   const legalConsentRef = useRef<LegalConsentStepHandle>(null);
   const [legalConsentCanAccept, setLegalConsentCanAccept] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState(() => resolveDesktopLanguageCode(locale));
@@ -201,8 +197,6 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         return <WelcomeIntro stepSequence={stepSequence} />;
       case OnboardingStep.LegalConsent:
         return <LegalConsentStep ref={legalConsentRef} onCanAcceptChange={setLegalConsentCanAccept} />;
-      case OnboardingStep.SharingAcceleration:
-        return <SharingAccelerationStep onReadyChange={setSharingStepReady} />;
       case OnboardingStep.Download:
         return <PackageDownload />;
       default:
@@ -241,9 +235,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
 
   const effectiveCanGoNext = currentStep === OnboardingStep.LanguageSelection
     ? !languageStepPending
-    : currentStep === OnboardingStep.SharingAcceleration
-      ? sharingStepReady
-      : currentStep === OnboardingStep.LegalConsent
+    : currentStep === OnboardingStep.LegalConsent
         ? legalConsentCanAccept
         : canGoNext;
 

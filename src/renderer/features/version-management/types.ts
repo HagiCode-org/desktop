@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import type { ComponentType, ReactNode } from 'react';
+import type { VersionDownloadProgress } from '../../../types/version-download.js';
 
 export type VersionManagementTabId = 'newVersions' | 'downloadedVersions' | 'sourceManagement';
 
@@ -29,7 +30,8 @@ export interface VersionManagementTabProps {
   switching: string | null;
   uninstalling: string | null;
   isInstalling: boolean;
-  installProgress: { progress: number; stage: string } | null;
+  installingVersionId: string | null;
+  installProgress: VersionDownloadProgress | null;
   getVersionStatus: (version: InstalledVersion) => ReactNode;
   formatDate: (dateString: string) => string;
   isDesktopIncompatible: (version: InstalledVersion) => boolean;
@@ -43,14 +45,6 @@ export interface Version {
   packageFilename: string;
   sourceType?: 'local-folder' | 'http-index';
   assetKind?: string;
-  hybrid?: {
-    torrentFirst: boolean;
-    eligible: boolean;
-    legacyHttpFallback: boolean;
-    isLatestDesktopAsset: boolean;
-    isLatestWebAsset: boolean;
-    serviceScope: 'latest-desktop' | 'latest-server' | 'local-cache';
-  };
 }
 
 export interface InstalledVersion {

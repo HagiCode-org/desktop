@@ -36,15 +36,10 @@ const fullSequence = [
   OnboardingStep.LanguageSelection,
   OnboardingStep.Welcome,
   OnboardingStep.LegalConsent,
-  OnboardingStep.SharingAcceleration,
   OnboardingStep.Download,
 ] as const;
 
 const legalOnlySequence = [OnboardingStep.LanguageSelection, OnboardingStep.LegalConsent] as const;
-
-function shouldHideSharingAccelerationStep(distributionState: DistributionModeState) {
-  return distributionState.fusionMode;
-}
 
 function shouldHideDownloadStep(distributionState: DistributionModeState) {
   return distributionState.fusionMode;
@@ -59,10 +54,6 @@ export function getOnboardingSequence(
   }
 
   let sequence = [...fullSequence];
-
-  if (shouldHideSharingAccelerationStep(distributionState)) {
-    sequence = sequence.filter((step) => step !== OnboardingStep.SharingAcceleration);
-  }
 
   if (shouldHideDownloadStep(distributionState)) {
     sequence = sequence.filter((step) => step !== OnboardingStep.Download);
@@ -136,10 +127,6 @@ export const onboardingSlice = createSlice({
   reducers: {
     setOnboardingDistributionState: (state, action: PayloadAction<DistributionModeState>) => {
       state.distributionState = action.payload;
-
-      if (state.currentStep === OnboardingStep.SharingAcceleration && shouldHideSharingAccelerationStep(action.payload)) {
-        state.currentStep = getNextStep(state.mode, OnboardingStep.SharingAcceleration, action.payload);
-      }
     },
     setActive: (state, action: PayloadAction<boolean>) => {
       state.isActive = action.payload;
@@ -394,9 +381,6 @@ export const onboardingSlice = createSlice({
             break;
           case OnboardingStep.LegalConsent:
             break;
-          case OnboardingStep.SharingAcceleration:
-            state.currentStep = getNextStep(state.mode, OnboardingStep.SharingAcceleration, state.distributionState);
-            break;
           case OnboardingStep.Download:
             break;
         }
@@ -405,9 +389,6 @@ export const onboardingSlice = createSlice({
         switch (state.currentStep) {
           case OnboardingStep.Download:
             state.currentStep = getPreviousStep(state.mode, OnboardingStep.Download, state.distributionState);
-            break;
-          case OnboardingStep.SharingAcceleration:
-            state.currentStep = getPreviousStep(state.mode, OnboardingStep.SharingAcceleration, state.distributionState);
             break;
           case OnboardingStep.LegalConsent:
             state.currentStep = getPreviousStep(state.mode, OnboardingStep.LegalConsent, state.distributionState);
@@ -475,8 +456,6 @@ export const selectCanGoNext = (state: { onboarding: OnboardingState }) => {
       return true;
     case OnboardingStep.LegalConsent:
       return false;
-    case OnboardingStep.SharingAcceleration:
-      return true;
     case OnboardingStep.Download:
       return runtimeProvisioned || (downloadProgress?.progress === 100 && Boolean(downloadProgress.version));
     default:

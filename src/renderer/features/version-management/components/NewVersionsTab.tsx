@@ -70,28 +70,36 @@ export default function NewVersionsTab({
                   </div>
                 </div>
                 {!installed ? (
-                  isInstallingCurrentVersion && webServiceInstallProgress ? (
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-32 overflow-hidden rounded-full bg-secondary">
-                        <div className="h-full bg-primary transition-all duration-300 ease-out" style={{ width: `${webServiceInstallProgress.progress}%` }} />
-                      </div>
-                      <span className="min-w-[60px] text-xs text-muted-foreground">
-                        {webServiceInstallProgress.stage === 'fetching-torrent' && t('versionManagement.downloadStage.fetchingTorrent')}
-                        {['downloading', 'backfilling', 'extracting'].includes(webServiceInstallProgress.stage) && `${webServiceInstallProgress.progress}%`}
-                        {webServiceInstallProgress.stage === 'verifying' && t('versionManagement.verifying')}
-                        {webServiceInstallProgress.stage === 'switching' && t('versionManagement.switching')}
-                        {webServiceInstallProgress.stage === 'completed' && t('versionManagement.completed')}
-                      </span>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => handleInstall(version.id)}
-                      disabled={isInstallingFromState || webServiceOperating}
-                      className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {isInstallingCurrentVersion ? <><Loader2 className="h-4 w-4 animate-spin" />{getInstallProgressText()}</> : <><Download className="h-4 w-4" />{t('versionManagement.actions.install')}</>}
-                    </button>
-                  )
+                  <button
+                    type="button"
+                    onClick={() => handleInstall(version.id)}
+                    disabled={!isInstallingCurrentVersion && (isInstallingFromState || webServiceOperating)}
+                    aria-disabled={isInstallingCurrentVersion || undefined}
+                    aria-label={isInstallingCurrentVersion && webServiceInstallProgress ? getInstallProgressText() : t('versionManagement.actions.install')}
+                    className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isInstallingCurrentVersion && webServiceInstallProgress ? (
+                      <>
+                        <div
+                          role="progressbar"
+                          aria-label={getInstallProgressText()}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-valuenow={webServiceInstallProgress.percentage}
+                          className="h-2 w-32 overflow-hidden rounded-full bg-secondary"
+                        >
+                          <div className="h-full bg-primary-foreground transition-all duration-300 ease-out" style={{ width: `${webServiceInstallProgress.percentage}%` }} />
+                        </div>
+                        <span className="min-w-[60px] text-xs" aria-live="polite">
+                          {webServiceInstallProgress.stage === 'downloading'
+                            ? `${webServiceInstallProgress.percentage}%`
+                            : getInstallProgressText()}
+                        </span>
+                      </>
+                    ) : (
+                      <><Download className="h-4 w-4" />{t('versionManagement.actions.install')}</>
+                    )}
+                  </button>
                 ) : (
                   <span className="flex items-center gap-1 text-sm text-primary">
                     <CheckCircle className="h-4 w-4" />

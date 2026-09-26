@@ -1,14 +1,13 @@
-import { BellRing, Bug, Languages, Rocket, SlidersHorizontal, Upload, HardDrive, MapPin } from 'lucide-react';
+import { BellRing, Bug, Languages, Rocket, Upload, HardDrive, MapPin } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { DistributionModeState } from '../../../../types/distribution-mode';
 import type { SettingsTabConfig, SettingsTabId } from '../types';
 
 interface UseSettingsTabOptions {
   distributionState: DistributionModeState;
-  showSharingAccelerationSettings: boolean;
 }
 
-export function useSettingsTab({ distributionState, showSharingAccelerationSettings }: UseSettingsTabOptions) {
+export function useSettingsTab({ distributionState }: UseSettingsTabOptions) {
   const tabs = useMemo<SettingsTabConfig[]>(() => {
     const baseTabs: SettingsTabConfig[] = [
       {
@@ -55,17 +54,8 @@ export function useSettingsTab({ distributionState, showSharingAccelerationSetti
       },
     ];
 
-    if (showSharingAccelerationSettings) {
-      baseTabs.splice(6, 0, {
-        id: 'sharingAcceleration',
-        labelKey: 'settings.tabs.sharingAcceleration',
-        icon: SlidersHorizontal,
-        loader: () => import('../components/tabs/builtInTabs').then((module) => ({ default: module.SharingAccelerationSettingsTab })),
-      });
-    }
-
     return baseTabs;
-  }, [showSharingAccelerationSettings]);
+  }, []);
 
   const [activeTab, setActiveTab] = useState<SettingsTabId>(tabs[0]?.id ?? 'notification');
 
