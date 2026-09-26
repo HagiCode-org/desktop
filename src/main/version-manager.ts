@@ -6,9 +6,9 @@ import { manifestReader } from './manifest-reader.js';
 import { DependencyManager, type DependencyCheckResult } from './dependency-manager.js';
 import { StateManager, type InstalledVersionInfo, type InstalledVersionStatus, type InstalledVersionValidation } from './state-manager.js';
 import { PathManager } from './path-manager.js';
-import { HybridDownloadCoordinator } from './distribution/hybrid-download-coordinator.js';
+import { DirectDownloadCoordinator } from './distribution/direct-download-coordinator.js';
 import { PackageSourceConfigManager, type StoredPackageSourceConfig } from './package-source-config-manager.js';
-import { createPackageSource, type PackageSource, type PackageSourceConfig, type LocalFolderConfig, type HttpIndexConfig, type DownloadProgressCallback, type PackageSourceType, type SharingAccelerationSettingsInput, type SharingAccelerationSettings } from './package-sources/index.js';
+import { createPackageSource, type PackageSource, type PackageSourceConfig, type LocalFolderConfig, type HttpIndexConfig, type DownloadProgressCallback, type PackageSourceType } from './package-sources/index.js';
 import type { RegionDetector } from './region-detector.js';
 import type { ServiceRegion } from '../types/service-region.js';
 import type { ServiceRegionPreferenceStore } from './service-region-controller.js';
@@ -24,7 +24,7 @@ import {
   resolveDistributionModeState,
   PORTABLE_VERSION_MODE_ERROR,
 } from '../types/distribution-mode.js';
-import type { HybridDistributionMetadata, VersionAssetKind, VersionDownloadProgress } from '../types/sharing-acceleration.js';
+import type { DownloadSource, VersionAssetKind, VersionDownloadProgress } from '../types/version-download.js';
 import { loadDistributionMetadata } from './distribution/distribution-metadata-loader.js';
 
 const { app } = electron;
@@ -57,7 +57,8 @@ export interface Version {
   channel?: string;
   sourceType?: PackageSourceType;
   assetKind?: VersionAssetKind;
-  hybrid?: HybridDistributionMetadata;
+  downloadSources?: DownloadSource[];
+  sha256?: string;
 }
 
 /**
@@ -131,7 +132,7 @@ export class VersionManager {
   private stateManager: StateManager;
   private pathManager: PathManager;
   private packageSourceConfigManager: PackageSourceConfigManager;
-  private hybridDownloadCoordinator: HybridDownloadCoordinator;
+  private directDownloadCoordinator: DirectDownloadCoordinator;
 
   private currentPackageSource: PackageSource | null;
   private distributionState: DistributionModeState = createDefaultDistributionModeState();
@@ -148,7 +149,7 @@ export class VersionManager {
     this.pathManager = PathManager.getInstance();
     // Initialize package source configuration manager
     this.packageSourceConfigManager = packageSourceConfigManager || new PackageSourceConfigManager();
-    this.hybridDownloadCoordinator = new HybridDownloadCoordinator({
+    this.directDownloadCoordinator = new DirectDownloadCoordinator({
       regionDetector,
       serviceRegionProvider: serviceRegionPreferenceStore
         ? () => resolveEffectiveServiceRegion(
@@ -331,7 +332,6 @@ export class VersionManager {
         isWindowsStoreRuntime: isWindowsStorePackage,
         activeRuntime,
       });
-      await this.hybridDownloadCoordinator.stopSharingActivity();
       log.info('[VersionManager] Portable version payload detected successfully:', {
         bundleRoot: portableSelection.bundleRoot,
         runtimeRoot: validation.runtimeRoot,
@@ -608,51 +608,6 @@ export class VersionManager {
     return this.packageSourceConfigManager.getAllSources();
   }
 
-  getSharingAccelerationSettings(): SharingAccelerationSettings {
-    return this.toEffectiveSharingAccelerationSettings(
-      this.hybridDownloadCoordinator.getSettingsStore().getSettings(),
-    );
-  }
-
-  async updateSharingAccelerationSettings(
-    settings: SharingAccelerationSettingsInput & { enabled: boolean }
-  ): Promise<SharingAccelerationSettings> {
-    if (this.isFusionMode()) {
-      await this.hybridDownloadCoordinator.stopSharingActivity();
-      return this.getSharingAccelerationSettings();
-    }
-
-    const nextSettings = this.hybridDownloadCoordinator.getSettingsStore().updateSettings(settings);
-    if (!nextSettings.enabled) {
-      await this.hybridDownloadCoordinator.disableSharingAcceleration();
-    }
-    return this.toEffectiveSharingAccelerationSettings(nextSettings);
-  }
-
-  async recordOnboardingSharingAccelerationChoice(enabled: boolean): Promise<SharingAccelerationSettings> {
-    if (this.isFusionMode()) {
-      await this.hybridDownloadCoordinator.stopSharingActivity();
-      return this.getSharingAccelerationSettings();
-    }
-
-    const nextSettings = this.hybridDownloadCoordinator.getSettingsStore().recordOnboardingChoice(enabled);
-    if (!enabled) {
-      await this.hybridDownloadCoordinator.disableSharingAcceleration();
-    }
-    return this.toEffectiveSharingAccelerationSettings(nextSettings);
-  }
-
-  private toEffectiveSharingAccelerationSettings(settings: SharingAccelerationSettings): SharingAccelerationSettings {
-    if (!this.isFusionMode()) {
-      return settings;
-    }
-
-    return {
-      ...settings,
-      enabled: false,
-    };
-  }
-
   /**
    * Validate a package source configuration
    */
@@ -803,7 +758,6 @@ export class VersionManager {
         mode: archive.mode,
         verified: archive.verified,
         message: 'extracting-package',
-        serviceScope: targetVersion.hybrid?.serviceScope ?? 'local-cache',
       });
       log.info('[VersionManager] Extracting package...');
       const AdmZip = (await import('adm-zip')).default;
@@ -860,7 +814,6 @@ export class VersionManager {
         mode: archive.mode,
         verified: archive.verified,
         message: 'installation-complete',
-        serviceScope: targetVersion.hybrid?.serviceScope ?? 'local-cache',
       });
 
       return {
@@ -875,7 +828,6 @@ export class VersionManager {
           mode: archive.mode,
           verified: archive.verified,
           message: 'installation-complete',
-          serviceScope: targetVersion.hybrid?.serviceScope ?? 'local-cache',
         },
       };
     } catch (error) {
@@ -1067,18 +1019,12 @@ export class VersionManager {
     }
 
     log.info('[VersionManager] Downloading package to cache...');
-    const effectiveSharingAccelerationSettings = this.getSharingAccelerationSettings();
-
     try {
-      const downloadResult = await this.hybridDownloadCoordinator.download(
+      const downloadResult = await this.directDownloadCoordinator.download(
         targetVersion,
         cachePath,
         packageSource,
         onProgress,
-        {
-          settings: effectiveSharingAccelerationSettings,
-          distributionState: this.getDistributionModeState(),
-        },
       );
       const fileSize = (await fs.stat(cachePath)).size;
 
@@ -1107,11 +1053,9 @@ export class VersionManager {
     }
 
     try {
-      const verified = await this.hybridDownloadCoordinator.verify(
+      const verified = await this.directDownloadCoordinator.verify(
         targetVersion,
         cachePath,
-        'source-fallback',
-        targetVersion.hybrid?.serviceScope ?? 'local-cache',
         onProgress,
       );
       const fileSize = (await fs.stat(cachePath)).size;
@@ -1120,7 +1064,7 @@ export class VersionManager {
         cachePath,
         fileSize,
         verified,
-        mode: 'source-fallback',
+        mode: 'http-direct',
         reusedExisting: true,
       };
     } catch (error) {

@@ -1,10 +1,6 @@
 import fs from 'node:fs/promises';
 import log from 'electron-log';
-import type {
-  HybridDistributionMetadata,
-  StructuredFallbackSource,
-  VersionAssetKind,
-} from '../../types/sharing-acceleration.js';
+import type { DownloadSource, DownloadSourceKind, VersionAssetKind } from '../../types/version-download.js';
 import type { Version } from '../version-manager.js';
 import type {
   PackageSource,
@@ -14,17 +10,12 @@ import type {
 } from './package-source.js';
 import { desktopHttpClient, HttpStatusError, HttpTimeoutError, type DesktopHttpClient } from '../http-client.js';
 
-const HYBRID_THRESHOLD_BYTES = 0;
-
 export interface HttpIndexAsset {
   name: string;
   path?: string;
   size?: number;
   lastModified?: string;
   directUrl?: string;
-  torrentUrl?: string;
-  infoHash?: string;
-  webSeeds?: string[];
   downloadSources?: HttpIndexDownloadSource[];
   sha256?: string;
 }
@@ -35,7 +26,6 @@ export interface HttpIndexDownloadSource {
   url?: string;
   urls?: { china?: string; international?: string };
   primary?: boolean;
-  webSeed?: boolean;
 }
 
 export interface HttpIndexLegacyFile {
@@ -120,7 +110,7 @@ export class HttpIndexPackageSource implements PackageSource {
 
           const directUrl = this.resolveAssetUrl(asset);
           const assetKind = this.detectAssetKind(asset.name, versionEntry.version, latestVersionSet);
-          const hybrid = this.buildHybridMetadata(asset, directUrl, assetKind);
+          const downloadSources = this.resolveStructuredDownloadSources(asset.downloadSources);
 
           versions.push({
             id: asset.name.replace(/\.zip$/, ''),
@@ -132,7 +122,8 @@ export class HttpIndexPackageSource implements PackageSource {
             downloadUrl: directUrl,
             sourceType: 'http-index',
             assetKind,
-            hybrid,
+            downloadSources,
+            sha256: this.normalizeSha256(asset.sha256, asset.name),
           });
         }
       }
@@ -196,10 +187,7 @@ export class HttpIndexPackageSource implements PackageSource {
               percentage,
               stage: 'downloading',
               mode: 'http-direct',
-              p2pBytes: 0,
-              fallbackBytes: current,
-              peers: 0,
-              message: version.hybrid?.legacyHttpFallback ? 'legacy-http-fallback' : 'direct-http',
+              message: 'direct-http',
             });
           }
         },
@@ -296,9 +284,6 @@ export class HttpIndexPackageSource implements PackageSource {
         if (!this.hasResolvableAssetTarget(asset)) {
           throw new Error('Invalid index file format');
         }
-        if (asset.webSeeds && !Array.isArray(asset.webSeeds)) {
-          throw new Error('Invalid index file format');
-        }
         if (asset.downloadSources && !Array.isArray(asset.downloadSources)) {
           throw new Error('Invalid index file format');
         }
@@ -332,31 +317,37 @@ export class HttpIndexPackageSource implements PackageSource {
   }
 
   private resolveAssetUrl(asset: HttpIndexAsset): string {
-    if (asset.directUrl) {
-      return new URL(asset.directUrl, this.config.indexUrl).toString();
+    for (const candidate of [asset.directUrl, asset.path]) {
+      const resolved = this.resolveOptionalUrl(candidate);
+      if (resolved) {
+        return resolved;
+      }
     }
 
-    if (asset.path) {
-      return new URL(asset.path, this.config.indexUrl).toString();
+    const structuredSource = this.resolveStructuredDownloadSources(asset.downloadSources)[0];
+    if (structuredSource) {
+      return structuredSource.url;
     }
 
     throw new Error(`Cannot resolve download URL for asset: ${asset.name}`);
   }
 
   private resolveOptionalUrl(urlValue?: string): string | undefined {
-    if (!urlValue) {
+    if (typeof urlValue !== 'string' || urlValue.trim().length === 0) {
       return undefined;
     }
 
     try {
-      return new URL(urlValue, this.config.indexUrl).toString();
+      const url = new URL(urlValue, this.config.indexUrl);
+      return url.protocol === 'http:' || url.protocol === 'https:' ? url.toString() : undefined;
     } catch {
       return undefined;
     }
   }
 
   private hasResolvableAssetTarget(asset: HttpIndexAsset): boolean {
-    return typeof asset.directUrl === 'string' || typeof asset.path === 'string';
+    return [asset.directUrl, asset.path].some((candidate) => Boolean(this.resolveOptionalUrl(candidate)))
+      || this.resolveStructuredDownloadSources(asset.downloadSources).length > 0;
   }
 
   private normalizeVersionAssets(versionEntry: HttpIndexVersion): HttpIndexAsset[] {
@@ -416,86 +407,51 @@ export class HttpIndexPackageSource implements PackageSource {
     return filename.toLowerCase().endsWith('.zip');
   }
 
-  private buildHybridMetadata(asset: HttpIndexAsset, directUrl: string, assetKind: VersionAssetKind): HybridDistributionMetadata {
-    const structuredSources = this.resolveStructuredDownloadSources(asset.downloadSources);
-    const legacyWebSeeds = Array.isArray(asset.webSeeds)
-      ? asset.webSeeds
-        .map((seed) => this.resolveOptionalUrl(seed))
-        .filter((seed): seed is string => Boolean(seed))
-      : [];
-    const structuredWebSeeds = structuredSources
-      .filter((source) => source.webSeed)
-      .map((source) => source.url);
-    const webSeeds = [...legacyWebSeeds, ...structuredWebSeeds]
-      .filter((seed, index, collection) => collection.findIndex((candidate) => candidate.toLowerCase() === seed.toLowerCase()) === index);
-
-    if (directUrl && !webSeeds.some((seed) => seed.toLowerCase() === directUrl.toLowerCase())) {
-      webSeeds.push(directUrl);
+  private normalizeSha256(sha256: string | undefined, assetName: string): string | undefined {
+    if (sha256 === undefined) {
+      return undefined;
     }
-
-    const torrentUrl = this.resolveOptionalUrl(asset.torrentUrl);
-    const hasTorrentMetadata = Boolean(torrentUrl || asset.infoHash);
-    const isLatestDesktopAsset = assetKind === 'desktop-latest';
-    const isLatestWebAsset = assetKind === 'web-latest';
-    const serviceScope = isLatestDesktopAsset
-      ? 'latest-desktop'
-      : isLatestWebAsset
-        ? 'latest-server'
-        : 'local-cache';
-
-    // Torrent metadata switches the asset onto the accelerated path; HTTP/WebSeed remains the fallback path.
-    return {
-      torrentUrl,
-      infoHash: asset.infoHash,
-      webSeeds,
-      downloadSources: structuredSources.length > 0 ? structuredSources : undefined,
-      sha256: asset.sha256,
-      directUrl,
-      hasTorrentMetadata,
-      torrentFirst: hasTorrentMetadata,
-      eligible: hasTorrentMetadata,
-      legacyHttpFallback: !hasTorrentMetadata,
-      thresholdBytes: HYBRID_THRESHOLD_BYTES,
-      assetKind,
-      isLatestDesktopAsset,
-      isLatestWebAsset,
-      serviceScope,
-    };
+    if (typeof sha256 !== 'string' || !/^[a-f\d]{64}$/i.test(sha256)) {
+      throw new Error(`Invalid SHA-256 digest for asset: ${assetName}`);
+    }
+    return sha256.toLowerCase();
   }
 
-  private resolveStructuredDownloadSources(downloadSources?: HttpIndexDownloadSource[]): StructuredFallbackSource[] {
+  private resolveStructuredDownloadSources(downloadSources?: HttpIndexDownloadSource[]): DownloadSource[] {
     if (!Array.isArray(downloadSources)) {
       return [];
     }
 
     return downloadSources
-      .map((source) => {
+      .map((source): DownloadSource | null => {
         const kind = typeof source?.kind === 'string' ? source.kind.trim().toLowerCase() : '';
         if (!this.isKnownDownloadSourceKind(kind)) {
           return null;
         }
 
         const url = typeof source.url === 'string' ? this.resolveStructuredSourceUrl(source.url) : undefined;
-        if (!url) {
-          return null;
-        }
-
-        const urls: StructuredFallbackSource['urls'] = kind === 'official' && source.urls
+        const urls: DownloadSource['urls'] = kind === 'official' && source.urls
           ? {
               china: typeof source.urls.china === 'string' ? this.resolveStructuredSourceUrl(source.urls.china) : undefined,
               international: typeof source.urls.international === 'string' ? this.resolveStructuredSourceUrl(source.urls.international) : undefined,
             }
           : undefined;
+        const fallbackUrl = urls?.international ?? urls?.china;
+        const resolvedUrl = url ?? fallbackUrl;
+        if (!resolvedUrl) {
+          return null;
+        }
+
+        const resolvedKind = kind as DownloadSourceKind;
         return {
-          kind,
+          kind: resolvedKind,
           label: typeof source.label === 'string' && source.label.trim().length > 0 ? source.label.trim() : kind,
-          url,
+          url: resolvedUrl,
           ...(urls && { urls }),
           primary: source.primary === true,
-          webSeed: source.webSeed === true,
         };
       })
-      .filter((source): source is StructuredFallbackSource => Boolean(source));
+      .filter((source): source is DownloadSource => source !== null);
   }
 
   private resolveStructuredSourceUrl(urlValue: string): string | undefined {

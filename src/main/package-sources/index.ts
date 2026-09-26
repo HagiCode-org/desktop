@@ -6,9 +6,6 @@ import type {
   HttpIndexConfig,
   PackageSourceValidationResult,
   DownloadProgressCallback,
-  SharingAccelerationSettings,
-  SharingAccelerationSettingsInput,
-  SharingAccelerationSettingsUpdate,
 } from './package-source.js';
 import { LocalFolderPackageSource } from './local-folder-source.js';
 import { HttpIndexPackageSource } from './http-index-source.js';
@@ -47,7 +44,4 @@ export type {
   HttpIndexConfig,
   PackageSourceValidationResult,
   DownloadProgressCallback,
-  SharingAccelerationSettings,
-  SharingAccelerationSettingsInput,
-  SharingAccelerationSettingsUpdate,
 };

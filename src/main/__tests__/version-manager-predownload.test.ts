@@ -18,7 +18,10 @@ describe('version manager predownload reuse', () => {
 
     assert.match(source, /const cachedArchive = await this\.tryUseCachedArchive\(targetVersion, cachePath, onProgress\)/);
     assert.match(source, /if \(cachedArchive\) \{/);
-    assert.match(source, /await this\.hybridDownloadCoordinator\.download\(/);
+    assert.match(source, /await this\.directDownloadCoordinator\.download\(/);
+    assert.match(source, /await this\.directDownloadCoordinator\.verify\(/);
     assert.match(source, /await fs\.rm\(cachePath, \{ force: true \}\)\.catch\(\(\) => undefined\)/);
+    assert.match(source, /private async tryUseCachedArchive\([\s\S]*?await this\.directDownloadCoordinator\.verify\(/);
+    assert.match(source, /reusedExisting: true/);
   });
 });

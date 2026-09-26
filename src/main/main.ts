@@ -1532,27 +1532,6 @@ ipcMain.handle('version:install', async (_, versionId: string) => {
   }
 });
 
-ipcMain.handle('sharing-acceleration:get', async () => {
-  if (!versionManager) {
-    return null;
-  }
-  return versionManager.getSharingAccelerationSettings();
-});
-
-ipcMain.handle('sharing-acceleration:set', async (_, settings) => {
-  if (!versionManager) {
-    return null;
-  }
-  return versionManager.updateSharingAccelerationSettings(settings);
-});
-
-ipcMain.handle('sharing-acceleration:record-onboarding-choice', async (_, enabled: boolean) => {
-  if (!versionManager) {
-    return null;
-  }
-  return versionManager.recordOnboardingSharingAccelerationChoice(enabled);
-});
-
 ipcMain.handle('version:uninstall', async (_, versionId: string) => {
   if (!versionManager || !mainWindow || !webServiceManager) {
     return false;

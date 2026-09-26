@@ -1,5 +1,5 @@
 import type { InstallWebServicePackageOptions, InstallWebServicePackageResult } from '../types/version-install.js';
-import type { VersionDownloadProgress } from '../types/sharing-acceleration.js';
+import type { VersionDownloadProgress } from '../types/version-download.js';
 import type { ActiveRuntimeDescriptor } from '../types/distribution-mode.js';
 
 type ProgressCallback = (progress: VersionDownloadProgress) => void;
