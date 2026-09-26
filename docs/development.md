@@ -178,7 +178,7 @@ This command:
 3. Builds the preload script in watch mode
 4. Launches Electron with the development configuration
 
-`npm run dev` also reuses or stages the governed Desktop runtime payloads through `hagiscript runtime install` before Electron launches. Desktop now stages the governed runtime layout under `resources/components/...`; the hagiscript manifest points each component back at the Desktop contract and source configuration.
+`npm run dev` prepares the governed Desktop runtime before Electron launches. On Windows, Linux, and macOS this includes a PM2-only Node executable under `resources/components/node/runtime` and PM2 dependencies under `resources/npm-pm2`; general-purpose Node/npm remains optional.
 
 ### Building for Production
 
@@ -207,6 +207,10 @@ The smoke test validates the staged and packaged .NET runtime; Node/npm is suppl
 ### CLI Process Execution
 
 Desktop main-process code should use `src/main/utils/cli-executor.ts` for bounded CLI work where the command is expected to finish and return stdout, stderr, an exit code, or a timeout/cancellation result. Use `executeCli` for captured output and `executeCliStreaming` when callers need live stdout/stderr callbacks plus a final normalized result.
+
+On Windows, the dependency-management batch dialog lets users choose Command Prompt or PowerShell and only previews and copies the generated script; Desktop does not execute it. The default remains the existing cmd format, while PowerShell output is compatible with Windows PowerShell 5.1.
+
+Bounded shell chains must opt in with an explicit executable, such as `commandChain: { shell: "powershell.exe" }`, and pass the complete chain as `command` text. The executor validates the supported shell-specific separators and launches the unchanged text once through that executable. Treat this text as trusted shell source: do not interpolate external values into it; pass dynamic values as direct executable arguments instead. Missing or unsupported shell selections and invalid chains fail before spawning. Calls that omit `commandChain`, including `.cmd`/`.bat` wrappers and non-Windows commands, retain their existing behavior.
 
 Direct `child_process` usage remains acceptable when the desktop application must retain ownership of a process handle or lifecycle. Keep direct process management for long-running services, detached terminal handoffs, restart/stop flows, PM2/service ownership, and interactive development helpers where the child process must stay attached to the parent process.
 
@@ -548,6 +552,8 @@ Behavior:
 
 - Packaged Linux: `pkg/linux-unpacked/resources/extra/runtime/components/dotnet/runtime/<rid>`
 - Packaged Windows: `pkg/win-unpacked/resources/extra/runtime/components/dotnet/runtime/<rid>`
+- Packaged PM2 Node: `pkg/<platform>-unpacked/resources/extra/runtime/components/node/runtime/{node.exe|bin/node}`
+- Packaged PM2 prefix: `pkg/<platform>-unpacked/resources/extra/runtime/npm-pm2/node_modules/pm2`
 - Runtime resolution in production: `process.resourcesPath/extra/runtime/components/dotnet/runtime/<rid>`
 
 The same `extraResources` block also copies `resources/portable-fixed` to `resources/extra/portable-fixed/` when a portable-version payload has been staged.
@@ -556,8 +562,10 @@ Desktop does not fall back to a machine-wide `dotnet` installation when that pac
 
 ### Development debugging with the staged runtime
 
-Use `npm run dev` after staging the separate embedded .NET runtime. Node.js and npm are resolved
-from the external host environment and are never replaced by a Desktop payload.
+Use `npm run dev` after staging the separate embedded .NET runtime. General-purpose Node.js and npm
+are resolved from the external host environment. Desktop-managed PM2 on Windows, Linux, and macOS
+uses the separate bundled Node executable and PM2 prefix; the released server remains launched
+through managed .NET.
 
 ### Verification commands
 
@@ -580,6 +588,7 @@ npm run package:runtime-pm2-integration
 - staged runtime payload under `resources/components/dotnet/runtime/<rid>`
 - packaged runtime payload under `pkg/<platform>-unpacked/resources/extra/runtime/components/dotnet/runtime/<rid>`
 - pinned metadata (`.hagicode-runtime.json`) matches the manifest and official Microsoft source host
+- the platform-specific PM2-only Node executable, managed PM2 entrypoint, and production dependencies are present outside `app.asar`
 
 `package:runtime-pm2-integration` stages a packaged Desktop artifact into a temp path with spaces, then runs the full non-interactive runtime-management flow:
 

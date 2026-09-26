@@ -34,10 +34,11 @@ npm run build:mac:x64:dmg
 npm run build:mac:arm64:zip
 ```
 
-- `npm run dev` prepares the optional bundled portable toolchain, starts the renderer, watches Electron processes, and launches the app in development mode
+- `npm run dev` prepares the governed runtime (including the PM2-only Node toolchain on Windows, Linux, and macOS), starts the renderer, watches Electron processes, and launches the app in development mode
 - `npm run dev:steam-mode` boots development mode directly against a fixed extracted runtime so Steam mode startup can be verified quickly
 - `npm run build:prod` runs the production build plus the smoke test used before packaging
-- `npm run build:win:store` is the workflow-facing Store packaging entrypoint used by `win_store_packer`; it prepares the private .NET runtime (not Node), checks the generated MSIX contains it without a bundled Node runtime, and emits build metadata for downstream signing/publication
+- Windows, Linux, and macOS packages include a minimal bundled Node executable and managed PM2 production dependencies for Desktop service lifecycle; this private PM2 toolchain is separate from the optional host Node/npm used by the dependency-management page
+- `npm run build:win:store` is the workflow-facing Store packaging entrypoint used by `win_store_packer`; it prepares the .NET runtime and PM2-only Node toolchain, validates both in the generated MSIX, and emits build metadata for downstream signing/publication
 - platform packaging commands now map directly to the CI matrix so local artifact verification can follow the same release contract
 
 ## Related guides

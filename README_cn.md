@@ -26,7 +26,7 @@ npm run dev
 npm run build:prod
 ```
 
-- `npm run dev` 启动渲染层、监听 Electron 相关进程并以开发模式运行应用
+- `npm run dev` 会先准备受管运行时（Windows 下包括 PM2 专用 Node），再启动渲染层、监听 Electron 相关进程并以开发模式运行应用
 - `npm run build:prod` 执行生产构建，并包含打包前的 smoke test
 
 ## 相关文档
