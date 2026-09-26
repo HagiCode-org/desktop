@@ -19,7 +19,6 @@ import {
   writeStoreForgeConfigOverlay,
 } from './store-package-config.js';
 import { readPinnedRuntimeConfig } from './embedded-runtime-config.js';
-import { validatePm2Toolchain } from './pm2-toolchain.js';
 const RUNTIME_CONSUMER_ENV = 'HAGICODE_RUNTIME_CONSUMER';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -132,7 +131,7 @@ export function buildStepScripts(scripts) {
   return ['prepare:runtime', 'build:prod'];
 }
 
-export function validateStoreMsixRuntimeEntries(entries, platformId, runtimeTarget, pm2ToolchainFiles = []) {
+export function validateStoreMsixRuntimeEntries(entries, platformId, runtimeTarget) {
   const names = entries.map((entry) => entry.replaceAll('\\', '/').toLowerCase());
   const runtimeRoot = 'resources/extra/runtime/';
   const dotnetRoot = `${runtimeRoot}components/dotnet/runtime/${platformId}/current/`.toLowerCase();
@@ -148,16 +147,11 @@ export function validateStoreMsixRuntimeEntries(entries, platformId, runtimeTarg
     throw new Error(`Store MSIX is missing the bundled .NET runtime: ${missingDotnet.join(', ')}`);
   }
 
-  const requiredPm2Files = [
-    'components/node/runtime/node.exe',
-    'npm-pm2/node_modules/pm2/bin/pm2',
-    'npm-pm2/node_modules/pm2/package.json',
-    ...pm2ToolchainFiles,
-  ];
-  const missingPm2Files = [...new Set(requiredPm2Files)].filter((relativePath) =>
-    !names.some((name) => name.endsWith(`${runtimeRoot}${relativePath.toLowerCase()}`)));
-  if (missingPm2Files.length > 0) {
-    throw new Error(`Store MSIX is missing the bundled PM2 toolchain: ${missingPm2Files.join(', ')}`);
+  const managedNodePm2Assets = names.filter((name) =>
+    name.includes(`${runtimeRoot}components/node/`)
+    || name.includes(`${runtimeRoot}npm-pm2/`));
+  if (managedNodePm2Assets.length > 0) {
+    throw new Error(`Store MSIX contains Desktop-managed Node/PM2 assets: ${managedNodePm2Assets.join(', ')}`);
   }
 }
 
@@ -297,7 +291,6 @@ export function createStoreBuildMetadata({
   packageVersion,
   payloadValidation,
   platformId,
-  pm2Toolchain,
   restoredWorkspacePayload,
   serverPayloadPath,
   serverPayloadRoot,
@@ -328,10 +321,8 @@ export function createStoreBuildMetadata({
           validationPassed: false,
           requiredPaths: [],
         },
-    pm2Toolchain: pm2Toolchain ?? {
-      validationPassed: false,
-      validationStatus: 'not-validated',
-      requiredFiles: [],
+    desktopManagedNodePm2: {
+      present: false,
     },
     store: {
       displayName: storeConfig.packageIdentity.displayName,
@@ -407,11 +398,6 @@ export async function buildStorePackage(rawOptions = {}) {
         packageVersion: buildVersion,
         payloadValidation,
         platformId: options.platformId,
-        pm2Toolchain: {
-          validationPassed: false,
-          validationStatus: 'not-validated-synthetic',
-          requiredFiles: [],
-        },
         restoredWorkspacePayload,
         serverPayloadPath: options.serverPayloadPath,
         serverPayloadRoot: payloadRoot,
@@ -435,16 +421,6 @@ export async function buildStorePackage(rawOptions = {}) {
         buildStepEnv,
       );
     }
-
-    const pm2Toolchain = await validatePm2Toolchain(path.join(projectRoot, 'resources'));
-    const pm2ToolchainMetadata = {
-      validationPassed: true,
-      validationStatus: 'validated-staged-and-packaged',
-      nodeExecutable: path.relative(pm2Toolchain.root, pm2Toolchain.nodePath).split(path.sep).join('/'),
-      pm2Entrypoint: path.relative(pm2Toolchain.root, pm2Toolchain.pm2Entrypoint).split(path.sep).join('/'),
-      pm2Version: pm2Toolchain.pm2Version,
-      requiredFiles: pm2Toolchain.requiredFiles,
-    };
 
     const existingMsixArtifacts = await listMsixArtifacts(artifactOutputDirectory);
     await runCommand(process.execPath, [
@@ -486,7 +462,6 @@ export async function buildStorePackage(rawOptions = {}) {
       new AdmZip(packagedMsixPath).getEntries().map((entry) => entry.entryName),
       options.platformId,
       runtimeTarget,
-      pm2Toolchain.requiredFiles.filter((file) => file.startsWith('npm-pm2/')),
     );
 
     const buildMetadata = createStoreBuildMetadata({
@@ -500,7 +475,6 @@ export async function buildStorePackage(rawOptions = {}) {
       packageVersion: buildVersion,
       payloadValidation,
       platformId: options.platformId,
-      pm2Toolchain: pm2ToolchainMetadata,
       restoredWorkspacePayload,
       serverPayloadPath: options.serverPayloadPath,
       serverPayloadRoot: payloadRoot,

@@ -2,7 +2,6 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { resolvePm2ToolchainPaths, validatePm2Toolchain } from './pm2-toolchain.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
@@ -103,20 +102,11 @@ function runForgeHook(work, done) {
 async function stageRequiredRuntimeComponents(runtimeRoot, platform, resourceSourceRoot = runtimeSourceRoot) {
   await copyDirectoryIfExists(path.join(resourceSourceRoot, 'bin'), path.join(runtimeRoot, 'bin'));
   await copyDirectoryIfExists(
-    path.join(resourceSourceRoot, 'components', 'node'),
-    path.join(runtimeRoot, 'components', 'node'),
-  );
-  await copyDirectoryIfExists(
     path.join(resourceSourceRoot, 'components', 'dotnet'),
     path.join(runtimeRoot, 'components', 'dotnet'),
   );
-  await copyDirectoryIfExists(
-    path.join(resourceSourceRoot, 'npm-pm2'),
-    path.join(runtimeRoot, 'npm-pm2'),
-  );
-  if (platform !== 'win32') {
-    await makeExecutableIfPresent(resolvePm2ToolchainPaths(runtimeRoot, platform).nodePath);
-  }
+  await fsp.rm(path.join(runtimeRoot, 'components', 'node'), { recursive: true, force: true });
+  await fsp.rm(path.join(runtimeRoot, 'npm-pm2'), { recursive: true, force: true });
 }
 
 async function stageWindowsStorePurchaseAddon(resourcesPath, platform) {
@@ -160,7 +150,6 @@ export async function materializeForgePackagingResources(
   const runtimeRoot = resolveRuntimeRoot(buildPath, platform);
 
   await stageRequiredRuntimeComponents(runtimeRoot, platform, resourceSourceRoot);
-  await validatePm2Toolchain(runtimeRoot, platform);
   await stageWindowsStorePurchaseAddon(resourcesPath, platform);
   await stagePortableFixedPayload(buildPath, platform);
   await stageLinuxLaunchWrappers(buildPath, platform);

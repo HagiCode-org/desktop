@@ -21,7 +21,10 @@ import {
 } from './embedded-runtime-config.js';
 import { resolveStagedDesktopRuntimeComponentRoot } from './desktop-runtime-layout.js';
 import { assertGlobalHagiscriptAvailable } from './global-hagiscript.js';
-import { validatePm2Toolchain } from './pm2-toolchain.js';
+import {
+  findDesktopManagedNodePm2Assets,
+  resolvePackagedRuntimeRootFromDotnetRoot,
+} from './desktop-managed-runtime-assets.js';
 
 const args = process.argv.slice(2);
 const isVerbose = args.includes('--verbose');
@@ -667,43 +670,28 @@ test('packaged runtime payload is complete', () => {
   );
 });
 
-test('Windows PM2 toolchain is staged and packaged outside app.asar', async () => {
-  if (!runtimePlatform.startsWith('win-')) {
-    log('  - Skipping: bundled PM2 toolchain checks are only defined for Windows', colors.yellow);
-    results.skipped++;
+test('Desktop-managed Node and PM2 assets are absent from staged and packaged runtimes', () => {
+  const roots = [{
+    name: 'staged',
+    root: path.join(process.cwd(), 'resources'),
+  }];
+  if (packagedRuntimeRoot) {
+    roots.push({
+      name: 'packaged',
+      root: resolvePackagedRuntimeRootFromDotnetRoot(packagedRuntimeRoot),
+    });
+  } else if (requirePackagedRuntimePayload) {
+    assert(false, 'packaged runtime root is available for managed Node/PM2 asset checks');
     return;
   }
 
-  const roots = [
-    {
-      name: 'staged',
-      root: path.join(process.cwd(), 'resources'),
-      required: requireRuntimePayload,
-    },
-    ...(requirePackagedRuntimePayload && packagedRuntimeRoot
-      ? [{
-          name: 'packaged',
-          root: path.resolve(packagedRuntimeRoot, '..', '..', '..', '..', '..'),
-          required: true,
-        }]
-      : []),
-  ];
-
   for (const candidate of roots) {
-    if (!candidate.required && !fs.existsSync(candidate.root)) {
-      log(`  - Skipping: ${candidate.name} PM2 toolchain is not required for this smoke-test run`, colors.yellow);
-      results.skipped++;
-      continue;
-    }
-
-    const validation = await validatePm2Toolchain(candidate.root);
+    const remainingAssets = findDesktopManagedNodePm2Assets(candidate.root);
     assert(
-      !validation.nodePath.includes('app.asar') && !validation.pm2Entrypoint.includes('app.asar'),
-      `${candidate.name} PM2 Node and entrypoint are outside app.asar`,
-    );
-    assert(
-      validation.requiredFiles.length > 2,
-      `${candidate.name} PM2 entrypoint and production dependencies are present`,
+      remainingAssets.length === 0,
+      remainingAssets.length === 0
+        ? `${candidate.name} runtime does not contain Desktop-managed Node/PM2 assets`
+        : `${candidate.name} runtime contains forbidden Desktop-managed assets: ${remainingAssets.join(', ')}`,
     );
   }
 });

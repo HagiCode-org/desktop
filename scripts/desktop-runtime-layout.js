@@ -7,7 +7,7 @@ export function resolveStagedDesktopRuntimeProgramHome(cwd = process.cwd()) {
 export function resolveStagedDesktopRuntimeComponentRoot(componentId, options = {}) {
   return path.join(
     resolveStagedDesktopRuntimeComponentContainerRoot(componentId, options),
-    ...(componentId === 'node' ? [] : ['current']),
+    'current',
   );
 }
 
@@ -17,9 +17,6 @@ export function resolveStagedDesktopRuntimeComponentContainerRoot(componentId, o
 
   if (componentId === 'dotnet') {
     return path.join(programHome, 'components', 'dotnet', 'runtime', options.platform);
-  }
-  if (componentId === 'node') {
-    return path.join(programHome, 'components', 'node', 'runtime');
   }
 
   throw new Error(`Unsupported Desktop runtime component: ${componentId}`);

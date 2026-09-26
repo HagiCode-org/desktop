@@ -17,7 +17,7 @@ test('development startup prepares runtime assets before launching Electron', ()
   assert.equal(packageJson.scripts.predev, 'npm run prepare:runtime');
 });
 
-test('Store builds prepare runtime assets before production assets, including the PM2-only Node toolchain', () => {
+test('Store builds prepare the managed .NET runtime before production assets', () => {
   const scripts = {
     'prepare:runtime': 'node scripts/prepare-embedded-runtime.js',
     'build:prod': 'npm run build:all',
@@ -34,38 +34,29 @@ test('Store builds prepare runtime assets before production assets, including th
   assert.throws(() => buildStepScripts({ 'build:prod': scripts['build:prod'] }), /prepare:runtime/);
 });
 
-test('Store MSIX requires the pinned .NET runtime and bundled PM2 toolchain', () => {
+test('Store MSIX requires the pinned .NET runtime and rejects Desktop-managed Node/PM2 assets', () => {
   const target = { hostFxrVersion: '10.0.10', netCoreVersion: '10.0.10', aspNetCoreVersion: '10.0.10' };
   const prefix = 'VFS/ProgramFilesX64/Hagicode Desktop/resources/extra/runtime/components/dotnet/runtime/win-x64/current/';
   const runtimePrefix = 'VFS/ProgramFilesX64/Hagicode Desktop/resources/extra/runtime/';
-  const pm2Files = [
-    'npm-pm2/node_modules/pm2/bin/pm2',
-    'npm-pm2/node_modules/pm2/package.json',
-    'npm-pm2/node_modules/@pm2/io/package.json',
-  ];
   const entries = [
     `${prefix}dotnet.exe`,
     `${prefix}host/fxr/10.0.10/hostfxr.dll`,
     `${prefix}shared/Microsoft.NETCore.App/10.0.10/System.Private.CoreLib.dll`,
     `${prefix}shared/Microsoft.AspNetCore.App/10.0.10/Microsoft.AspNetCore.dll`,
-    `${runtimePrefix}components/node/runtime/node.exe`,
-    ...pm2Files.map((file) => `${runtimePrefix}${file}`),
   ];
-  assert.doesNotThrow(() => validateStoreMsixRuntimeEntries(entries, 'win-x64', target, pm2Files));
+  assert.doesNotThrow(() => validateStoreMsixRuntimeEntries(entries, 'win-x64', target));
   assert.throws(() => validateStoreMsixRuntimeEntries(entries.slice(1), 'win-x64', target), /dotnet.exe/);
   assert.throws(() => validateStoreMsixRuntimeEntries(entries.map((entry) => entry.replace('10.0.10', '9.0.0')), 'win-x64', target), /runtime/);
   assert.throws(() => validateStoreMsixRuntimeEntries(
-    entries.filter((entry) => !entry.endsWith('/node.exe')),
+    [...entries, `${runtimePrefix}components/node/runtime/node.exe`],
     'win-x64',
     target,
-    pm2Files,
-  ), /node\.exe/);
+  ), /Desktop-managed Node\/PM2 assets/);
   assert.throws(() => validateStoreMsixRuntimeEntries(
-    entries.filter((entry) => !entry.endsWith('/node_modules/@pm2/io/package.json')),
+    [...entries, `${runtimePrefix}npm-pm2/node_modules/pm2/bin/pm2`],
     'win-x64',
     target,
-    pm2Files,
-  ), /@pm2\/io\/package\.json/);
+  ), /Desktop-managed Node\/PM2 assets/);
 });
 
 test('resolveStoreRuntimePolicyEnvironment defaults Store builds to external dependency management', () => {
@@ -91,14 +82,6 @@ test('createStoreBuildMetadata records external runtime package metadata', () =>
     packageVersion: '1.0.0.0',
     payloadValidation: null,
     platformId: 'win-x64',
-    pm2Toolchain: {
-      validationPassed: true,
-      validationStatus: 'validated-staged-and-packaged',
-      nodeExecutable: 'components/node/runtime/node.exe',
-      pm2Entrypoint: 'npm-pm2/node_modules/pm2/bin/pm2',
-      pm2Version: '7.0.1',
-      requiredFiles: ['components/node/runtime/node.exe', 'npm-pm2/node_modules/pm2/bin/pm2'],
-    },
     restoredWorkspacePayload: false,
     serverPayloadPath: null,
     serverPayloadRoot: null,
@@ -120,6 +103,5 @@ test('createStoreBuildMetadata records external runtime package metadata', () =>
   });
 
   assert.equal(metadata.windowsStoreVersion, 'v0.1.0');
-  assert.equal(metadata.pm2Toolchain.validationPassed, true);
-  assert.equal(metadata.pm2Toolchain.pm2Version, '7.0.1');
+  assert.deepEqual(metadata.desktopManagedNodePm2, { present: false });
 });

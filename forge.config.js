@@ -148,7 +148,7 @@ export default {
       /^\/resources\/toolchain($|\/)/,
       /^\/resources\/portable-fixed\/current($|\/)/,
       /^\/scripts\/__tests__($|\/)/,
-      /^\/scripts\/(?:build-macos|build-store-package(?:\.test)?|bump-version|check-ts-import-extensions|ci-build|desktop-runtime-hagiscript|desktop-runtime-layout|download-workflow-artifact|embedded-runtime-config|forge-packaging-hooks|generate-about-snapshot|generate-i18n-resources|global-hagiscript|msix-config|non-interactive-integration-test|package-msix|pm2-toolchain(?:-prepare)?|prepare-embedded-runtime|prepare-msix|prepare-runtime-if-supported|preserve-artifacts|run-electron-app|run-electron-forge|runtime-phase-timing|smoke-test|store-package-config|verify-native-libs|verify-signature|wait-for-dev-ready)\.(?:js|mjs|d\.ts)$/,
+      /^\/scripts\/(?:build-macos|build-store-package(?:\.test)?|bump-version|check-ts-import-extensions|ci-build|desktop-managed-runtime-assets|desktop-runtime-hagiscript|desktop-runtime-layout|download-workflow-artifact|embedded-runtime-config|forge-packaging-hooks|generate-about-snapshot|generate-i18n-resources|global-hagiscript|msix-config|non-interactive-integration-test|package-msix|prepare-embedded-runtime|prepare-msix|prepare-runtime-if-supported|preserve-artifacts|run-electron-app|run-electron-forge|runtime-phase-timing|smoke-test|store-package-config|verify-native-libs|verify-signature|wait-for-dev-ready)\.(?:js|mjs|d\.ts)$/,
       /^\/src\/renderer\/test-utils($|\/)/,
       /\/__tests__\//,
       /\.test\.[cm]?[jt]s$/,

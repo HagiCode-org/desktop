@@ -13,8 +13,6 @@ permissions:
 
 env:
   NODE_VERSION: "22"
-  HAGISCRIPT_VERSION: "latest"
-  HAGICODE_PM2_LIFECYCLE_TIMEOUT_MS: "90000"
 
 jobs:
   integration-linux:
@@ -34,18 +32,6 @@ jobs:
           cache: "npm"
           cache-dependency-path: package-lock.json
 
-      - name: Install global hagiscript
-        shell: bash
-        run: |
-          npm install --global "@hagicode/hagiscript@${HAGISCRIPT_VERSION}"
-          prefix="$(npm config get prefix)"
-          echo "$prefix" >> "$GITHUB_PATH"
-          if [ -d "$prefix/bin" ]; then
-            echo "$prefix/bin" >> "$GITHUB_PATH"
-          fi
-          hash -r
-          hagiscript --version
-
       - name: Install dependencies
         run: npm ci
 
@@ -62,7 +48,7 @@ jobs:
             --artifact-name "release-linux-appimage-assets,hagicode-linux-appimage-${{ github.event.workflow_run.head_sha }}" \
             --output-dir pkg
 
-      - name: Run non-interactive runtime verification
+      - name: Verify packaged runtime and backend lifecycle when bundled
         run: npm run package:non-interactive-integration
 
   integration-macos:
@@ -81,18 +67,6 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
           cache-dependency-path: package-lock.json
-
-      - name: Install global hagiscript
-        shell: bash
-        run: |
-          npm install --global "@hagicode/hagiscript@${HAGISCRIPT_VERSION}"
-          prefix="$(npm config get prefix)"
-          echo "$prefix" >> "$GITHUB_PATH"
-          if [ -d "$prefix/bin" ]; then
-            echo "$prefix/bin" >> "$GITHUB_PATH"
-          fi
-          hash -r
-          hagiscript --version
 
       - name: Install dependencies
         run: npm ci
@@ -115,7 +89,7 @@ jobs:
             --artifact-name "release-macos-arm64-dmg-assets,hagicode-macos-arm64-dmg-${{ github.event.workflow_run.head_sha }}" \
             --output-dir pkg
 
-      - name: Run non-interactive runtime verification
+      - name: Verify packaged runtime and backend lifecycle when bundled
         run: npm run package:non-interactive-integration
 
   integration-windows:
@@ -135,18 +109,6 @@ jobs:
           cache: "npm"
           cache-dependency-path: package-lock.json
 
-      - name: Install global hagiscript
-        shell: bash
-        run: |
-          npm install --global "@hagicode/hagiscript@${HAGISCRIPT_VERSION}"
-          prefix="$(npm config get prefix)"
-          echo "$prefix" >> "$GITHUB_PATH"
-          if [ -d "$prefix/bin" ]; then
-            echo "$prefix/bin" >> "$GITHUB_PATH"
-          fi
-          hash -r
-          hagiscript --version
-
       - name: Install dependencies
         run: npm ci
 
@@ -164,6 +126,6 @@ jobs:
             --artifact-name "release-windows-portable-assets,hagicode-windows-portable-${{ github.event.workflow_run.head_sha }}" \
             --output-dir pkg
 
-      - name: Run non-interactive runtime verification
+      - name: Verify packaged runtime and backend lifecycle when bundled
         shell: bash
         run: npm run package:non-interactive-integration
