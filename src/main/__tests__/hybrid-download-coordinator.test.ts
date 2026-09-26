@@ -515,6 +515,65 @@ describe('HybridDownloadCoordinator', () => {
     assert.deepEqual(attempts, ['https://github.com/HagiCode-org/hagicode/releases/download/v1.0.0/hagicode.zip']);
   });
 
+  it('uses the current service region at download time instead of locale detection', async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'hybrid-download-service-region-'));
+    const payload = 'service-region-routing';
+    const attempts: string[] = [];
+    let serviceRegion: 'CN' | 'INTERNATIONAL' = 'INTERNATIONAL';
+    const coordinator = new HybridDownloadCoordinator({
+      engine: {
+        async download() {
+          throw new Error('HTTP-only version should not use torrent');
+        },
+        async stopAll() {},
+      },
+      regionDetector: {
+        detectWithCache: () => ({
+          region: 'CN',
+          detectedAt: new Date('2026-04-06T00:00:00.000Z'),
+          method: 'locale',
+          localeSnapshot: 'zh-CN',
+          rawLocale: 'zh-CN',
+          matchedRule: 'zh-family',
+        }),
+      },
+      serviceRegionProvider: () => serviceRegion,
+      settingsStore: { getSettings: () => baseSettings, updateSettings: () => baseSettings } as any,
+      cacheRetentionManager: {
+        async stopAllSeeding() {},
+        async prune() { return { totalBytes: 0, removedEntries: [], retainedEntries: [] }; },
+        async markTrusted(record: any) { return record; },
+        async discard() {},
+      } as any,
+    });
+    const source = {
+      async downloadPackage(version: Version, destinationPath: string) {
+        attempts.push(version.downloadUrl ?? '');
+        await fs.writeFile(destinationPath, payload);
+      },
+      async listAvailableVersions() {
+        return [];
+      },
+    } as any;
+    const version = createMultiSourceVersion(payload, {
+      torrentUrl: undefined,
+      infoHash: undefined,
+      hasTorrentMetadata: false,
+      torrentFirst: false,
+      eligible: false,
+      legacyHttpFallback: true,
+    });
+
+    await coordinator.download(version, path.join(tempRoot, 'international.zip'), source);
+    serviceRegion = 'CN';
+    await coordinator.download(version, path.join(tempRoot, 'mainland.zip'), source);
+
+    assert.deepEqual(attempts, [
+      'https://github.com/HagiCode-org/hagicode/releases/download/v1.0.0/hagicode.zip',
+      'https://official.example.com/hagicode.zip',
+    ]);
+  });
+
   it('falls back conservatively to official first when region detection is unknown', async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'hybrid-download-unknown-'));
     const cachePath = path.join(tempRoot, 'hagicode.zip');

@@ -53,6 +53,7 @@ import type {
 import { createClipboardBridge } from './clipboard-bridge.js';
 import { createSystemDiagnosticBridge } from './system-diagnostic-bridge.js';
 import type { InterfaceOpeningMethod } from '../main/config.js';
+import type { ServiceRegion, ServiceRegionState, SetServiceRegionResult } from '../types/service-region.js';
 
 const { contextBridge, ipcRenderer } = electron;
 const SUBSCRIPTION_FEATURE_ARG = '--desktop-subscription-enabled=1';
@@ -340,6 +341,12 @@ interface ElectronAPI {
   onActiveVersionChanged: (callback: (version: InstalledVersionPayload | null) => void) => () => void;
   onVersionListChanged: (callback: () => void) => () => void;
   onVersionUpdateChanged: (callback: (snapshot: VersionUpdateSnapshotPayload) => void) => () => void;
+  serviceRegion: {
+    get: () => Promise<ServiceRegionState>;
+    set: (region: ServiceRegion) => Promise<SetServiceRegionResult>;
+    resetPreference: () => Promise<SetServiceRegionResult>;
+    onDidChange: (callback: (state: ServiceRegionState) => void) => () => void;
+  };
 
   // Prompt Guidance APIs
   llmGetPromptGuidance: (
@@ -713,6 +720,16 @@ const electronAPI: ElectronAPI = {
   // Region Detection APIs
   getRegionStatus: () => ipcRenderer.invoke('region:get-status'),
   redetectRegion: () => ipcRenderer.invoke('region:redetect'),
+  serviceRegion: {
+    get: () => ipcRenderer.invoke('service-region:get'),
+    set: (region) => ipcRenderer.invoke('service-region:set', region),
+    resetPreference: () => ipcRenderer.invoke('service-region:reset-preference'),
+    onDidChange: (callback) => {
+      const listener = (_event, state) => callback(state);
+      ipcRenderer.on('service-region:changed', listener);
+      return () => ipcRenderer.removeListener('service-region:changed', listener);
+    },
+  },
 
   // Prompt Guidance APIs
   llmGetPromptGuidance: (resourceKey: 'smartConfig', customPromptPath?: string) =>

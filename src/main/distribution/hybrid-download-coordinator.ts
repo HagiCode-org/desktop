@@ -13,6 +13,7 @@ import type {
   VersionDownloadMode,
 } from '../../types/sharing-acceleration.js';
 import type { DistributionModeState } from '../../types/distribution-mode.js';
+import type { ServiceRegion } from '../../types/service-region.js';
 import { CacheRetentionManager } from './cache-retention-manager.js';
 import type { DownloadEngineAdapter } from './download-engine-adapter.js';
 import { DistributionPolicyEvaluator } from './distribution-policy-evaluator.js';
@@ -38,8 +39,8 @@ interface FallbackSourceAttempt {
 interface FallbackPlan {
   attempts: FallbackSourceAttempt[];
   regionBucket: FallbackRegionBucket;
-  detectionMethod: DetectionResult['method'] | 'unavailable';
-  matchedRule: DetectionResult['matchedRule'] | 'unavailable';
+  detectionMethod: DetectionResult['method'] | 'service-region' | 'unavailable';
+  matchedRule: DetectionResult['matchedRule'] | 'service-region' | 'unavailable';
 }
 
 export class HybridDownloadCoordinator {
@@ -48,6 +49,7 @@ export class HybridDownloadCoordinator {
   private readonly engine: DownloadEngineAdapter;
   private readonly cacheRetentionManager: CacheRetentionManager;
   private readonly regionDetector?: Pick<RegionDetector, 'detectWithCache'>;
+  private readonly serviceRegionProvider?: () => ServiceRegion | undefined;
 
   constructor(options?: {
     policyEvaluator?: DistributionPolicyEvaluator;
@@ -55,6 +57,7 @@ export class HybridDownloadCoordinator {
     engine?: DownloadEngineAdapter;
     cacheRetentionManager?: CacheRetentionManager;
     regionDetector?: Pick<RegionDetector, 'detectWithCache'>;
+    serviceRegionProvider?: () => ServiceRegion | undefined;
   }) {
     this.policyEvaluator = options?.policyEvaluator ?? new DistributionPolicyEvaluator();
     this.settingsStore = options?.settingsStore ?? new SharingAccelerationSettingsStore();
@@ -62,6 +65,7 @@ export class HybridDownloadCoordinator {
     this.engine = options?.engine ?? new InProcessTorrentEngineAdapter();
     this.cacheRetentionManager = options?.cacheRetentionManager ?? new CacheRetentionManager();
     this.regionDetector = options?.regionDetector;
+    this.serviceRegionProvider = options?.serviceRegionProvider;
   }
 
   getSettingsStore(): SharingAccelerationSettingsStore {
@@ -390,6 +394,21 @@ export class HybridDownloadCoordinator {
   }
 
   private detectFallbackRegion(): Pick<FallbackPlan, 'regionBucket' | 'detectionMethod' | 'matchedRule'> {
+    try {
+      const serviceRegion = this.serviceRegionProvider?.();
+      if (serviceRegion) {
+        return {
+          regionBucket: serviceRegion,
+          detectionMethod: 'service-region',
+          matchedRule: 'service-region',
+        };
+      }
+    } catch (error) {
+      log.warn('[HybridDownloadCoordinator] Effective service-region lookup failed; using locale fallback:', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
     if (!this.regionDetector) {
       return {
         regionBucket: 'UNKNOWN',

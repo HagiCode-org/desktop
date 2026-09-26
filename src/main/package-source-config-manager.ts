@@ -6,6 +6,7 @@ import {
   OFFICIAL_SERVER_HTTP_INDEX_URL,
   normalizeOfficialServerHttpIndexUrl,
 } from '../shared/package-source-defaults.js';
+import type { ServiceRegion } from '../types/service-region.js';
 
 const DEFAULT_HTTP_INDEX_SOURCE_ID = 'http-index-default';
 const INTERNATIONAL_HTTP_INDEX_SOURCE_ID = 'http-index-international';
@@ -123,6 +124,17 @@ export class PackageSourceConfigManager {
       log.error('[PackageSourceConfigManager] Failed to get source by ID:', error);
       return null;
     }
+  }
+
+  findSourceForConfig(
+    config: { type: 'local-folder'; path: string } | { type: 'http-index'; indexUrl: string },
+  ): StoredPackageSourceConfig | null {
+    return this.getAllSources().find(source => (
+      source.type === config.type
+      && (config.type === 'local-folder'
+        || normalizeOfficialServerHttpIndexUrl(source.indexUrl)
+          === normalizeOfficialServerHttpIndexUrl(config.indexUrl))
+    )) ?? null;
   }
 
   /**
@@ -288,6 +300,22 @@ export class PackageSourceConfigManager {
 
   getDefaultHttpIndexSource(): StoredPackageSourceConfig {
     return this.createDefaultHttpIndexSource();
+  }
+
+  getOrCreateOfficialSource(region: ServiceRegion): StoredPackageSourceConfig {
+    const indexUrl = region === 'CN'
+      ? OFFICIAL_MAINLAND_SERVER_HTTP_INDEX_URL
+      : OFFICIAL_INTERNATIONAL_SERVER_HTTP_INDEX_URL;
+    const existingSource = this.findSourceForConfig({ type: 'http-index', indexUrl });
+    if (existingSource) {
+      return existingSource;
+    }
+
+    return this.addSource({
+      type: 'http-index',
+      name: region === 'CN' ? DEFAULT_HTTP_INDEX_NAME : INTERNATIONAL_HTTP_INDEX_NAME,
+      indexUrl,
+    });
   }
 
   /**

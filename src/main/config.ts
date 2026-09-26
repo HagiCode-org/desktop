@@ -3,6 +3,7 @@ import type { ServerConfig } from './server';
 import { resolveDesktopLanguageCode } from '../shared/desktop-languages.js';
 import type { DebugOptionsSettings } from '../types/debug-options.js';
 import type { RuntimeDataPathPreset } from '../types/runtime-data-path.js';
+import type { ServiceRegion } from '../types/service-region.js';
 
 export interface AppSettings {
   language: string;
@@ -48,6 +49,7 @@ export interface AppConfig {
   msstoreRatingPrompt?: MsstoreRatingPromptState;
   msstoreDonationItem?: MsstoreDonationItemState;
   interfaceOpeningMethod?: InterfaceOpeningMethod;
+  serviceRegionPreference?: ServiceRegion;
 }
 
 export const DEFAULT_VERSION_AUTO_UPDATE_SETTINGS: VersionAutoUpdateSettings = {
@@ -285,6 +287,19 @@ export class ConfigManager {
    */
   getStore(): Store<AppConfig> {
     return this.store;
+  }
+
+  getServiceRegionPreference(): ServiceRegion | undefined {
+    const preference = this.store.get('serviceRegionPreference');
+    return preference === 'CN' || preference === 'INTERNATIONAL' ? preference : undefined;
+  }
+
+  setServiceRegionPreference(region: ServiceRegion): void {
+    this.store.set('serviceRegionPreference', region);
+  }
+
+  clearServiceRegionPreference(): void {
+    this.store.delete('serviceRegionPreference');
   }
 
   getRuntimeDataPathPreset(): RuntimeDataPathPreset {

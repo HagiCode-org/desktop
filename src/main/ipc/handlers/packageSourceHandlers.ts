@@ -1,33 +1,45 @@
 import { electron } from '../../../electron-api.js';
 import type { BrowserWindow } from 'electron';
 import { VersionManager } from '../../version-manager.js';
+import { ConfigManager } from '../../config.js';
+import {
+  resolveEffectiveServiceRegion,
+  serviceRegionPreferenceAfterSourceChange,
+} from '../../../shared/service-region.js';
+import type { ServiceRegionState } from '../../../types/service-region.js';
 
 const { ipcMain } = electron;
 
 interface PackageSourceHandlerState {
   versionManager: VersionManager | null;
   mainWindow: BrowserWindow | null;
+  configManager: ConfigManager | null;
 }
 
 const state: PackageSourceHandlerState = {
   versionManager: null,
   mainWindow: null,
+  configManager: null,
 };
 
 export function initPackageSourceHandlers(
   versionManager: VersionManager | null,
   mainWindow: BrowserWindow | null,
+  configManager: ConfigManager | null = null,
 ): void {
   state.versionManager = versionManager;
   state.mainWindow = mainWindow;
+  state.configManager = configManager;
 }
 
 export function registerPackageSourceHandlers(deps: {
   versionManager: VersionManager | null;
   mainWindow: BrowserWindow | null;
+  configManager?: ConfigManager | null;
 }): void {
   state.versionManager = deps.versionManager;
   state.mainWindow = deps.mainWindow;
+  state.configManager = deps.configManager ?? null;
 
   ipcMain.handle('package-source:get-config', async () => {
     if (!state.versionManager) {
@@ -58,9 +70,11 @@ export function registerPackageSourceHandlers(deps: {
       return { success: false, error: 'Version manager not initialized' };
     }
     try {
+      const previousConfig = state.versionManager.getCurrentSourceConfig();
       const result = await state.versionManager.setSourceConfig(config);
       if (result.success) {
         const newConfig = state.versionManager.getCurrentSourceConfig();
+        syncServiceRegionAfterSourceChange(previousConfig, newConfig);
         state.mainWindow?.webContents.send('package-source:configChanged', newConfig);
         state.mainWindow?.webContents.send('version:list:changed');
       }
@@ -79,9 +93,11 @@ export function registerPackageSourceHandlers(deps: {
       return { success: false, error: 'Version manager not initialized' };
     }
     try {
+      const previousConfig = state.versionManager.getCurrentSourceConfig();
       const success = await state.versionManager.switchSource(sourceId);
       if (success) {
         const newConfig = state.versionManager.getCurrentSourceConfig();
+        syncServiceRegionAfterSourceChange(previousConfig, newConfig);
         state.mainWindow?.webContents.send('package-source:configChanged', newConfig);
         state.mainWindow?.webContents.send('version:list:changed');
       }
@@ -188,4 +204,30 @@ export function registerPackageSourceHandlers(deps: {
   });
 
   console.log('[IPC] Package source handlers registered');
+}
+
+function syncServiceRegionAfterSourceChange(
+  previousConfig: ReturnType<VersionManager['getCurrentSourceConfig']>,
+  currentConfig: ReturnType<VersionManager['getCurrentSourceConfig']>,
+): void {
+  const configManager = state.configManager;
+  if (!configManager) {
+    return;
+  }
+
+  const previousPreference = configManager.getServiceRegionPreference();
+  const preferenceAfterChange = serviceRegionPreferenceAfterSourceChange(
+    previousPreference,
+    previousConfig,
+    currentConfig,
+  );
+  if (preferenceAfterChange !== undefined) {
+    configManager.setServiceRegionPreference(preferenceAfterChange);
+  }
+
+  const statePayload: ServiceRegionState = {
+    region: resolveEffectiveServiceRegion(configManager.getServiceRegionPreference(), currentConfig),
+    isExplicit: configManager.getServiceRegionPreference() !== undefined,
+  };
+  state.mainWindow?.webContents.send('service-region:changed', statePayload);
 }

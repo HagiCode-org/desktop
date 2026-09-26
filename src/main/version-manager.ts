@@ -10,6 +10,9 @@ import { HybridDownloadCoordinator } from './distribution/hybrid-download-coordi
 import { PackageSourceConfigManager, type StoredPackageSourceConfig } from './package-source-config-manager.js';
 import { createPackageSource, type PackageSource, type PackageSourceConfig, type LocalFolderConfig, type HttpIndexConfig, type DownloadProgressCallback, type PackageSourceType, type SharingAccelerationSettingsInput, type SharingAccelerationSettings } from './package-sources/index.js';
 import type { RegionDetector } from './region-detector.js';
+import type { ServiceRegion } from '../types/service-region.js';
+import type { ServiceRegionPreferenceStore } from './service-region-controller.js';
+import { resolveEffectiveServiceRegion } from '../shared/service-region.js';
 import { evaluateRuntimeCompatibility, validateFrameworkDependentPayload, validateEmbeddedRuntimeLayout } from './embedded-runtime.js';
 import { evaluateDesktopCompatibility, type DesktopCompatibilityDetails } from './desktop-compatibility.js';
 import { isWindowsStoreRuntime } from './windows-store-runtime.js';
@@ -138,14 +141,22 @@ export class VersionManager {
     dependencyManager: DependencyManager,
     packageSourceConfigManager?: PackageSourceConfigManager,
     regionDetector?: RegionDetector,
+    serviceRegionPreferenceStore?: Pick<ServiceRegionPreferenceStore, 'getServiceRegionPreference'>,
   ) {
     this.dependencyManager = dependencyManager;
     this.stateManager = new StateManager();
     this.pathManager = PathManager.getInstance();
-    this.hybridDownloadCoordinator = new HybridDownloadCoordinator({ regionDetector });
-
     // Initialize package source configuration manager
     this.packageSourceConfigManager = packageSourceConfigManager || new PackageSourceConfigManager();
+    this.hybridDownloadCoordinator = new HybridDownloadCoordinator({
+      regionDetector,
+      serviceRegionProvider: serviceRegionPreferenceStore
+        ? () => resolveEffectiveServiceRegion(
+            serviceRegionPreferenceStore.getServiceRegionPreference(),
+            this.packageSourceConfigManager.getActiveSource(),
+          )
+        : undefined,
+    });
 
     // Initialize current package source
     this.currentPackageSource = null;
@@ -497,6 +508,19 @@ export class VersionManager {
     return this.packageSourceConfigManager.getActiveSource();
   }
 
+  async switchToServiceRegion(region: ServiceRegion): Promise<boolean> {
+    try {
+      const source = this.packageSourceConfigManager.getOrCreateOfficialSource(region);
+      return await this.switchSource(source.id);
+    } catch (error) {
+      log.error('[VersionManager] Failed to resolve official source for service region:', {
+        region,
+        error,
+      });
+      return false;
+    }
+  }
+
   /**
    * Set a new package source configuration
    */
@@ -506,8 +530,7 @@ export class VersionManager {
     try {
       this.ensureSupportedSourceType((config as { type?: string }).type);
 
-      const sources = this.packageSourceConfigManager.getAllSources();
-      const existingSource = sources.find(source => source.type === config.type);
+      const existingSource = this.packageSourceConfigManager.findSourceForConfig(config);
 
       let newSource: StoredPackageSourceConfig;
 
@@ -523,7 +546,9 @@ export class VersionManager {
           updates.indexUrl = config.indexUrl;
         }
 
-        this.packageSourceConfigManager.updateSource(existingSource.id, updates);
+        if (!this.packageSourceConfigManager.updateSource(existingSource.id, updates)) {
+          return { success: false, error: 'Failed to update package source' };
+        }
         newSource = { ...existingSource, ...updates } as StoredPackageSourceConfig;
         log.info('[VersionManager] Package source updated:', newSource.type, 'ID:', newSource.id);
       } else {
@@ -537,8 +562,11 @@ export class VersionManager {
         log.info('[VersionManager] Package source created:', newSource.type, 'ID:', newSource.id);
       }
 
-      this.currentPackageSource = createPackageSource(this.storedToConfig(newSource));
-      this.packageSourceConfigManager.setActiveSource(newSource.id);
+      const nextPackageSource = createPackageSource(this.storedToConfig(newSource));
+      if (!this.packageSourceConfigManager.setActiveSource(newSource.id)) {
+        return { success: false, error: 'Failed to activate package source' };
+      }
+      this.currentPackageSource = nextPackageSource;
       return { success: true };
     } catch (error) {
       log.error('[VersionManager] Failed to set package source:', error);
@@ -560,8 +588,11 @@ export class VersionManager {
         return false;
       }
 
-      this.currentPackageSource = createPackageSource(this.storedToConfig(source));
-      this.packageSourceConfigManager.setActiveSource(sourceId);
+      const nextPackageSource = createPackageSource(this.storedToConfig(source));
+      if (!this.packageSourceConfigManager.setActiveSource(sourceId)) {
+        return false;
+      }
+      this.currentPackageSource = nextPackageSource;
       log.info('[VersionManager] Switched to package source:', sourceId);
       return true;
     } catch (error) {

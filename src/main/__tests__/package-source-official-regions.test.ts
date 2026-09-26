@@ -120,6 +120,40 @@ describe('official regional package sources', () => {
     assert.equal(manager.getActiveSource()?.indexUrl, OFFICIAL_INTERNATIONAL_SERVER_HTTP_INDEX_URL);
   });
 
+  it('recreates only the explicitly requested official source after it was removed', () => {
+    const manager = new PackageSourceConfigManager(new MockStore() as never);
+    const international = manager.getAllSources().find(
+      source => source.indexUrl === OFFICIAL_INTERNATIONAL_SERVER_HTTP_INDEX_URL,
+    );
+
+    assert.ok(international);
+    assert.equal(manager.removeSource(international.id), true);
+
+    const recreated = manager.getOrCreateOfficialSource('INTERNATIONAL');
+    assert.equal(recreated.indexUrl, OFFICIAL_INTERNATIONAL_SERVER_HTTP_INDEX_URL);
+    assert.equal(manager.getAllSources().filter(
+      source => source.indexUrl === OFFICIAL_INTERNATIONAL_SERVER_HTTP_INDEX_URL,
+    ).length, 1);
+  });
+
+  it('does not match another official index when the requested index is missing', () => {
+    const manager = new PackageSourceConfigManager(new MockStore() as never);
+    const international = manager.getAllSources().find(
+      source => source.indexUrl === OFFICIAL_INTERNATIONAL_SERVER_HTTP_INDEX_URL,
+    );
+
+    assert.ok(international);
+    assert.equal(manager.removeSource(international.id), true);
+    assert.equal(manager.findSourceForConfig({
+      type: 'http-index',
+      indexUrl: OFFICIAL_INTERNATIONAL_SERVER_HTTP_INDEX_URL,
+    }), null);
+    assert.equal(manager.findSourceForConfig({
+      type: 'http-index',
+      indexUrl: OFFICIAL_MAINLAND_SERVER_HTTP_INDEX_URL,
+    })?.indexUrl, OFFICIAL_MAINLAND_SERVER_HTTP_INDEX_URL);
+  });
+
   it('keeps environment overrides active while seeding both official choices', () => {
     const previousOverride = process.env.UPDATE_SOURCE_OVERRIDE;
     process.env.UPDATE_SOURCE_OVERRIDE = JSON.stringify({

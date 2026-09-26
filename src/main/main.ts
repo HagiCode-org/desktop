@@ -19,6 +19,8 @@ import { PromptResourceResolver } from './prompt-resource-resolver.js';
 import { DistributionModeError, VersionManager, type InstalledVersion } from './version-manager.js';
 import { VersionUpdateManager } from './version-update-manager.js';
 import { PackageSourceConfigManager } from './package-source-config-manager.js';
+import { ServiceRegionController } from './service-region-controller.js';
+import type { ServiceRegionState } from '../types/service-region.js';
 import { OnboardingManager } from './onboarding-manager.js';
 import { manifestReader } from './manifest-reader.js';
 import { buildStartupFailurePayload } from './startup-failure-payload.js';
@@ -53,7 +55,6 @@ import {
   registerDependencyHandlers,
   registerPackageSourceHandlers,
   registerOnboardingHandlers,
-  registerRegionHandlers,
   registerLlmHandlers,
   registerSystemDiagnosticHandlers,
   registerDependencyManagementHandlers,
@@ -317,6 +318,7 @@ let webServicePollingInterval: NodeJS.Timeout | null = null;
 let webServicePollingInFlight = false;
 let menuManager: MenuManager | null = null;
 let regionDetector: RegionDetector | null = null;
+let serviceRegionController: ServiceRegionController | null = null;
 let systemDiagnosticManager: SystemDiagnosticManager | null = null;
 let dependencyManagementService: DependencyManagementService | null = null;
 let promptResourceResolver: PromptResourceResolver | null = null;
@@ -2192,6 +2194,51 @@ ipcMain.handle('region:redetect', async () => {
   }
 });
 
+ipcMain.handle('service-region:get', async (): Promise<ServiceRegionState> => {
+  if (!serviceRegionController) {
+    throw new Error('Service-region controller not initialized');
+  }
+  return serviceRegionController.getState();
+});
+
+ipcMain.handle('service-region:set', async (_, value: unknown) => {
+  if (!serviceRegionController) {
+    return { success: false, error: 'Service-region controller not initialized' };
+  }
+  if (versionManager?.getDistributionModeState().steamMode) {
+    return {
+      success: false,
+      state: serviceRegionController.getState(),
+      error: 'Service-region changes are unavailable in Steam mode',
+    };
+  }
+  const result = await serviceRegionController.setRegion(value);
+  if (result.success && result.state) {
+    mainWindow?.webContents.send('service-region:changed', result.state);
+    mainWindow?.webContents.send('package-source:configChanged', versionManager?.getCurrentSourceConfig() ?? null);
+    mainWindow?.webContents.send('version:list:changed');
+  }
+  return result;
+});
+
+ipcMain.handle('service-region:reset-preference', async () => {
+  if (!serviceRegionController) {
+    return { success: false, error: 'Service-region controller not initialized' };
+  }
+  if (versionManager?.getDistributionModeState().steamMode) {
+    return {
+      success: false,
+      state: serviceRegionController.getState(),
+      error: 'Service-region changes are unavailable in Steam mode',
+    };
+  }
+  const result = await serviceRegionController.resetPreference();
+  if (result.success && result.state) {
+    mainWindow?.webContents.send('service-region:changed', result.state);
+  }
+  return result;
+});
+
 // Web service status change handler for menu updates
 ipcMain.on('web-service-status-for-menu', async (_event, status: ProcessInfo) => {
   if (menuManager) {
@@ -2692,7 +2739,14 @@ app.whenReady().then(async () => {
   packageSourceConfigManager = new PackageSourceConfigManager(configManager.getStore() as unknown as Store);
 
   // Initialize Version Manager with package source config manager
-  versionManager = new VersionManager(dependencyManager, packageSourceConfigManager, regionDetector ?? undefined);
+  versionManager = new VersionManager(
+    dependencyManager,
+    packageSourceConfigManager,
+    regionDetector ?? undefined,
+    configManager,
+  );
+  serviceRegionController = new ServiceRegionController(configManager, versionManager);
+  log.info('[App] Effective service region initialized:', serviceRegionController.getState());
   const distributionModeState = await versionManager.initializeDistributionMode();
   subscriptionFeatureEnabled = distributionModeState.winStoreMode;
   turboEngineLicenseFeatureEnabled = distributionModeState.winStoreMode;
@@ -2722,6 +2776,7 @@ app.whenReady().then(async () => {
   registerPackageSourceHandlers({
     versionManager,
     mainWindow,
+    configManager,
   });
   log.info('[App] Package source IPC handlers registered');
 
