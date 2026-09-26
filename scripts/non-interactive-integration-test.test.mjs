@@ -38,8 +38,8 @@ test('packaged integration rejects Desktop-managed Node and PM2 assets on all pa
   }
 });
 
-test('legacy and canonical packaged integration commands both remain available', async () => {
+test('only the canonical packaged integration command remains available', () => {
   const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
   assert.equal(packageJson.scripts['package:non-interactive-integration'], 'node scripts/non-interactive-integration-test.mjs');
-  assert.equal(packageJson.scripts['package:runtime-pm2-integration'], 'npm run package:non-interactive-integration');
+  assert.equal(Object.hasOwn(packageJson.scripts, 'package:runtime-pm2-integration'), false);
 });

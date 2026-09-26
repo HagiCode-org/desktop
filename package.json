@@ -83,7 +83,6 @@
     "package:smoke-test:mac:x64": "cross-env HAGICODE_EMBEDDED_DOTNET_PLATFORM=osx-x64 HAGICODE_SMOKE_TEST_REQUIRE_RUNTIME=1 node scripts/smoke-test.js",
     "package:smoke-test:mac:arm64": "cross-env HAGICODE_EMBEDDED_DOTNET_PLATFORM=osx-arm64 HAGICODE_SMOKE_TEST_REQUIRE_RUNTIME=1 node scripts/smoke-test.js",
     "package:non-interactive-integration": "node scripts/non-interactive-integration-test.mjs",
-    "package:runtime-pm2-integration": "npm run package:non-interactive-integration",
     "test:win-store:local": "node scripts/run-local-win-store-test.js"
   },
   "keywords": [
