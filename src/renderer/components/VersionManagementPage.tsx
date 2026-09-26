@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useDispatch, useSelector } from 'react-redux';
@@ -37,6 +37,7 @@ import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 import { VersionManagementTabContent } from '../features/version-management/VersionManagementTabContent';
 import { useVersionManagementTab } from '../features/version-management/useVersionManagementTab';
 import type { InstalledVersion, Version } from '../features/version-management/types';
+import { areVersionManagementDataEquivalent } from '../features/version-management/versionManagementData';
 import { PageHeader } from './ui/page-header';
 
 
@@ -124,25 +125,66 @@ export default function VersionManagementPage({ distributionState }: VersionMana
   const [reinstallDialogOpen, setReinstallDialogOpen] = useState(false);
   const [uninstallDialogOpen, setUninstallDialogOpen] = useState(false);
   const [pendingVersionId, setPendingVersionId] = useState<string | null>(null);
+  const hasLoadedData = useRef(false);
+  const fetchRequestId = useRef(0);
 
+  const fetchAllData = useCallback(async () => {
+    const requestId = ++fetchRequestId.current;
+    if (!hasLoadedData.current) {
+      setLoading(true);
+    }
+
+    try {
+      const [available, installed, active] = await Promise.all([
+        window.electronAPI.versionList(),
+        window.electronAPI.versionGetInstalled(),
+        window.electronAPI.versionGetActive(),
+      ]);
+      if (requestId !== fetchRequestId.current) {
+        return;
+      }
+
+      setAvailableVersions(current => (
+        areVersionManagementDataEquivalent(current, available) ? current : available
+      ));
+      setInstalledVersions(current => (
+        areVersionManagementDataEquivalent(current, installed) ? current : installed
+      ));
+      setActiveVersion(current => (
+        areVersionManagementDataEquivalent(current, active) ? current : active
+      ));
+      hasLoadedData.current = true;
+    } catch (error) {
+      console.error('Failed to fetch version data:', error);
+    } finally {
+      if (requestId === fetchRequestId.current) {
+        setLoading(false);
+      }
+    }
+  }, []);
 
   useEffect(() => {
-    fetchAllData();
+    void fetchAllData();
 
     const unsubscribeInstalled = window.electronAPI.onInstalledVersionsChanged((versions) => {
-      setInstalledVersions(versions);
+      setInstalledVersions(current => (
+        areVersionManagementDataEquivalent(current, versions) ? current : versions
+      ));
     });
 
     const unsubscribeActive = window.electronAPI.onActiveVersionChanged((version) => {
-      setActiveVersion(version);
+      setActiveVersion(current => (
+        areVersionManagementDataEquivalent(current, version) ? current : version
+      ));
     });
 
     const unsubscribeVersionListChanged = window.electronAPI.onVersionListChanged(() => {
       // Refresh available versions when package source changes
-      fetchAllData();
+      void fetchAllData();
     });
 
     return () => {
+      fetchRequestId.current++;
       if (typeof unsubscribeInstalled === 'function') {
         unsubscribeInstalled();
       }
@@ -153,26 +195,7 @@ export default function VersionManagementPage({ distributionState }: VersionMana
         unsubscribeVersionListChanged();
       }
     };
-  }, []);
-
-  const fetchAllData = async () => {
-    try {
-      setLoading(true);
-      const [available, installed, active] = await Promise.all([
-        window.electronAPI.versionList(),
-        window.electronAPI.versionGetInstalled(),
-        window.electronAPI.versionGetActive(),
-      ]);
-
-      setAvailableVersions(available);
-      setInstalledVersions(installed);
-      setActiveVersion(active);
-    } catch (error) {
-      console.error('Failed to fetch version data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [fetchAllData]);
 
   const handleUninstall = async (versionId: string) => {
     if (uninstalling) return;
