@@ -3,7 +3,10 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 import { PackageSourceConfigManager } from '../package-source-config-manager.js';
-import { OFFICIAL_SERVER_HTTP_INDEX_URL } from '../../shared/package-source-defaults.js';
+import {
+  OFFICIAL_INTERNATIONAL_SERVER_HTTP_INDEX_URL,
+  OFFICIAL_SERVER_HTTP_INDEX_URL,
+} from '../../shared/package-source-defaults.js';
 
 class MockStore {
   private data: Record<string, unknown>;
@@ -59,7 +62,7 @@ describe('package source github-release removal', () => {
     const sources = manager.getAllSources();
 
     assert.equal(sources.some(source => (source as { type?: string }).type === 'github-release'), false);
-    assert.equal(sources.filter(source => source.type === 'http-index').length, 1);
+    assert.equal(sources.filter(source => source.type === 'http-index').length, 2);
     assert.equal(manager.getActiveSource()?.id, 'official-http');
     assert.equal(manager.getDefaultSource()?.id, 'official-http');
   });
@@ -82,9 +85,10 @@ describe('package source github-release removal', () => {
     const manager = new PackageSourceConfigManager(store as never);
     const sources = manager.getAllSources();
 
-    assert.equal(sources.length, 1);
+    assert.equal(sources.length, 2);
     assert.equal(sources[0]?.type, 'http-index');
     assert.equal(sources[0]?.indexUrl, OFFICIAL_SERVER_HTTP_INDEX_URL);
+    assert.equal(sources[1]?.indexUrl, OFFICIAL_INTERNATIONAL_SERVER_HTTP_INDEX_URL);
     assert.equal(manager.getActiveSource()?.type, 'http-index');
     assert.equal(manager.getDefaultSource()?.type, 'http-index');
   });

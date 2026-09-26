@@ -257,6 +257,9 @@ dependencyManagement:
 packageSource:
   cardTitle: Paketquellenkonfiguration
   cardDescription: Konfigurieren und verwalten Sie Paketquellen für die Installation
+  officialSource:
+    mainland: Offizieller HagiCode-Index - Festlandchina
+    international: Offizieller HagiCode-Index - International
   sourceType:
     label: Paketquellentyp
     folder: Lokaler Ordner

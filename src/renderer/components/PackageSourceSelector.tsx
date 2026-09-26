@@ -2,7 +2,11 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Folder, Globe, Package } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
-import { OFFICIAL_SERVER_HTTP_INDEX_URL } from '../../shared/package-source-defaults';
+import {
+  OFFICIAL_INTERNATIONAL_SERVER_HTTP_INDEX_URL,
+  OFFICIAL_MAINLAND_SERVER_HTTP_INDEX_URL,
+  OFFICIAL_SERVER_HTTP_INDEX_URL,
+} from '../../shared/package-source-defaults';
 import type { RootState, AppDispatch } from '../store';
 import {
   selectAllConfigs,
@@ -68,6 +72,18 @@ export function PackageSourceSelector() {
     dispatch(setSourceConfig(draftConfig));
   };
 
+  const getSourceName = (source: (typeof allConfigs)[number]) => {
+    if (source.type === 'http-index' && source.indexUrl === OFFICIAL_MAINLAND_SERVER_HTTP_INDEX_URL) {
+      return t('packageSource.officialSource.mainland');
+    }
+    if (source.type === 'http-index' && source.indexUrl === OFFICIAL_INTERNATIONAL_SERVER_HTTP_INDEX_URL) {
+      return t('packageSource.officialSource.international');
+    }
+    return source.name || t(source.type === 'local-folder'
+      ? 'packageSource.sourceType.folder'
+      : 'packageSource.sourceType.httpIndex');
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -78,6 +94,27 @@ export function PackageSourceSelector() {
         <CardDescription>{t('packageSource.cardDescription')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {allConfigs.length > 0 && (
+          <div className="space-y-2">
+            <Label>{t('packageSource.currentSource')}</Label>
+            <Select
+              value={currentConfig?.id ?? ''}
+              onValueChange={(sourceId) => dispatch(switchSource(sourceId))}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {allConfigs.map((source) => (
+                  <SelectItem key={source.id} value={source.id}>
+                    {getSourceName(source)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         <div className="space-y-2">
           <Label>{t('packageSource.sourceType.label')}</Label>
           <Select value={sourceType} onValueChange={handleSourceTypeChange}>

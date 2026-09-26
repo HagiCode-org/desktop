@@ -257,6 +257,9 @@ dependencyManagement:
 packageSource:
   cardTitle: 패키지 소스 구성
   cardDescription: 설치를 위한 패키지 소스 구성 및 관리
+  officialSource:
+    mainland: HagiCode 공식 인덱스 - 중국 본토
+    international: HagiCode 공식 인덱스 - 국제
   sourceType:
     label: 패키지 소스 유형
     folder: 로컬 폴더

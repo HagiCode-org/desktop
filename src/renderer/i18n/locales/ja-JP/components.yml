@@ -257,6 +257,9 @@ dependencyManagement:
 packageSource:
   cardTitle: パッケージソース構成
   cardDescription: インストール用のパッケージ ソースを構成および管理する
+  officialSource:
+    mainland: HagiCode 公式インデックス - 中国本土
+    international: HagiCode 公式インデックス - 国際
   sourceType:
     label: パッケージソースタイプ
     folder: ローカルフォルダー

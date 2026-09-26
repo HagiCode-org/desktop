@@ -257,6 +257,9 @@ dependencyManagement:
 packageSource:
   cardTitle: Configuração de origem do pacote
   cardDescription: Configurar e gerenciar fontes de pacotes para instalação
+  officialSource:
+    mainland: Índice oficial do HagiCode - China continental
+    international: Índice oficial do HagiCode - Internacional
   sourceType:
     label: Tipo de origem do pacote
     folder: Pasta local

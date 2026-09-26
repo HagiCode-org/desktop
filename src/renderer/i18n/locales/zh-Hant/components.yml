@@ -257,6 +257,9 @@ dependencyManagement:
 packageSource:
   cardTitle: 套件來源配置
   cardDescription: 配置和管理用於安裝的套件來源
+  officialSource:
+    mainland: HagiCode 官方索引 - 中國大陸
+    international: HagiCode 官方索引 - 國際
   sourceType:
     label: 套件來源類型
     folder: 本地資料夾

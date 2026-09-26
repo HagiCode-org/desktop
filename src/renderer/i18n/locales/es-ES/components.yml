@@ -257,6 +257,9 @@ dependencyManagement:
 packageSource:
   cardTitle: Configuración de origen del paquete
   cardDescription: Configurar y administrar fuentes de paquetes para la instalación
+  officialSource:
+    mainland: Índice oficial de HagiCode - China continental
+    international: Índice oficial de HagiCode - Internacional
   sourceType:
     label: Tipo de fuente del paquete
     folder: Carpeta local

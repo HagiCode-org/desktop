@@ -49,6 +49,7 @@ describe('package source validation', () => {
     }, /Local folder source requires a path/);
 
     assert.equal(manager.getActiveSource()?.id, officialSource.id);
-    assert.deepEqual(manager.getAllSources(), [officialSource]);
+    assert.deepEqual(manager.getAllSources()[0], officialSource);
+    assert.equal(manager.getAllSources().length, 2);
   });
 });

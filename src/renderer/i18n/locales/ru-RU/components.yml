@@ -257,6 +257,9 @@ dependencyManagement:
 packageSource:
   cardTitle: Конфигурация исходного кода пакета
   cardDescription: Настройка источников пакетов для установки и управление ими
+  officialSource:
+    mainland: Официальный индекс HagiCode - материковый Китай
+    international: Официальный индекс HagiCode - международный
   sourceType:
     label: Тип источника пакета
     folder: Локальная папка

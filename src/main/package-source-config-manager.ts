@@ -1,12 +1,17 @@
 import Store from 'electron-store';
 import log from 'electron-log';
 import {
+  OFFICIAL_INTERNATIONAL_SERVER_HTTP_INDEX_URL,
+  OFFICIAL_MAINLAND_SERVER_HTTP_INDEX_URL,
   OFFICIAL_SERVER_HTTP_INDEX_URL,
   normalizeOfficialServerHttpIndexUrl,
 } from '../shared/package-source-defaults.js';
 
 const DEFAULT_HTTP_INDEX_SOURCE_ID = 'http-index-default';
+const INTERNATIONAL_HTTP_INDEX_SOURCE_ID = 'http-index-international';
 const DEFAULT_HTTP_INDEX_NAME = 'HagiCode 官方源';
+const INTERNATIONAL_HTTP_INDEX_NAME = 'HagiCode Official - International';
+const OFFICIAL_HTTP_INDEX_SOURCES_VERSION = 1;
 
 /**
  * Package source configuration with metadata
@@ -51,6 +56,7 @@ interface PackageSourceStoreSchema {
   sources: StoredPackageSourceConfig[];
   activeSourceId: string | null;
   defaultSourceId: string | null;
+  officialHttpIndexSourcesVersion?: number;
 }
 
 /**
@@ -76,12 +82,14 @@ export class PackageSourceConfigManager {
           sources: [],
           activeSourceId: null,
           defaultSourceId: null,
+          officialHttpIndexSourcesVersion: 0,
         },
       });
     }
 
     this.reconcileStoredSources();
     this.initializeDefaultSource();
+    this.seedOfficialHttpIndexSources();
   }
 
   /**
@@ -300,7 +308,10 @@ export class PackageSourceConfigManager {
    * Generate a unique source ID
    */
   private generateSourceId(): string {
-    const sources = this.getAllSources();
+    return this.generateSourceIdFrom(this.getAllSources());
+  }
+
+  private generateSourceIdFrom(sources: StoredPackageSourceConfig[]): string {
     let counter = sources.length + 1;
     let id = `source-${counter}`;
 
@@ -318,7 +329,11 @@ export class PackageSourceConfigManager {
   private initializeDefaultSource(): void {
     try {
       const sources = this.getAllSources();
-      if (sources.length > 0) {
+      const hasSeededOfficialSources = this.store.get(
+        'officialHttpIndexSourcesVersion',
+        0,
+      ) >= OFFICIAL_HTTP_INDEX_SOURCES_VERSION;
+      if (sources.length > 0 || hasSeededOfficialSources) {
         return;
       }
 
@@ -334,6 +349,52 @@ export class PackageSourceConfigManager {
     } catch (error) {
       log.error('[PackageSourceConfigManager] Failed to initialize default source:', error);
     }
+  }
+
+  private seedOfficialHttpIndexSources(): void {
+    if (this.store.get('officialHttpIndexSourcesVersion', 0) >= OFFICIAL_HTTP_INDEX_SOURCES_VERSION) {
+      return;
+    }
+
+    const sources = this.getAllSources();
+    const officialSources = [
+      {
+        id: DEFAULT_HTTP_INDEX_SOURCE_ID,
+        name: DEFAULT_HTTP_INDEX_NAME,
+        indexUrl: OFFICIAL_MAINLAND_SERVER_HTTP_INDEX_URL,
+      },
+      {
+        id: INTERNATIONAL_HTTP_INDEX_SOURCE_ID,
+        name: INTERNATIONAL_HTTP_INDEX_NAME,
+        indexUrl: OFFICIAL_INTERNATIONAL_SERVER_HTTP_INDEX_URL,
+      },
+    ];
+    let sourcesChanged = false;
+
+    for (const officialSource of officialSources) {
+      const normalizedUrl = normalizeOfficialServerHttpIndexUrl(officialSource.indexUrl);
+      if (sources.some(source => source.type === 'http-index'
+        && normalizeOfficialServerHttpIndexUrl(source.indexUrl) === normalizedUrl)) {
+        continue;
+      }
+
+      const id = sources.some(source => source.id === officialSource.id)
+        ? this.generateSourceIdFrom(sources)
+        : officialSource.id;
+      sources.push({
+        id,
+        type: 'http-index',
+        name: officialSource.name,
+        indexUrl: officialSource.indexUrl,
+        createdAt: new Date().toISOString(),
+      });
+      sourcesChanged = true;
+    }
+
+    if (sourcesChanged) {
+      this.store.set('sources', sources);
+    }
+    this.store.set('officialHttpIndexSourcesVersion', OFFICIAL_HTTP_INDEX_SOURCES_VERSION);
   }
 
   /**

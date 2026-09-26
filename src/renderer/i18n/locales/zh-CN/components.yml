@@ -257,6 +257,9 @@ dependencyManagement:
 packageSource:
   cardTitle: 包源配置
   cardDescription: 配置和管理用于安装的包源
+  officialSource:
+    mainland: HagiCode 官方索引 - 中国大陆
+    international: HagiCode 官方索引 - 国际
   sourceType:
     label: 包源类型
     folder: 本地文件夹

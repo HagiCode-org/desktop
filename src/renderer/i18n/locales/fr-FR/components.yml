@@ -257,6 +257,9 @@ dependencyManagement:
 packageSource:
   cardTitle: Configuration de la source du package
   cardDescription: Configurer et gérer les sources de packages pour l'installation
+  officialSource:
+    mainland: Index officiel HagiCode - Chine continentale
+    international: Index officiel HagiCode - International
   sourceType:
     label: Type de source du package
     folder: Dossier local

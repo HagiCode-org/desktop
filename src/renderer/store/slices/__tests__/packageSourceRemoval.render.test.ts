@@ -8,10 +8,10 @@ const selectorPath = path.resolve(process.cwd(), 'src/renderer/components/Packag
 const settingsPagePath = path.resolve(process.cwd(), 'src/renderer/components/SettingsPage.tsx');
 const slicePath = path.resolve(process.cwd(), 'src/renderer/store/slices/packageSourceSlice.ts');
 const managerPath = path.resolve(process.cwd(), 'src/main/package-source-config-manager.ts');
-const zhComponentsPath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/zh-CN/components.json');
-const enComponentsPath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/en-US/components.json');
-const zhPagesPath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/zh-CN/pages.json');
-const enPagesPath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/en-US/pages.json');
+const zhComponentsPath = path.resolve(process.cwd(), 'src/renderer/i18n/generated-locales/zh-CN/components.json');
+const enComponentsPath = path.resolve(process.cwd(), 'src/renderer/i18n/generated-locales/en-US/components.json');
+const zhPagesPath = path.resolve(process.cwd(), 'src/renderer/i18n/generated-locales/zh-CN/pages.json');
+const enPagesPath = path.resolve(process.cwd(), 'src/renderer/i18n/generated-locales/en-US/pages.json');
 const githubOAuthSettingsPath = path.resolve(process.cwd(), 'src/renderer/components/settings/GitHubOAuthSettings.tsx');
 
 describe('package source renderer cleanup', () => {
@@ -47,6 +47,16 @@ describe('package source renderer cleanup', () => {
     assert.equal(managerSource.includes(OFFICIAL_SERVER_HTTP_INDEX_URL), false);
   });
 
+  it('localizes and switches between both official regional sources', async () => {
+    const selectorSource = await fs.readFile(selectorPath, 'utf8');
+
+    assert.match(selectorSource, /OFFICIAL_MAINLAND_SERVER_HTTP_INDEX_URL/);
+    assert.match(selectorSource, /OFFICIAL_INTERNATIONAL_SERVER_HTTP_INDEX_URL/);
+    assert.match(selectorSource, /packageSource\.officialSource\.mainland/);
+    assert.match(selectorSource, /packageSource\.officialSource\.international/);
+    assert.match(selectorSource, /dispatch\(switchSource\(sourceId\)\)/);
+  });
+
   it('removes github source copy and the desktop github oauth settings surface', async () => {
     const [zhRaw, enRaw, zhPagesRaw, enPagesRaw, settingsPageSource] = await Promise.all([
       fs.readFile(zhComponentsPath, 'utf8'),
@@ -63,6 +73,10 @@ describe('package source renderer cleanup', () => {
 
     assert.equal('github' in zh.packageSource.sourceType, false);
     assert.equal('github' in en.packageSource.sourceType, false);
+    assert.equal(typeof zh.packageSource.officialSource.mainland, 'string');
+    assert.equal(typeof zh.packageSource.officialSource.international, 'string');
+    assert.equal(typeof en.packageSource.officialSource.mainland, 'string');
+    assert.equal(typeof en.packageSource.officialSource.international, 'string');
     assert.equal('github' in zh.packageSource, false);
     assert.equal('github' in en.packageSource, false);
     assert.equal('githubIntegration' in zhPages.settings.tabs, false);
