@@ -40,7 +40,7 @@ npm run build:linux
 - Keep renderer changes aligned with existing React and Redux Toolkit patterns.
 - Route all user-facing strings through the repo's i18n flow.
 - If packaging, runtime bootstrapping, or native dependency behavior changes, run the relevant smoke or verification scripts.
-- Desktop-managed PM2 manifests on Windows, Linux, and macOS require the packaged Node executable and managed PM2 prefix; the released server continues to launch through the required managed `paths.dotnetRuntime`.
+- Desktop packages retain the managed .NET runtime and do not bundle Node or PM2 for Desktop-owned process management; external service distributions may still include their own Node tooling.
 
 ## References
 

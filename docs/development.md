@@ -164,6 +164,7 @@ The Store build writes:
 - metadata that records the Store config source, Desktop source ref, Microsoft Store version, payload source, effective injection path, and produced artifact paths
 
 `win_store_packer` consumes that metadata directly during signing finalization and release publication. It should not re-derive Desktop packaging state independently.
+The current external `win_store_packer` still requires Desktop PM2-toolchain metadata and validates that the obsolete bundled assets exist. This Desktop change intentionally stops producing that toolchain; downstream Store signing/publication therefore remains blocked until a separately authorized `win_store_packer` contract update removes that requirement.
 
 ### Starting Development Mode
 
@@ -178,7 +179,7 @@ This command:
 3. Builds the preload script in watch mode
 4. Launches Electron with the development configuration
 
-`npm run dev` prepares the governed Desktop runtime before Electron launches. On Windows, Linux, and macOS this includes a PM2-only Node executable under `resources/components/node/runtime` and PM2 dependencies under `resources/npm-pm2`; general-purpose Node/npm remains optional.
+`npm run dev` prepares the managed .NET runtime before Electron launches. Desktop does not stage or bundle Node or PM2; host Node/npm remains external and is used only for CLI package management and build tooling.
 
 ### Building for Production
 
@@ -202,7 +203,7 @@ npm run smoke-test
 npm run smoke-test:verbose
 ```
 
-The smoke test validates the staged and packaged .NET runtime; Node/npm is supplied by the host environment.
+The smoke test validates the staged and packaged .NET runtime and rejects Desktop-managed Node/PM2 assets; Node/npm is supplied by the host environment.
 
 ### CLI Process Execution
 
@@ -212,7 +213,7 @@ On Windows, the dependency-management batch dialog lets users choose Command Pro
 
 Bounded shell chains must opt in with an explicit executable, such as `commandChain: { shell: "powershell.exe" }`, and pass the complete chain as `command` text. The executor validates the supported shell-specific separators and launches the unchanged text once through that executable. Treat this text as trusted shell source: do not interpolate external values into it; pass dynamic values as direct executable arguments instead. Missing or unsupported shell selections and invalid chains fail before spawning. Calls that omit `commandChain`, including `.cmd`/`.bat` wrappers and non-Windows commands, retain their existing behavior.
 
-Direct `child_process` usage remains acceptable when the desktop application must retain ownership of a process handle or lifecycle. Keep direct process management for long-running services, detached terminal handoffs, restart/stop flows, PM2/service ownership, and interactive development helpers where the child process must stay attached to the parent process.
+Direct `child_process` usage remains acceptable when the desktop application must retain ownership of a process handle or lifecycle. Keep direct process management for the Desktop-owned .NET backend, detached terminal handoffs, restart/stop flows, and interactive development helpers where the child process must stay attached to the parent process. Auxiliary services such as code-server and OmniRoute remain externally managed; Desktop does not supervise them.
 
 ### Region-Aware Source Fallback
 
@@ -346,8 +347,8 @@ npm run dev
 ## Web Service Runtime State
 
 Desktop persists web service bind configuration only. Managed service lifecycle
-state is reconciled through the configured PM2 process name instead of a stored
-process ID.
+state is reconciled through a runtime-scoped, verified process identity rather
+than a PM2 process name or a port-only listener.
 
 ### Runtime State File
 
@@ -363,10 +364,10 @@ binds such as `0.0.0.0` still open through loopback (`127.0.0.1`) locally.
 
 ### Lifecycle Decision Order
 
-1. Query PM2 by the configured service process name.
-2. Reuse the named PM2 service when PM2 reports it online and endpoint health checks succeed.
-3. Start or restart through PM2 when the named service is missing, offline, or unhealthy.
-4. Surface PM2/startup errors directly; Desktop does not terminate non-PM2 port conflicts by PID lookup.
+1. Resolve the framework-dependent backend DLL and managed .NET executable.
+2. Reconcile a saved backend process identity using its PID, executable, and creation identity; never adopt a process because it owns the configured port.
+3. Start, restart, and stop the child process directly, with HTTP readiness and health checks.
+4. Stop only the verified Desktop-owned process tree. If a legacy process cannot be safely reconciled, block startup with actionable diagnostics.
 
 ## Embedded Runtime Staging
 
@@ -434,28 +435,13 @@ Desktop startup uses it to distinguish:
 - pinned-version mismatch
 - service payload incompatibility
 
-### PM2-managed .NET service
+### Desktop-owned .NET backend
 
-Desktop starts the validated framework-dependent service payload through PM2 instead of holding the `dotnet` child process directly. The deterministic PM2 process name is `hagicode-dotnet-service`.
+Desktop directly starts the validated framework-dependent backend DLL as a child of its managed .NET executable. It keeps the child handle, serializes lifecycle operations, verifies HTTP readiness and health, and records runtime-scoped process identity for safe shutdown and stale-process recovery. No PM2 daemon, ecosystem file, or Desktop-bundled Node/PM2 installation is required.
 
-Before each start or restart, Desktop regenerates runtime files under `<userData>/config/pm2-dotnet-service/`:
+If a managed service descendant or maintenance script needs the Desktop-pinned .NET runtime, use the inherited `DOTNET_ROOT`/`HAGICODE_DOTNET_EXE` environment contract. Desktop does not prepend a bundled Node/npm payload to `PATH` / `Path`.
 
-- `.env`: sorted runtime environment values required by the .NET service, including host, port, data directory, pinned `DOTNET_ROOT`, `DOTNET_MULTILEVEL_LOOKUP=0`, explicit `HAGICODE_DOTNET_EXE`, optional `HAGICODE_AGENT_CLI_PATH` for Agent CLI discovery, and optional `HAGICODE_NPM_GLOBAL_PATH` for the externally managed npm global prefix. `HAGICODE_AGENT_CLI_PATH` remains a command-search directory hint only, while `HAGICODE_NPM_GLOBAL_PATH` identifies the external npm global install root used to resolve managed packages such as `pm2`. Desktop does not prepend a Node/npm payload to `PATH` / `Path` for the managed server.
-- `ecosystem.config.js`: PM2 app definition with explicit absolute `script` (`dotnetPath`), `args`, `cwd`, process name, and `.env` file reference.
-
-If a managed service descendant or maintenance script needs the Desktop-pinned .NET runtime, read `HAGICODE_DOTNET_EXE` or `DOTNET_ROOT` from `.env`. Do not assume Desktop has exposed the bundled runtime through `PATH`.
-
-Desktop invokes PM2 with explicit argument arrays. Fresh starts use `pm2 start <ecosystem.config.js> --only hagicode-dotnet-service --update-env`, restart uses `pm2 reload <ecosystem.config.js> --update-env`, stop uses `pm2 stop hagicode-dotnet-service`, and status uses `pm2 jlist` to map PM2 `online` state back to the existing Desktop service status model.
-
-On Windows packaged cold starts, the first `pm2 jlist` call can emit daemon bootstrap text such as `[PM2] Spawning...` before JSON status is available. Desktop now treats that bootstrap-only output as a bounded internal retry condition instead of an immediate startup failure. If a later retry returns valid PM2 JSON, startup continues without surfacing the bootstrap text to the renderer.
-
-Persistent PM2 invocation failures remain distinct from bootstrap recovery. Non-zero `pm2` / `pm2.cmd` status failures, localized command errors, or garbled command output still fail startup once the retry budget is exhausted, and the retained startup log should include:
-
-- the normalized PM2 failure summary
-- recent PM2 stdout/stderr lines
-- the pinned runtime root, managed entry point, PM2 runtime files directory, and injected environment hints already recorded earlier in startup
-
-Follow-up status polling should warn once for a repeated PM2 failure signature and then suppress duplicate low-signal warnings until PM2 status changes again or startup succeeds.
+Old PM2 state files are ignored. Desktop only manages processes it launches and verifies itself; a process already occupying the configured port blocks startup and must be stopped separately.
 
 The `.env` file can contain sensitive runtime values. Desktop logs generated file paths and key counts only; it must not log the generated `.env` contents.
 
@@ -548,24 +534,22 @@ Behavior:
 
 ### Packaged runtime location
 
-`forge.config.js` and `scripts/forge-packaging-hooks.js` ship the generated `resources/bin` and `resources/components` trees into `extra/runtime`, so the packaged runtime remains outside `app.asar`:
+`forge.config.js` and `scripts/forge-packaging-hooks.js` ship the generated `resources/bin` and .NET component into `extra/runtime`, so the packaged runtime remains outside `app.asar`:
 
 - Packaged Linux: `pkg/linux-unpacked/resources/extra/runtime/components/dotnet/runtime/<rid>`
 - Packaged Windows: `pkg/win-unpacked/resources/extra/runtime/components/dotnet/runtime/<rid>`
-- Packaged PM2 Node: `pkg/<platform>-unpacked/resources/extra/runtime/components/node/runtime/{node.exe|bin/node}`
-- Packaged PM2 prefix: `pkg/<platform>-unpacked/resources/extra/runtime/npm-pm2/node_modules/pm2`
 - Runtime resolution in production: `process.resourcesPath/extra/runtime/components/dotnet/runtime/<rid>`
 
 The same `extraResources` block also copies `resources/portable-fixed` to `resources/extra/portable-fixed/` when a portable-version payload has been staged.
+Packaged resources must not contain `components/node` or `npm-pm2`; smoke and integration checks fail if either Desktop-managed asset tree is present.
 
 Desktop does not fall back to a machine-wide `dotnet` installation when that packaged runtime is missing.
 
 ### Development debugging with the staged runtime
 
 Use `npm run dev` after staging the separate embedded .NET runtime. General-purpose Node.js and npm
-are resolved from the external host environment. Desktop-managed PM2 on Windows, Linux, and macOS
-uses the separate bundled Node executable and PM2 prefix; the released server remains launched
-through managed .NET.
+are resolved from the external host environment. The backend launches through the managed .NET
+runtime; auxiliary services such as code-server and OmniRoute remain externally managed.
 
 ### Verification commands
 
@@ -580,7 +564,7 @@ After packaging Windows/Linux artifacts:
 
 ```bash
 npm run package:smoke-test
-npm run package:runtime-pm2-integration
+npm run package:non-interactive-integration
 ```
 
 `package:smoke-test` validates both:
@@ -588,34 +572,34 @@ npm run package:runtime-pm2-integration
 - staged runtime payload under `resources/components/dotnet/runtime/<rid>`
 - packaged runtime payload under `pkg/<platform>-unpacked/resources/extra/runtime/components/dotnet/runtime/<rid>`
 - pinned metadata (`.hagicode-runtime.json`) matches the manifest and official Microsoft source host
-- the platform-specific PM2-only Node executable, managed PM2 entrypoint, and production dependencies are present outside `app.asar`
+- no Desktop-managed Node or PM2 assets remain in either staged or packaged resources
 
-`package:runtime-pm2-integration` stages a packaged Desktop artifact into a temp path with spaces, then runs the full non-interactive runtime-management flow:
+`package:non-interactive-integration` stages a packaged Desktop artifact under the repository's `build/non-interactive-integration` directory (including paths with spaces), then runs the non-interactive verification flow:
 
 1. `runtime verify`
-2. `deps install --claude-code --codex`
-3. `runtime lifecycle`
+2. `runtime lifecycle`
 
-The lifecycle stage asserts Desktop-managed hagiscript resolution plus hagiscript-backed bundled PM2 start/status/stop coverage for the packaged backend payload.
+When the artifact contains a portable backend payload, the lifecycle stage directly starts, health-checks, restarts, and stops it through the managed .NET runtime. Standard Desktop packages that download the backend separately report an explicit lifecycle skip. The stage reports auxiliary service management as external and does not start or supervise code-server or OmniRoute.
+`package:runtime-pm2-integration` remains as a compatibility alias for callers and forwards to the canonical command.
 
-### Packaged runtime + PM2 integration debugging
+### Packaged runtime integration debugging
 
 Useful environment overrides:
 
 ```bash
-HAGICODE_NON_INTERACTIVE_INTEGRATION_TIMEOUT_MS=480000 npm run package:runtime-pm2-integration
-HAGICODE_NON_INTERACTIVE_INTEGRATION_KEEP_TEMP=1 npm run package:runtime-pm2-integration
+HAGICODE_NON_INTERACTIVE_INTEGRATION_TIMEOUT_MS=480000 npm run package:non-interactive-integration
+HAGICODE_NON_INTERACTIVE_INTEGRATION_KEEP_TEMP=1 npm run package:non-interactive-integration
 ```
 
 - `HAGICODE_NON_INTERACTIVE_INTEGRATION_TIMEOUT_MS` raises the per-command timeout used by the packaged harness and the lifecycle polling window inside the Desktop non-interactive verifier.
-- `HAGICODE_NON_INTERACTIVE_INTEGRATION_KEEP_TEMP=1` retains the staged artifact and staged user-data root so you can inspect PM2 state after a failure.
+- `HAGICODE_NON_INTERACTIVE_INTEGRATION_KEEP_TEMP=1` retains the staged artifact and user-data root so you can inspect backend process identity and logs after a failure.
 
 When the temp root is retained, inspect these locations first:
 
-- `<temp>/Managed npm user data with spaces/non-interactive-startup.log`
-- `<temp>/Managed npm user data with spaces/logs/`
-- `<temp>/Managed npm user data with spaces/runtimeData/components/services/*/.pm2/logs/`
-- `<temp>/Managed npm user data with spaces/runtimeData/components/services/*/runtime/`
+- `build/non-interactive-integration/<run>/Desktop artifact with spaces/`
+- `build/non-interactive-integration/<run>/Desktop user data with spaces/non-interactive-startup.log`
+- `build/non-interactive-integration/<run>/Desktop user data with spaces/runtimeData/backend-process.json`
+- `build/non-interactive-integration/<run>/Desktop user data with spaces/logs/`
 
 The harness fails hard when the packaged backend payload contract is broken. In that case, confirm the staged portable runtime still contains:
 
