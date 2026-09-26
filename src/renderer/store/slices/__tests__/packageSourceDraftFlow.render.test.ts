@@ -2,10 +2,15 @@ import assert from 'node:assert/strict';
 import { afterEach, describe, it } from 'node:test';
 import { configureStore } from '@reduxjs/toolkit';
 import type { StoredPackageSourceConfig } from '../../../../main/package-source-config-manager.js';
-import { OFFICIAL_SERVER_HTTP_INDEX_URL } from '../../../../shared/package-source-defaults.js';
 import {
+  OFFICIAL_INTERNATIONAL_SERVER_HTTP_INDEX_URL,
+  OFFICIAL_SERVER_HTTP_INDEX_URL,
+} from '../../../../shared/package-source-defaults.js';
+import {
+  getSelectedSourceChoice,
   hasPackageSourceDraftChanges,
-  resolveSourceTypeChange,
+  officialIndexUrls,
+  resolveSourceChoice,
 } from '../../../components/packageSourceSelectorState.js';
 import reducer, {
   setAllConfigs,
@@ -78,7 +83,7 @@ describe('package source draft flow', () => {
     store.dispatch(setCurrentConfig(httpIndexConfig));
     store.dispatch(setAllConfigs([httpIndexConfig]));
 
-    const nextAction = resolveSourceTypeChange([httpIndexConfig], 'local-folder');
+    const nextAction = resolveSourceChoice([httpIndexConfig], 'local-folder');
 
     assert.deepEqual(nextAction, {
       kind: 'edit-draft',
@@ -99,6 +104,41 @@ describe('package source draft flow', () => {
       }),
       true,
     );
+  });
+
+  it('resolves each official region independently and keeps local folder separate', () => {
+    const mainland: StoredPackageSourceConfig = {
+      id: 'mainland',
+      type: 'http-index',
+      name: 'Mainland',
+      indexUrl: OFFICIAL_SERVER_HTTP_INDEX_URL,
+      createdAt: '2026-04-11T00:00:00.000Z',
+    };
+    const international: StoredPackageSourceConfig = {
+      ...mainland,
+      id: 'international',
+      name: 'International',
+      indexUrl: OFFICIAL_INTERNATIONAL_SERVER_HTTP_INDEX_URL,
+    };
+
+    assert.deepEqual(resolveSourceChoice([mainland, international], 'international'), {
+      kind: 'switch-saved-source',
+      sourceId: 'international',
+    });
+    assert.deepEqual(resolveSourceChoice([mainland], 'international'), {
+      kind: 'create-official-source',
+      indexUrl: OFFICIAL_INTERNATIONAL_SERVER_HTTP_INDEX_URL,
+    });
+    assert.deepEqual(resolveSourceChoice([mainland], 'local-folder'), {
+      kind: 'edit-draft',
+      sourceType: 'local-folder',
+    });
+    assert.equal(getSelectedSourceChoice(international, 'http-index'), 'international');
+    assert.equal(getSelectedSourceChoice(mainland, 'http-index'), 'mainland');
+    assert.equal(officialIndexUrls.international, international.indexUrl);
+    assert.equal(officialIndexUrls.mainland, mainland.indexUrl);
+    assert.equal(getSelectedSourceChoice(mainland, 'local-folder'), 'local-folder');
+    assert.equal(getSelectedSourceChoice({ ...mainland, indexUrl: 'https://custom.example/index.json' }, 'http-index'), undefined);
   });
 
   it('persists a valid local-folder draft only when save is triggered explicitly', async () => {

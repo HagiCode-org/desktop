@@ -338,3 +338,30 @@ blogFeed:
   actions:
     readArticle: 記事を開く
     openFeed: フィードを開く
+serviceRegion:
+  title: サービス地域
+  resetTitle: 地域選択の案内を再テスト
+  resetDescription: 保存済みの選択を解除し、次回ホームを開いたときに案内を再表示します。現在のパッケージソースは変更されません。
+  resetButton: 選択をリセット
+  resetSuccess: 地域選択をリセットしました。次回ホームを開くと案内が再表示されます。
+  promptTitle: サーバーのサービス地域を選択
+  confirmChoice: この地域を使用
+  later: 後で
+  successTitle: サービス地域を保存しました
+  successDescription: この設定は後から「設定 > 地域」で変更できます。
+  done: 確認
+  promptDescription: Hagicode のバージョン更新や関連ソフトウェアのダウンロード先に影響します。表示言語や依存関係のミラーは変更されません。
+  description: 公式サーバーパッケージインデックスと優先ダウンロード元を設定します。表示言語や依存関係のミラーは変更されません。
+  choiceLabel: サービス地域
+  loading: 地域を読み込み中...
+  saving: 地域を適用中...
+  current: '現在: {{region}}'
+  regions:
+    CN: 中国本土
+    INTERNATIONAL: 国際
+  regionDetails:
+    CN: 中国本土のユーザーにおすすめです。Hagicode の更新と関連ソフトウェアは、Alibaba Cloud や Tencent Cloud など中国国内のクラウドサーバーを優先し、ダウンロードを高速化します。
+    INTERNATIONAL: 中国本土以外のユーザーにおすすめです。Hagicode の更新と関連ソフトウェアは、Cloudflare や Azure Cloud など国際クラウドを優先し、海外からのダウンロードを高速化します。
+  steamRestricted: Steam モードでは配布元が固定されるため、サービス地域を変更できません。
+  changeFailed: サービス地域を変更できませんでした
+  errorDetails: '詳細: {{error}}'

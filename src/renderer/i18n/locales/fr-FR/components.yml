@@ -338,3 +338,30 @@ blogFeed:
   actions:
     readArticle: Lire l’article
     openFeed: Ouvrir le flux
+serviceRegion:
+  title: Région de service
+  resetTitle: Tester à nouveau le choix de région
+  resetDescription: Efface le choix enregistré et réaffiche l’invite lors de la prochaine ouverture de l’accueil. La source de paquets actuelle ne change pas.
+  resetButton: Réinitialiser le choix
+  resetSuccess: Choix de région réinitialisé. L’invite réapparaîtra à la prochaine ouverture de l’accueil.
+  promptTitle: Choisir la région de service du serveur
+  confirmChoice: Utiliser cette région
+  later: Plus tard
+  successTitle: Région de service enregistrée
+  successDescription: Vous pourrez la modifier plus tard dans Paramètres > Région.
+  done: Compris
+  promptDescription: Ce choix détermine les points de téléchargement des mises à jour de Hagicode et des logiciels associés. Il ne modifie ni la langue ni les miroirs des dépendances.
+  description: Définit l’index officiel des paquets serveur et la source de téléchargement prioritaire. La langue et les miroirs des dépendances restent inchangés.
+  choiceLabel: Région de service
+  loading: Chargement de la région...
+  saving: Application de la région...
+  current: 'Actuelle : {{region}}'
+  regions:
+    CN: Chine continentale
+    INTERNATIONAL: International
+  regionDetails:
+    CN: Recommandé pour la Chine continentale. Les mises à jour de Hagicode et les logiciels associés privilégient des serveurs cloud locaux, comme Alibaba Cloud et Tencent Cloud, pour accélérer les téléchargements.
+    INTERNATIONAL: Recommandé hors de Chine continentale. Les mises à jour de Hagicode et les logiciels associés privilégient des réseaux cloud internationaux comme Cloudflare et Azure Cloud, généralement plus rapides à l’international.
+  steamRestricted: En mode Steam, les sources de paquets sont fixes pour cette distribution ; la région ne peut pas être modifiée.
+  changeFailed: Impossible de modifier la région de service
+  errorDetails: 'Détails : {{error}}'

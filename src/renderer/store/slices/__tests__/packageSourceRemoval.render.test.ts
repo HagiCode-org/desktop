@@ -15,12 +15,22 @@ const enPagesPath = path.resolve(process.cwd(), 'src/renderer/i18n/generated-loc
 const githubOAuthSettingsPath = path.resolve(process.cwd(), 'src/renderer/components/settings/GitHubOAuthSettings.tsx');
 
 describe('package source renderer cleanup', () => {
-  it('only renders local-folder and http-index package source options', async () => {
+  it('renders mainland, international and local folder as parallel source choices', async () => {
     const selectorSource = await fs.readFile(selectorPath, 'utf8');
 
-    assert.match(selectorSource, /SelectItem value="local-folder"/);
-    assert.match(selectorSource, /SelectItem value="http-index"/);
+    assert.match(selectorSource, /RadioGroup/);
+    assert.match(selectorSource, /'mainland', 'international', 'local-folder'/);
+    assert.doesNotMatch(selectorSource, /<Select/);
     assert.doesNotMatch(selectorSource, /github-release/);
+  });
+
+  it('shows the selected official index URL in a labeled text field', async () => {
+    const selectorSource = await fs.readFile(selectorPath, 'utf8');
+
+    assert.match(selectorSource, /<Label htmlFor="http-index-url">/);
+    assert.match(selectorSource, /id="http-index-url"/);
+    assert.match(selectorSource, /officialIndexUrls\[selectedChoice\]/);
+    assert.match(selectorSource, /readOnly/);
   });
 
   it('removes github-specific form state from the package source slice', async () => {
@@ -38,10 +48,11 @@ describe('package source renderer cleanup', () => {
       fs.readFile(managerPath, 'utf8'),
     ]);
 
-    assert.match(selectorSource, /OFFICIAL_SERVER_HTTP_INDEX_URL/);
+    const selectorStateSource = await fs.readFile(path.resolve(process.cwd(), 'src/renderer/components/packageSourceSelectorState.ts'), 'utf8');
+    assert.match(selectorStateSource, /OFFICIAL_SERVER_HTTP_INDEX_URL/);
     assert.match(sliceSource, /OFFICIAL_SERVER_HTTP_INDEX_URL/);
     assert.match(managerSource, /OFFICIAL_SERVER_HTTP_INDEX_URL/);
-    assert.match(selectorSource, new RegExp(`placeholder=\\{OFFICIAL_SERVER_HTTP_INDEX_URL\\}`));
+    assert.match(selectorStateSource, /indexUrl: httpIndexUrl \|\| OFFICIAL_SERVER_HTTP_INDEX_URL/);
     assert.equal(selectorSource.includes(OFFICIAL_SERVER_HTTP_INDEX_URL), false);
     assert.equal(sliceSource.includes(OFFICIAL_SERVER_HTTP_INDEX_URL), false);
     assert.equal(managerSource.includes(OFFICIAL_SERVER_HTTP_INDEX_URL), false);
@@ -50,11 +61,12 @@ describe('package source renderer cleanup', () => {
   it('localizes and switches between both official regional sources', async () => {
     const selectorSource = await fs.readFile(selectorPath, 'utf8');
 
-    assert.match(selectorSource, /OFFICIAL_MAINLAND_SERVER_HTTP_INDEX_URL/);
-    assert.match(selectorSource, /OFFICIAL_INTERNATIONAL_SERVER_HTTP_INDEX_URL/);
-    assert.match(selectorSource, /packageSource\.officialSource\.mainland/);
-    assert.match(selectorSource, /packageSource\.officialSource\.international/);
-    assert.match(selectorSource, /dispatch\(switchSource\(sourceId\)\)/);
+    const selectorStateSource = await fs.readFile(path.resolve(process.cwd(), 'src/renderer/components/packageSourceSelectorState.ts'), 'utf8');
+    assert.match(selectorStateSource, /OFFICIAL_MAINLAND_SERVER_HTTP_INDEX_URL/);
+    assert.match(selectorStateSource, /OFFICIAL_INTERNATIONAL_SERVER_HTTP_INDEX_URL/);
+    assert.match(selectorSource, /'mainland', 'international', 'local-folder'/);
+    assert.match(selectorSource, /`packageSource\.officialSource\.\$\{choice\}`/);
+    assert.match(selectorSource, /dispatch\(switchSource\(nextAction.sourceId\)\)/);
   });
 
   it('removes github source copy and the desktop github oauth settings surface', async () => {

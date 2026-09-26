@@ -4,6 +4,8 @@ import i18nReducer from './slices/i18nSlice';
 import dependencyReducer from './slices/dependencySlice';
 import viewReducer from './slices/viewSlice';
 import packageSourceReducer from './slices/packageSourceSlice';
+import serviceRegionReducer, { setServiceRegionState } from './slices/serviceRegionSlice';
+import { loadServiceRegion } from './thunks/serviceRegionThunks';
 import onboardingReducer from './slices/onboardingSlice';
 import rssFeedReducer from './slices/rssFeedSlice';
 import claudeConfigReducer from './slices/claudeConfigSlice';
@@ -43,6 +45,7 @@ import { initializeDependency } from './thunks/dependencyThunks';
 import { initializeRSSFeed } from './thunks/rssFeedThunks';
 import { checkOnboardingTrigger } from './thunks/onboardingThunks';
 import type { HagihubApi } from '../../shared/api.js';
+import type { ServiceRegionState } from '../../types/service-region.js';
 import { setStartupStoreLicenseVerificationPromise } from './startupStoreLicenseVerification';
 
 const subscriptionFeatureEnabled = typeof window !== 'undefined'
@@ -72,6 +75,7 @@ export const store = configureStore({
     dependency: dependencyReducer,
     view: viewReducer,
     packageSource: packageSourceReducer,
+    serviceRegion: serviceRegionReducer,
     onboarding: onboardingReducer,
     rssFeed: rssFeedReducer,
     claudeConfig: claudeConfigReducer,
@@ -155,8 +159,15 @@ function registerRealtimeListeners(): void {
     msstoreDonationItem?: {
       onDidChange: (callback: (state: any) => void) => (() => void) | void;
     };
+    serviceRegion?: {
+      onDidChange: (callback: (state: ServiceRegionState) => void) => (() => void) | void;
+    };
   };
   const hagihub = (window as Window & { hagihub?: HagihubApi }).hagihub;
+
+  electronAPI.serviceRegion?.onDidChange?.((state) => {
+    store.dispatch(setServiceRegionState(state));
+  });
 
   electronAPI.onActiveVersionChanged?.((version: any) => {
     store.dispatch({ type: 'webService/setActiveVersion', payload: version });
@@ -262,6 +273,7 @@ export function startBackgroundStartupInitialization(): void {
 
   void Promise.allSettled([
     store.dispatch(checkOnboardingTrigger()),
+    store.dispatch(loadServiceRegion()),
     store.dispatch(initializePackageSource()),
     store.dispatch(initializeDependency()),
     store.dispatch(initializeRSSFeed()),

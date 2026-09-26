@@ -1,4 +1,4 @@
-import { BellRing, Bug, Languages, Rocket, SlidersHorizontal, Upload, HardDrive } from 'lucide-react';
+import { BellRing, Bug, Languages, Rocket, SlidersHorizontal, Upload, HardDrive, MapPin } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { DistributionModeState } from '../../../../types/distribution-mode';
 import type { SettingsTabConfig, SettingsTabId } from '../types';
@@ -40,6 +40,12 @@ export function useSettingsTab({ distributionState, showSharingAccelerationSetti
         labelKey: 'settings.tabs.debugOptions',
         icon: Bug,
         loader: () => import('../components/tabs/builtInTabs').then((module) => ({ default: module.DebugOptionsSettingsTab })),
+      },
+      {
+        id: 'region',
+        labelKey: 'settings.tabs.region',
+        icon: MapPin,
+        loader: () => import('../components/tabs/RegionTab').then((module) => ({ default: module.RegionTab })),
       },
       {
         id: 'language',

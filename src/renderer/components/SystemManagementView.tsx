@@ -43,6 +43,7 @@ import type {
 import type { DependencyReadinessSummary } from '../../types/dependency-management';
 import { createDefaultDistributionModeState, type DistributionModeState } from '../../types/distribution-mode';
 import { resolveDesktopLanguageCode } from '../../shared/desktop-languages';
+import { ServiceRegionPrompt } from './settings/ServiceRegionPrompt';
 
 interface InstalledVersion {
   id: string;
@@ -118,6 +119,8 @@ export default function SystemManagementView({
   const [openingTarget, setOpeningTarget] = useState<LogDirectoryTarget | null>(null);
   const [dependencyReadiness, setDependencyReadiness] = useState<DependencyReadinessSummary | null>(null);
   const [dependencyReadinessError, setDependencyReadinessError] = useState<string | null>(null);
+  const [homepageTourStartupResolved, setHomepageTourStartupResolved] = useState(false);
+  const [homepageTourActive, setHomepageTourActive] = useState(false);
   const homepageTourSessionRef = useRef<HomepageTourSession | null>(null);
   const homepageTourFrameRef = useRef<number | null>(null);
   const homepageTourTimeoutRef = useRef<number | null>(null);
@@ -241,13 +244,17 @@ export default function SystemManagementView({
     if (onboardingActive) {
       clearPendingHomepageTourStartup();
       destroyHomepageTourSession(false);
+      setHomepageTourStartupResolved(true);
       return;
     }
 
     if (homepageTourSessionRef.current?.isActive()) {
+      setHomepageTourActive(true);
+      setHomepageTourStartupResolved(true);
       return;
     }
 
+    setHomepageTourStartupResolved(false);
     clearPendingHomepageTourStartup();
 
     homepageTourFrameRef.current = window.requestAnimationFrame(() => {
@@ -257,6 +264,7 @@ export default function SystemManagementView({
 
         const steps = buildHomepageTourSteps({ t });
         if (!shouldAutoStartHomepageTour({ currentView, onboardingActive, steps })) {
+          setHomepageTourStartupResolved(true);
           return;
         }
 
@@ -265,8 +273,11 @@ export default function SystemManagementView({
           steps,
           onDestroyed: () => {
             homepageTourSessionRef.current = null;
+            setHomepageTourActive(false);
           },
         });
+        setHomepageTourActive(true);
+        setHomepageTourStartupResolved(true);
       }, HOMEPAGE_TOUR_DOM_STABLE_DELAY_MS);
     });
 
@@ -576,6 +587,10 @@ export default function SystemManagementView({
           </section>
         </motion.div>
       ) : null}
+
+      <ServiceRegionPrompt
+        disabled={distributionState.steamMode || onboardingActive || !homepageTourStartupResolved || homepageTourActive}
+      />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.95fr)]">
         <div className="space-y-6">

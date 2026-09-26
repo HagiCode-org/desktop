@@ -5,6 +5,7 @@ settings:
     notification: Notification Center
     dependencyManagement: Dependency Management
     debugOptions: Debug Options
+    region: Dienstregion
     language: Language Settings
     onboarding: Onboarding
     sharingAcceleration: Herunterladen und Teilen

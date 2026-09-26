@@ -9,6 +9,7 @@ export type SettingsTabId =
   | 'runtimeData'
   | 'debugOptions'
   | 'sharingAcceleration'
+  | 'region'
   | 'language';
 
 export interface SettingsTabComponentProps {

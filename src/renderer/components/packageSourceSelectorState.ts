@@ -1,7 +1,17 @@
 import type { StoredPackageSourceConfig } from '../../main/package-source-config-manager';
-import { OFFICIAL_SERVER_HTTP_INDEX_URL } from '../../shared/package-source-defaults';
+import {
+  OFFICIAL_INTERNATIONAL_SERVER_HTTP_INDEX_URL,
+  OFFICIAL_MAINLAND_SERVER_HTTP_INDEX_URL,
+  OFFICIAL_SERVER_HTTP_INDEX_URL,
+} from '../../shared/package-source-defaults.js';
 
 export type PackageSourceType = StoredPackageSourceConfig['type'];
+export type PackageSourceChoice = 'mainland' | 'international' | 'local-folder' | `saved:${string}`;
+
+export const officialIndexUrls = {
+  mainland: OFFICIAL_MAINLAND_SERVER_HTTP_INDEX_URL,
+  international: OFFICIAL_INTERNATIONAL_SERVER_HTTP_INDEX_URL,
+};
 
 export type EditablePackageSourceConfig =
   | {
@@ -22,14 +32,33 @@ export type SourceTypeChangeResolution =
     }
   | {
       kind: 'edit-draft';
-      sourceType: PackageSourceType;
+      sourceType: 'local-folder';
+    }
+  | {
+      kind: 'create-official-source';
+      indexUrl: string;
     };
 
-export function resolveSourceTypeChange(
+export function resolveSourceChoice(
   allConfigs: StoredPackageSourceConfig[],
-  sourceType: PackageSourceType,
+  choice: string,
 ): SourceTypeChangeResolution {
-  const existingSource = allConfigs.find(config => config.type === sourceType);
+  if (choice.startsWith('saved:')) {
+    const sourceId = choice.slice('saved:'.length);
+    const savedSource = allConfigs.find(config => config.id === sourceId && config.type === 'http-index');
+    if (!savedSource) {
+      throw new Error(`Unknown saved custom package source: ${sourceId}`);
+    }
+    return { kind: 'switch-saved-source', sourceId: savedSource.id };
+  }
+
+  if (choice !== 'mainland' && choice !== 'international' && choice !== 'local-folder') {
+    throw new Error(`Unsupported package source choice: ${choice}`);
+  }
+
+  const existingSource = allConfigs.find(config => choice === 'local-folder'
+    ? config.type === 'local-folder'
+    : config.type === 'http-index' && config.indexUrl === officialIndexUrls[choice]);
   if (existingSource) {
     return {
       kind: 'switch-saved-source',
@@ -37,10 +66,23 @@ export function resolveSourceTypeChange(
     };
   }
 
-  return {
-    kind: 'edit-draft',
-    sourceType,
-  };
+  return choice === 'local-folder'
+    ? { kind: 'edit-draft', sourceType: 'local-folder' }
+    : { kind: 'create-official-source', indexUrl: officialIndexUrls[choice] };
+}
+
+export function getSelectedSourceChoice(
+  currentConfig: StoredPackageSourceConfig | null,
+  sourceType: PackageSourceType,
+): PackageSourceChoice | undefined {
+  if (sourceType === 'local-folder') {
+    return 'local-folder';
+  }
+  if (currentConfig?.type !== 'http-index') {
+    return undefined;
+  }
+  return (Object.keys(officialIndexUrls) as Array<'mainland' | 'international'>)
+    .find(region => currentConfig.indexUrl === officialIndexUrls[region]);
 }
 
 export function buildDraftSourceConfig(params: {

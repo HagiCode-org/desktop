@@ -338,3 +338,30 @@ blogFeed:
   actions:
     readArticle: Artikel öffnen
     openFeed: Feed öffnen
+serviceRegion:
+  title: Dienstregion
+  resetTitle: Regionsauswahl erneut testen
+  resetDescription: Löschen Sie die gespeicherte Auswahl, damit der Hinweis beim nächsten Öffnen der Startseite erneut erscheint. Die aktuelle Paketquelle bleibt unverändert.
+  resetButton: Auswahl zurücksetzen
+  resetSuccess: Regionsauswahl zurückgesetzt. Der Hinweis erscheint beim nächsten Öffnen der Startseite erneut.
+  promptTitle: Dienstregion für den Server auswählen
+  confirmChoice: Diese Region verwenden
+  later: Später
+  successTitle: Dienstregion gespeichert
+  successDescription: Sie können die Region später unter Einstellungen > Region ändern.
+  done: Verstanden
+  promptDescription: Diese Auswahl legt die Download-Endpunkte für Hagicode-Updates und zugehörige Softwarepakete fest. Sprache und Abhängigkeits-Mirrors bleiben unverändert.
+  description: Legt den offiziellen Serverpaketindex und die bevorzugte Downloadquelle fest. Sprache und Abhängigkeits-Mirrors bleiben unverändert.
+  choiceLabel: Dienstregion
+  loading: Region wird geladen...
+  saving: Region wird angewendet...
+  current: 'Aktuell: {{region}}'
+  regions:
+    CN: Festlandchina
+    INTERNATIONAL: International
+  regionDetails:
+    CN: Empfohlen für Nutzer in Festlandchina. Hagicode-Updates und zugehörige Softwarepakete werden bevorzugt über Cloudserver in China, etwa Alibaba Cloud und Tencent Cloud, geladen.
+    INTERNATIONAL: Empfohlen für Nutzer außerhalb Festlandchinas. Hagicode-Updates und zugehörige Softwarepakete werden bevorzugt über internationale Cloud-Netzwerke wie Cloudflare und Azure Cloud geladen, die dort meist schneller sind.
+  steamRestricted: Im Steam-Modus sind Paketquellen für diese Distribution festgelegt; die Dienstregion kann nicht geändert werden.
+  changeFailed: Dienstregion konnte nicht geändert werden
+  errorDetails: 'Details: {{error}}'

@@ -1,7 +1,7 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { Version } from '../../../main/version-manager';
 import type { StoredPackageSourceConfig } from '../../../main/package-source-config-manager';
-import { OFFICIAL_SERVER_HTTP_INDEX_URL } from '../../../shared/package-source-defaults';
+import { OFFICIAL_SERVER_HTTP_INDEX_URL } from '../../../shared/package-source-defaults.js';
 
 export interface PackageSourceState {
   currentConfig: StoredPackageSourceConfig | null;

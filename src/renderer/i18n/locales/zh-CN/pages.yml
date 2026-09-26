@@ -5,6 +5,7 @@ settings:
     notification: 通知管理
     dependencyManagement: 依赖管理
     debugOptions: 调试选项
+    region: 服务区域
     language: 语言设置
     onboarding: 启动向导
     sharingAcceleration: 下载与共享加速

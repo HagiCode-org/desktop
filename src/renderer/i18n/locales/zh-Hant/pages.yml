@@ -5,6 +5,7 @@ settings:
     notification: Notification Center
     dependencyManagement: 依賴管理
     debugOptions: 調試選項
+    region: 服務區域
     language: Language Settings
     onboarding: 啟動精靈
     sharingAcceleration: 下載與分享加速

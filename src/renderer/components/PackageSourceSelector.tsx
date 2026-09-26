@@ -2,11 +2,6 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Folder, Globe, Package } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
-import {
-  OFFICIAL_INTERNATIONAL_SERVER_HTTP_INDEX_URL,
-  OFFICIAL_MAINLAND_SERVER_HTTP_INDEX_URL,
-  OFFICIAL_SERVER_HTTP_INDEX_URL,
-} from '../../shared/package-source-defaults';
 import type { RootState, AppDispatch } from '../store';
 import {
   selectAllConfigs,
@@ -15,20 +10,21 @@ import {
   selectHttpIndexUrl,
   selectSelectedSourceType,
   setFolderPath,
-  setHttpIndexUrl,
   setSelectedSourceType,
 } from '../store/slices/packageSourceSlice';
 import { setSourceConfig, switchSource } from '../store/thunks/packageSourceThunks';
 import {
   buildDraftSourceConfig,
+  getSelectedSourceChoice,
   hasPackageSourceDraftChanges,
-  resolveSourceTypeChange,
+  officialIndexUrls,
+  resolveSourceChoice,
 } from './packageSourceSelectorState';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 
 export function PackageSourceSelector() {
   const { t } = useTranslation('components');
@@ -38,6 +34,13 @@ export function PackageSourceSelector() {
   const folderPath = useSelector((state: RootState) => selectFolderPath(state));
   const httpIndexUrl = useSelector((state: RootState) => selectHttpIndexUrl(state));
   const sourceType = useSelector((state: RootState) => selectSelectedSourceType(state));
+  const selectedChoice = getSelectedSourceChoice(currentConfig, sourceType);
+  const savedCustomSources = allConfigs.filter(source => (
+    source.type === 'http-index'
+    && source.indexUrl !== officialIndexUrls.mainland
+    && source.indexUrl !== officialIndexUrls.international
+  ));
+  const selectedCustomSourceId = savedCustomSources.find(source => source.id === currentConfig?.id)?.id;
 
   const draftConfig = useMemo(() => (
     buildDraftSourceConfig({
@@ -58,30 +61,30 @@ export function PackageSourceSelector() {
     })
   ), [currentConfig, folderPath, httpIndexUrl, sourceType]);
 
-  const handleSourceTypeChange = (value: 'local-folder' | 'http-index') => {
-    const nextAction = resolveSourceTypeChange(allConfigs, value);
+  const handleSourceChoiceChange = (value: string) => {
+    const nextAction = resolveSourceChoice(allConfigs, value);
     if (nextAction.kind === 'switch-saved-source') {
-      dispatch(switchSource(nextAction.sourceId));
+      if (nextAction.sourceId !== currentConfig?.id) {
+        dispatch(switchSource(nextAction.sourceId));
+      } else if (value !== 'local-folder' && sourceType === 'local-folder') {
+        dispatch(setSelectedSourceType('http-index'));
+      }
       return;
     }
 
-    dispatch(setSelectedSourceType(nextAction.sourceType));
+    if (nextAction.kind === 'edit-draft') {
+      dispatch(setSelectedSourceType(nextAction.sourceType));
+    } else {
+      dispatch(setSourceConfig({
+        type: 'http-index',
+        name: t(`packageSource.officialSource.${value}`),
+        indexUrl: nextAction.indexUrl,
+      }));
+    }
   };
 
   const handleSave = () => {
     dispatch(setSourceConfig(draftConfig));
-  };
-
-  const getSourceName = (source: (typeof allConfigs)[number]) => {
-    if (source.type === 'http-index' && source.indexUrl === OFFICIAL_MAINLAND_SERVER_HTTP_INDEX_URL) {
-      return t('packageSource.officialSource.mainland');
-    }
-    if (source.type === 'http-index' && source.indexUrl === OFFICIAL_INTERNATIONAL_SERVER_HTTP_INDEX_URL) {
-      return t('packageSource.officialSource.international');
-    }
-    return source.name || t(source.type === 'local-folder'
-      ? 'packageSource.sourceType.folder'
-      : 'packageSource.sourceType.httpIndex');
   };
 
   return (
@@ -94,49 +97,52 @@ export function PackageSourceSelector() {
         <CardDescription>{t('packageSource.cardDescription')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {allConfigs.length > 0 && (
-          <div className="space-y-2">
-            <Label>{t('packageSource.currentSource')}</Label>
-            <Select
-              value={currentConfig?.id ?? ''}
-              onValueChange={(sourceId) => dispatch(switchSource(sourceId))}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {allConfigs.map((source) => (
-                  <SelectItem key={source.id} value={source.id}>
-                    {getSourceName(source)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
         <div className="space-y-2">
-          <Label>{t('packageSource.sourceType.label')}</Label>
-          <Select value={sourceType} onValueChange={handleSourceTypeChange}>
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="local-folder">
-                <div className="flex items-center gap-2">
-                  <Folder className="h-4 w-4" />
-                  {t('packageSource.sourceType.folder')}
-                </div>
-              </SelectItem>
-              <SelectItem value="http-index">
-                <div className="flex items-center gap-2">
-                  <Globe className="h-4 w-4" />
-                  {t('packageSource.sourceType.httpIndex')}
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
+          <Label id="package-source-choice-label">{t('packageSource.sourceType.label')}</Label>
+          <RadioGroup
+            aria-labelledby="package-source-choice-label"
+            value={selectedChoice ?? ''}
+            onValueChange={handleSourceChoiceChange}
+            className="grid gap-3 sm:grid-cols-3"
+          >
+            {(['mainland', 'international', 'local-folder'] as const).map((choice) => (
+              <Label
+                key={choice}
+                htmlFor={`package-source-${choice}`}
+                className="flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-muted/20 p-4 has-[[data-state=checked]]:border-primary"
+              >
+                <RadioGroupItem id={`package-source-${choice}`} value={choice} />
+                {choice === 'local-folder' ? <Folder className="h-4 w-4 shrink-0" /> : <Globe className="h-4 w-4 shrink-0" />}
+                <span>{t(choice === 'local-folder'
+                  ? 'packageSource.sourceType.folder'
+                  : `packageSource.officialSource.${choice}`)}</span>
+              </Label>
+            ))}
+          </RadioGroup>
         </div>
+
+        {savedCustomSources.length > 0 ? (
+          <div className="space-y-2">
+            <Label id="saved-custom-package-source-label">{t('packageSource.availableSources')}</Label>
+            <RadioGroup
+              aria-labelledby="saved-custom-package-source-label"
+              value={selectedCustomSourceId ? `saved:${selectedCustomSourceId}` : ''}
+              onValueChange={handleSourceChoiceChange}
+              className="grid gap-3 sm:grid-cols-2"
+            >
+              {savedCustomSources.map((source) => (
+                <Label
+                  key={source.id}
+                  htmlFor={`saved-package-source-${source.id}`}
+                  className="flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-muted/20 p-4 has-[[data-state=checked]]:border-primary"
+                >
+                  <RadioGroupItem id={`saved-package-source-${source.id}`} value={`saved:${source.id}`} />
+                  <span>{source.name || source.indexUrl || t('packageSource.notSet')}</span>
+                </Label>
+              ))}
+            </RadioGroup>
+          </div>
+        ) : null}
 
         {sourceType === 'local-folder' && (
           <div className="space-y-2">
@@ -149,40 +155,35 @@ export function PackageSourceSelector() {
               placeholder={t('packageSource.folder.path.placeholder')}
               className="font-mono text-sm"
             />
+            {currentConfig?.type === 'local-folder' && (
+              <p className="text-xs text-muted-foreground">
+                {t('packageSource.folder.currentPath', { path: currentConfig.path || t('packageSource.notSet') })}
+              </p>
+            )}
+          </div>
+        )}
+
+        {sourceType === 'http-index' && currentConfig?.type === 'http-index' && (
+          <div className="space-y-2">
+            <Label htmlFor="http-index-url">{t('packageSource.httpIndex.indexUrl.label')}</Label>
+            <Input
+              id="http-index-url"
+              type="url"
+              value={selectedChoice === 'mainland' || selectedChoice === 'international'
+                ? officialIndexUrls[selectedChoice]
+                : currentConfig.indexUrl || httpIndexUrl}
+              readOnly
+              className="font-mono text-sm"
+            />
             <p className="text-xs text-muted-foreground">
-              当前路径: {currentConfig?.type === 'local-folder' ? currentConfig.path : '未设置'}
+              {t('packageSource.httpIndex.indexUrl.hint')}
             </p>
           </div>
         )}
 
-        {sourceType === 'http-index' && (
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <Label htmlFor="http-index-url">{t('packageSource.httpIndex.indexUrl.label')}</Label>
-              <Input
-                id="http-index-url"
-                type="text"
-                value={httpIndexUrl}
-                onChange={(event) => dispatch(setHttpIndexUrl(event.target.value))}
-                placeholder={OFFICIAL_SERVER_HTTP_INDEX_URL}
-                className="font-mono text-sm"
-              />
-              <p className="text-xs text-muted-foreground">
-                {t('packageSource.httpIndex.indexUrl.hint')}
-              </p>
-            </div>
-
-            <div className="text-xs text-muted-foreground">
-              当前配置: {currentConfig?.type === 'http-index'
-                ? currentConfig.indexUrl || '未设置'
-                : '未设置'}
-            </div>
-          </div>
-        )}
-
-        {hasChanges && (
+        {sourceType === 'local-folder' && hasChanges && (
           <Button onClick={handleSave} className="w-full">
-            保存配置
+            {t('packageSource.applyButton')}
           </Button>
         )}
       </CardContent>

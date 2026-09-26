@@ -261,11 +261,12 @@ packageSource:
     mainland: HagiCode official index - China mainland
     international: HagiCode official index - International
   sourceType:
-    label: Package Source Type
+    label: Server package source
     folder: Local Folder
     httpIndex: HTTP Index
     http: HTTP URL
   folder:
+    currentPath: "Current path: {{path}}"
     path:
       label: Folder Path
       placeholder: Enter path to package directory
@@ -296,6 +297,7 @@ packageSource:
   currentSource: Current Package Source
   availableSources: Available Package Sources
   noSources: No package sources configured
+  notSet: Not set
   sourceName: Source Name
   actions: Actions
   scanSuccess: Scan completed, found {{count}} versions
@@ -338,3 +340,30 @@ blogFeed:
   actions:
     readArticle: Read article
     openFeed: Open feed
+serviceRegion:
+  title: Service region
+  promptTitle: Choose a service region
+  confirmChoice: Use this region
+  later: Later
+  successTitle: Service region saved
+  successDescription: You can change this later in Settings > Region.
+  done: Got it
+  resetTitle: Test the region prompt again
+  resetDescription: Clear the saved choice and show the setup prompt the next time you open Home. Your current package source stays unchanged.
+  resetButton: Reset choice
+  resetSuccess: Region choice reset. The setup prompt will appear next time you open Home.
+  promptDescription: This choice affects the download endpoints used for Hagicode version updates and related software packages. It does not change your interface language or dependency mirrors.
+  description: Controls the official server package index and preferred download source. It does not change interface language or dependency mirrors.
+  choiceLabel: Service region
+  loading: Loading region...
+  saving: Applying region...
+  current: 'Current: {{region}}'
+  regions:
+    CN: China Mainland
+    INTERNATIONAL: International
+  regionDetails:
+    CN: Recommended for users in mainland China. Hagicode updates and related software packages are prioritized through domestic cloud servers such as Alibaba Cloud and Tencent Cloud for faster downloads.
+    INTERNATIONAL: Recommended for users outside mainland China. Hagicode updates and related software packages are prioritized through international cloud networks such as Cloudflare and Azure Cloud, which are generally faster for overseas users.
+  steamRestricted: Region switching is unavailable in Steam mode because package sources are fixed for this distribution.
+  changeFailed: Could not change the service region
+  errorDetails: 'Details: {{error}}'

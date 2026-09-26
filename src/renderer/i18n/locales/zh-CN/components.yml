@@ -261,11 +261,12 @@ packageSource:
     mainland: HagiCode 官方索引 - 中国大陆
     international: HagiCode 官方索引 - 国际
   sourceType:
-    label: 包源类型
+    label: Server 包来源
     folder: 本地文件夹
     httpIndex: HTTP 索引源
     http: HTTP URL
   folder:
+    currentPath: "当前路径: {{path}}"
     path:
       label: 文件夹路径
       placeholder: 输入包目录路径
@@ -296,6 +297,7 @@ packageSource:
   currentSource: 当前包源
   availableSources: 可用包源
   noSources: 未配置包源
+  notSet: 未设置
   sourceName: 包源名称
   actions: 操作
   scanSuccess: 扫描完成，找到 {{count}} 个版本
@@ -338,3 +340,30 @@ blogFeed:
   actions:
     readArticle: 查看详情
     openFeed: 打开订阅源
+serviceRegion:
+  title: 服务区域
+  promptTitle: 选择服务器服务区域
+  confirmChoice: 使用此区域
+  later: 稍后
+  successTitle: 服务区域已保存
+  successDescription: 以后可以在“设置 > 服务区域”中修改。
+  done: 知道了
+  resetTitle: 重新测试区域选择提示
+  resetDescription: 清除已保存的选择，下次打开首页时重新显示设置提示；不会更改当前包源。
+  resetButton: 重置选择
+  resetSuccess: 区域选择已重置；下次打开首页时会再次显示设置提示。
+  promptDescription: 该选择会影响 Hagicode 版本更新和相关软件包下载时使用的下载节点，不会更改界面语言或依赖镜像。
+  description: 控制官方服务器包索引和优先下载来源，不会更改界面语言或依赖镜像。
+  choiceLabel: 服务区域
+  loading: 正在读取区域...
+  saving: 正在应用区域...
+  current: '当前：{{region}}'
+  regions:
+    CN: 中国大陆
+    INTERNATIONAL: 国际
+  regionDetails:
+    CN: 推荐中国大陆用户选择。Hagicode 版本更新和相关软件包将优先使用阿里云、腾讯云等国内云节点，以提升下载速度。
+    INTERNATIONAL: 推荐中国大陆以外的用户选择。Hagicode 版本更新和相关软件包将优先使用 Cloudflare、Azure Cloud 等国际云节点，通常能获得更快的下载速度。
+  steamRestricted: Steam 模式使用固定的软件包来源，因此无法切换服务区域。
+  changeFailed: 无法更改服务区域
+  errorDetails: '详细信息：{{error}}'

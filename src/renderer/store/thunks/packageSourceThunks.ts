@@ -12,7 +12,7 @@ import {
   clearErrors,
   setScanResult,
   setSelectedChannel,
-} from '../slices/packageSourceSlice';
+} from '../slices/packageSourceSlice.js';
 import type { Version } from '../../../main/version-manager';
 import type { StoredPackageSourceConfig } from '../../../main/package-source-config-manager';
 

@@ -338,3 +338,30 @@ blogFeed:
   actions:
     readArticle: 查看詳情
     openFeed: 開啟訂閱源
+serviceRegion:
+  title: 服務區域
+  resetTitle: 重新測試區域選擇提示
+  resetDescription: 清除已儲存的選擇，下次開啟首頁時重新顯示設定提示；不會更改目前的套件來源。
+  resetButton: 重設選擇
+  resetSuccess: 區域選擇已重設；下次開啟首頁時會再次顯示設定提示。
+  promptTitle: 選擇伺服器服務區域
+  confirmChoice: 使用此區域
+  later: 稍後
+  successTitle: 服務區域已儲存
+  successDescription: 之後可以在「設定 > 服務區域」中修改。
+  done: 知道了
+  promptDescription: 此選擇會影響 Hagicode 版本更新與相關軟體套件下載時使用的下載節點，不會變更介面語言或相依項目鏡像。
+  description: 控制官方伺服器套件索引與優先下載來源，不會更改介面語言或相依項目鏡像。
+  choiceLabel: 服務區域
+  loading: 正在載入區域...
+  saving: 正在套用區域...
+  current: '目前：{{region}}'
+  regions:
+    CN: 中國大陸
+    INTERNATIONAL: 國際
+  regionDetails:
+    CN: 推薦中國大陸使用者選擇。Hagicode 版本更新與相關軟體套件將優先使用阿里雲、騰訊雲等中國大陸雲端節點，以提升下載速度。
+    INTERNATIONAL: 推薦中國大陸以外的使用者選擇。Hagicode 版本更新與相關軟體套件將優先使用 Cloudflare、Azure Cloud 等國際雲端節點，通常可獲得更快的下載速度。
+  steamRestricted: Steam 模式使用固定的套件來源，因此無法切換服務區域。
+  changeFailed: 無法更改服務區域
+  errorDetails: '詳細資訊：{{error}}'
