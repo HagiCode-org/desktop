@@ -45,6 +45,8 @@ common:
   operationFailed: 操作失败
   confirmDelete: 确定要删除吗？
   confirmAction: 确定要继续吗？
+  unknownError: 未知错误
+  notAvailable: 暂无
 header:
   title: 设置
   runningSuccessfully: 运行成功

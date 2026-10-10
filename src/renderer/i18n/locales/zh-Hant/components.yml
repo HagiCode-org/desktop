@@ -94,10 +94,10 @@ webServiceStatus:
   startButton: 啟動服務
   dependencyReadinessButton: 進入依賴項管理
   managedStartup:
-    label: Managed service startup
-    description: Choose which managed services should start together when you launch Hagicode.
+    label: 託管服務連動啟動
+    description: 選擇啟動 Hagicode 時需要一併啟動的託管服務。
   dependencyReadinessAlert:
-    title: 依赖项尚未就绪
+    title: 相依性尚未就緒
     message: 請先安裝 Desktop 託管環境中的必要相依性；選用相依性不會阻塞基礎服務啟動。
   stoppingButton: 停止中...
   restartButton: 重啟
@@ -145,41 +145,41 @@ webServiceStatus:
     copyError: 複製日誌失敗
     copyEmpty: 沒有可複製的日誌內容
   startupProgress:
-    title: Starting service
-    description: Desktop is checking the active version, validating required dependencies, and waiting for the local Hagicode service to finish booting.
-    successTitle: Service is ready
-    successDescription: The local service completed startup checks and is ready to open.
-    failureTitle: Startup did not finish
-    failureDescription: Desktop hit a problem while starting the service. Review the failure log or close this dialog and continue troubleshooting.
-    currentStepLabel: Current progress
-    waitingHint: Startup can take several seconds. Desktop keeps this dialog updated with the current step and execution status.
+    title: 正在啟動服務
+    description: Desktop 正在依序檢查版本、驗證必需的依賴項，並等待本機 Hagicode 服務完成啟動。
+    successTitle: 服務已就緒
+    successDescription: 本機服務已通過啟動檢查，可以開啟。
+    failureTitle: 啟動未完成
+    failureDescription: Desktop 在啟動服務時遇到問題。您可以查看失敗日誌，或關閉此對話方塊後繼續排查。
+    currentStepLabel: 目前進度
+    waitingHint: 啟動可能需要數秒。Desktop 會持續在此對話方塊中更新目前步驟與執行狀態。
     states:
-      pending: Pending
-      active: In progress
-      completed: Completed
-      failed: Failed
+      pending: 等待中
+      active: 進行中
+      completed: 已完成
+      failed: 失敗
     actions:
-      close: Close
-      done: Done
-      openFailureLog: View failure log
+      close: 關閉
+      done: 完成
+      openFailureLog: 查看失敗日誌
     meta:
-      version: Active version
-      port: Port
-      accessUrl: Access URL
+      version: 活動版本
+      port: 連接埠
+      accessUrl: 存取 URL
     stepLabels:
-      checkingVersion: Check version
-      checkingDependencies: Check dependencies
-      spawning: Start service process
-      waitingListening: Wait for listening port
-      healthCheck: Run health check
-      running: Startup complete
+      checkingVersion: 檢查版本
+      checkingDependencies: 檢查依賴項
+      spawning: 啟動服務程序
+      waitingListening: 等待連接埠開始監聽
+      healthCheck: 執行健康檢查
+      running: 啟動完成
     stepDescriptions:
-      checkingVersion: Confirm that the active version, entry point, and startup metadata are ready for this launch.
-      checkingDependencies: Validate that Desktop-managed required dependencies are ready before the service starts.
-      spawning: Create the managed service process and inject the runtime environment prepared by Desktop.
-      waitingListening: Wait for the service to bind the configured port and make the local access address reachable.
-      healthCheck: Probe the booted service and confirm the Web API is ready to serve requests.
-      running: Every startup check passed and the local Hagicode service is ready to open.
+      checkingVersion: 確認目前活動版本、進入點與啟動中繼資料已可用於此次啟動。
+      checkingDependencies: 在服務啟動前，驗證 Desktop 託管的必需依賴項是否已就緒。
+      spawning: 建立託管服務程序，並注入由 Desktop 準備好的執行環境。
+      waitingListening: 等待服務綁定已設定的連接埠，並使本機存取位址可連線。
+      healthCheck: 探測已啟動的服務，確認 Web API 已可處理請求。
+      running: 所有啟動檢查均已通過，本機 Hagicode 服務已可開啟。
   toast:
     noActiveVersion: 目前沒有可開啟 Web 日誌的活動版本
     openLogsSuccess: 已開啟活動版本的 Web 日誌資料夾
@@ -254,6 +254,19 @@ dependencyManagement:
     faqUrl: https://docs.hagicode.com/faq/desktop-node-environment/
     refreshHint: 命令執行完成後刷新一次，以重新偵測 Desktop 託管相依性。
   noDependencies: 未檢測到依賴
+  installToast:
+    manualDisabledTitle: 已停用自動安裝
+    manualDisabledDescription: 請依提示在 Desktop 之外完成手動安裝，然後重新整理狀態。
+    completedTitle: 依賴項安裝完成
+    completedDescription: '{{success}} 個安裝成功，{{failed}} 個失敗'
+    failedTitle: 依賴項安裝失敗
+    allFailedDescription: '{{count}} 個依賴項安裝失敗'
+    successTitle: 依賴項已安裝
+    successDescription: 所有依賴項均已成功安裝
+    genericErrorDescription: 安裝過程中發生錯誤
+    unknownError: 未知錯誤
+    singleFailedDescription: '{{name}} 安裝失敗'
+    singleSuccessDescription: '{{name}} 已成功安裝'
 packageSource:
   cardTitle: 套件來源配置
   cardDescription: 配置和管理用於安裝的套件來源
@@ -273,6 +286,7 @@ packageSource:
     scanButton: 掃描可用版本
     scanning: 掃描中...
     notFound: 資料夾不存在或無法存取
+    currentPath: 目前路徑：{{path}}
   http:
     url:
       label: 包 URL
@@ -312,6 +326,11 @@ packageSource:
     scanFailed: 掃描資料夾失敗
     fetchFailed: 取得 GitHub 版本失敗
     validateFailed: 驗證配置失敗
+    fetchIndexFailed: 從 HTTP 索引取得版本失敗
+    channelFailed: 設定頻道偏好失敗
+    invalidConfig: 配置無效
+  notSet: 未設定
+  channelSetSuccess: 頻道偏好已設定為：{{channel}}
 tray:
   status:
     running: 運作中

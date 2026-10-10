@@ -94,8 +94,8 @@ webServiceStatus:
   startButton: 서비스 시작
   dependencyReadinessButton: 개방형 종속성 관리
   managedStartup:
-    label: Managed service startup
-    description: Choose which managed services should start together when you launch Hagicode.
+    label: 관리형 서비스 함께 시작
+    description: Hagicode를 실행할 때 함께 시작할 관리형 서비스를 선택하세요.
   dependencyReadinessAlert:
     title: 종속성이 준비되지 않았습니다.
     message: Hagicode을 시작하기 전에 필수 데스크탑 관리 종속성을 설치하십시오. 선택적 종속성은 기본 서비스 시작을 차단하지 않습니다.
@@ -145,41 +145,41 @@ webServiceStatus:
     copyError: 시작 로그를 복사하지 못했습니다.
     copyEmpty: 복사할 로그 콘텐츠가 없습니다.
   startupProgress:
-    title: Starting service
-    description: Desktop is checking the active version, validating required dependencies, and waiting for the local Hagicode service to finish booting.
-    successTitle: Service is ready
-    successDescription: The local service completed startup checks and is ready to open.
-    failureTitle: Startup did not finish
-    failureDescription: Desktop hit a problem while starting the service. Review the failure log or close this dialog and continue troubleshooting.
-    currentStepLabel: Current progress
-    waitingHint: Startup can take several seconds. Desktop keeps this dialog updated with the current step and execution status.
+    title: 서비스 시작 중
+    description: Desktop이 활성 버전을 확인하고, 필수 종속성을 검증하고, 로컬 Hagicode 서비스가 부팅을 마칠 때까지 기다리는 중입니다.
+    successTitle: 서비스가 준비되었습니다
+    successDescription: 로컬 서비스가 시작 검사를 마쳤으며 바로 열 수 있습니다.
+    failureTitle: 시작이 완료되지 않았습니다
+    failureDescription: 서비스를 시작하는 동안 Desktop에서 문제가 발생했습니다. 실패 로그를 확인하거나 이 대화 상자를 닫고 문제 해결을 계속하세요.
+    currentStepLabel: 현재 진행 상황
+    waitingHint: 시작에는 몇 초가 걸릴 수 있습니다. Desktop은 이 대화 상자에 현재 단계와 실행 상태를 계속 업데이트합니다.
     states:
-      pending: Pending
-      active: In progress
-      completed: Completed
-      failed: Failed
+      pending: 대기 중
+      active: 진행 중
+      completed: 완료됨
+      failed: 실패
     actions:
-      close: Close
+      close: 닫기
       done: 완료
-      openFailureLog: View failure log
+      openFailureLog: 실패 로그 보기
     meta:
-      version: Active version
-      port: Port
-      accessUrl: Access URL
+      version: 활성 버전
+      port: 포트
+      accessUrl: 액세스 URL
     stepLabels:
-      checkingVersion: Check version
-      checkingDependencies: Check dependencies
-      spawning: Start service process
-      waitingListening: Wait for listening port
-      healthCheck: Run health check
-      running: Startup complete
+      checkingVersion: 버전 확인
+      checkingDependencies: 종속성 확인
+      spawning: 서비스 프로세스 시작
+      waitingListening: 포트 수신 대기
+      healthCheck: 상태 점검 실행
+      running: 시작 완료
     stepDescriptions:
-      checkingVersion: Confirm that the active version, entry point, and startup metadata are ready for this launch.
-      checkingDependencies: Validate that Desktop-managed required dependencies are ready before the service starts.
-      spawning: Create the managed service process and inject the runtime environment prepared by Desktop.
-      waitingListening: Wait for the service to bind the configured port and make the local access address reachable.
-      healthCheck: Probe the booted service and confirm the Web API is ready to serve requests.
-      running: Every startup check passed and the local Hagicode service is ready to open.
+      checkingVersion: 활성 버전, 진입점, 시작 메타데이터가 이번 실행에 사용할 준비가 되었는지 확인합니다.
+      checkingDependencies: 서비스를 시작하기 전에 Desktop이 관리하는 필수 종속성이 준비되었는지 검증합니다.
+      spawning: 관리형 서비스 프로세스를 생성하고 Desktop이 준비한 런타임 환경을 주입합니다.
+      waitingListening: 서비스가 구성된 포트에 바인딩되어 로컬 액세스 주소에 접근할 수 있을 때까지 기다립니다.
+      healthCheck: 부팅된 서비스를 점검하여 Web API가 요청을 처리할 준비가 되었는지 확인합니다.
+      running: 모든 시작 검사를 통과했으며 로컬 Hagicode 서비스를 열 수 있습니다.
   toast:
     noActiveVersion: 웹 로그에 대해 선택된 활성 버전이 없습니다.
     openLogsSuccess: 활성 버전 웹 로그 폴더가 열렸습니다.
@@ -254,6 +254,19 @@ dependencyManagement:
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
     refreshHint: 명령이 완료된 후 새로 고쳐 Desktop 관리 종속성을 다시 확인하세요.
   noDependencies: 종속성이 감지되지 않았습니다.
+  installToast:
+    manualDisabledTitle: 자동 설치가 비활성화되었습니다
+    manualDisabledDescription: 안내에 따라 Desktop 외부에서 수동 설치를 완료한 후 상태를 새로고침하세요.
+    completedTitle: 종속성 설치 완료
+    completedDescription: '{{success}}개 설치됨, {{failed}}개 실패'
+    failedTitle: 종속성 설치 실패
+    allFailedDescription: '{{count}}개의 종속성을 설치하지 못했습니다'
+    successTitle: 종속성이 설치되었습니다
+    successDescription: 모든 종속성이 성공적으로 설치되었습니다
+    genericErrorDescription: 설치 중 오류가 발생했습니다
+    unknownError: 알 수 없는 오류
+    singleFailedDescription: '{{name}} 설치에 실패했습니다'
+    singleSuccessDescription: '{{name}} 설치가 완료되었습니다'
 packageSource:
   cardTitle: 패키지 소스 구성
   cardDescription: 설치를 위한 패키지 소스 구성 및 관리
@@ -273,6 +286,7 @@ packageSource:
     scanButton: 사용 가능한 버전 스캔
     scanning: 스캔 중...
     notFound: 폴더가 존재하지 않거나 접근할 수 없습니다.
+    currentPath: '현재 경로: {{path}}'
   http:
     url:
       label: 패키지 URL
@@ -312,6 +326,11 @@ packageSource:
     scanFailed: 폴더를 검색하지 못했습니다.
     fetchFailed: GitHub 릴리스를 가져오지 못했습니다.
     validateFailed: 구성을 검증하지 못했습니다.
+    fetchIndexFailed: HTTP 인덱스에서 버전을 가져오지 못했습니다
+    channelFailed: 채널 기본 설정을 지정하지 못했습니다
+    invalidConfig: 잘못된 구성
+  notSet: 설정되지 않음
+  channelSetSuccess: '채널 기본 설정을 다음으로 지정했습니다: {{channel}}'
 tray:
   status:
     running: 달리기

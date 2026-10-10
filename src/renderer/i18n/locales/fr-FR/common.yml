@@ -45,6 +45,8 @@ common:
   operationFailed: L'opération a échoué
   confirmDelete: Êtes-vous sûr de vouloir supprimer?
   confirmAction: Êtes-vous sûr de vouloir continuer?
+  unknownError: Erreur inconnue
+  notAvailable: N/D
 header:
   title: Paramètres
   runningSuccessfully: Exécution réussie
@@ -95,7 +97,7 @@ mirror:
   mirrorUrl: Miroir URL
   detectedAt: Détecté à
   official: npm officiel
-  taobao: Taobao NPM Mirror
+  taobao: Miroir npm Taobao
   redetect: Redétecter
   info: NPM outils utiliseront automatiquement ce miroir pour des téléchargements plus rapides
   regions:
@@ -187,67 +189,67 @@ dependencyManagement:
     readOnlyHelp: Les paramètres de miroir n'ont aucun effet tant que la gestion des dépendances est en mode externe lecture seule.
     saveFailed: Échec de l'enregistrement des paramètres du miroir
   vendoredRuntime:
-    title: Desktop-managed runtimes
-    description: Vendored runtimes are staged and supervised by Desktop instead of npm package management.
-    managedByDesktop: Managed directly by Desktop
+    title: Runtimes gérés par Desktop
+    description: Les runtimes embarqués sont préparés et supervisés par Desktop, et non gérés via la gestion des packages npm.
+    managedByDesktop: Géré directement par Desktop
     runtimeState: État du runtime
-    runtimeRoot: Runtime root
-    packagedRoot: Packaged source root
-    packagedArchivePath: Packaged archive
-    packagedMarkerPath: Packaged marker
-    metadataPath: Metadata path
-    healthUrl: Local URL
+    runtimeRoot: Racine du runtime
+    packagedRoot: Racine de la source packagée
+    packagedArchivePath: Archive packagée
+    packagedMarkerPath: Marqueur packagé
+    metadataPath: Chemin des métadonnées
+    healthUrl: URL locale
     diagnostics: Diagnostics
-    reinstallHint: This vendored runtime ships with Desktop packaging. Reinstall Desktop to restore a damaged packaged copy.
+    reinstallHint: Ce runtime embarqué est livré avec le package d’installation de Desktop. Réinstallez Desktop pour restaurer une copie packagée endommagée.
     primaryDescriptions:
       installed: Les fichiers du runtime sont installés et respectent le contrat de runtime Desktop le plus récent.
-      packaged: Packaged archive is ready, but the writable runtime has not been enabled yet.
+      packaged: L’archive packagée est prête, mais le runtime accessible en écriture n’a pas encore été activé.
       not-installed: Les fichiers du runtime ne sont pas encore installés dans l'emplacement géré par Desktop.
       removed: Les fichiers du runtime ont été supprimés de l'emplacement géré par Desktop.
       failed: Les fichiers du runtime sont incomplets ou ont échoué à la validation.
     installStatus:
       installed: Installé
-      packaged: Packaged
+      packaged: Packagé
       not-installed: Non installé
       removed: Supprimé
       failed: Validation échouée
     status:
-      ready: Ready
-      running: Running
-      stopped: Stopped
-      missing: Missing
-      damaged: Damaged
-      enable-required: Enable required
-      extracting: Extracting
+      ready: Prêt
+      running: En cours d’exécution
+      stopped: Arrêté
+      missing: Manquant
+      damaged: Endommagé
+      enable-required: Activation requise
+      extracting: Extraction
     actions:
-      enable: Enable Runtime
-      start: Start
-      stop: Stop
-      restart: Restart
-      repair: Repair staged runtime
-      openLogs: Open logs
-      openRuntimeRoot: Open runtime root
-      openUrl: Open local URL
-      reinstallDesktop: Reinstall Desktop
-    activationInline: Extracting runtime... {{percent}}%
+      enable: Activer le runtime
+      start: Démarrer
+      stop: Arrêter
+      restart: Redémarrer
+      repair: Réparer le runtime préparé
+      openLogs: Ouvrir les journaux
+      openRuntimeRoot: Ouvrir la racine du runtime
+      openUrl: Ouvrir l’URL locale
+      reinstallDesktop: Réinstaller Desktop
+    activationInline: Extraction du runtime... {{percent}}%
     activationStage:
-      idle: Idle
-      validating-source: Validating packaged source
-      preparing-staging: Preparing staging directory
-      extracting: Extracting archive
-      validating-runtime: Validating extracted runtime
-      swapping-runtime: Promoting extracted runtime
-      completed: Activation complete
-      failed: Activation failed
+      idle: Inactif
+      validating-source: Validation de la source packagée
+      preparing-staging: Préparation du répertoire intermédiaire
+      extracting: Extraction de l’archive
+      validating-runtime: Validation du runtime extrait
+      swapping-runtime: Basculement vers le runtime extrait
+      completed: Activation terminée
+      failed: Échec de l’activation
   package:
     version: Version
-    requiredVersion: Required version
-    versionMismatch: Current version {{current}} does not satisfy {{required}}.
+    requiredVersion: Version requise
+    versionMismatch: La version actuelle {{current}} ne satisfait pas {{required}}.
     packageName: Forfait
     category: Catégorie
   packageStatus:
     installed: Installé
-    outdated: Upgrade required
+    outdated: Mise à niveau requise
     not-installed: Non installé
     unknown: Inconnu
   uninstall:
@@ -270,9 +272,9 @@ dependencyManagement:
     codex:
       description: OpenAI Codex Agent CLI pour les flux de travail de codage.
     pi:
-      description: PI coding agent CLI distributed through the official @earendil-works/pi-coding-agent npm package.
+      description: CLI de l’agent de codage PI distribué via le package npm officiel @earendil-works/pi-coding-agent.
     reasonix:
-      description: Reasonix coding agent CLI distributed through the official reasonix npm package.
+      description: CLI de l’agent de codage Reasonix distribué via le package npm officiel reasonix.
     githubCopilot:
       description: GitHub Copilot CLI distribué via le package officiel @github/copilot npm.
     codebuddy:
@@ -285,6 +287,8 @@ dependencyManagement:
       description: Google Gemini CLI distribué via le package officiel @google/gemini-cli npm.
     impeccable:
       description: Outil Impeccable fournissant des compétences de design, des commandes et la détection d anti-patterns pour les agents de codage IA.
+    ohMyPi:
+      description: CLI de l’agent de codage Oh My Pi distribué via le package officiel @oh-my-pi/pi-coding-agent.
   categories:
     bootstrap: Hérité
     workflow: Flux de travail
@@ -292,16 +296,16 @@ dependencyManagement:
     developer-tool: Outil de développement
   bootstrap:
     title: Ancien CLI
-    selectorLabel: Install target
+    selectorLabel: Cible d’installation
     selectorHint: Desktop n'installe plus de CLI hagiscript autonome. Ces libellés sont conservés uniquement pour compatibilité avec les anciennes interfaces.
     currentTarget: 'Cible héritée : {{target}}'
-    customVersionLabel: Custom version
-    customVersionPlaceholder: Enter a version such as 0.2.3
+    customVersionLabel: Version personnalisée
+    customVersionPlaceholder: Saisissez une version, par exemple 0.2.3
     customVersionDescription: Les versions autonomes de hagiscript ne sont plus utilisées dans les flux de dépendances gérés par Desktop.
     targetOptions:
-      latest: Latest stable
-      dev: Development build
-      version: Exact version
+      latest: Dernière version stable
+      dev: Version de développement
+      version: Version exacte
   dependencyGate:
     title: Le SDK Desktop n'est pas encore prêt
     missing: Les autres actions de dépendance restent désactivées tant que Desktop n'a pas terminé de préparer son environnement npm géré.
@@ -338,7 +342,7 @@ dependencyManagement:
     refresh: Actualiser
     install: Installer
     installed: Installé
-    upgrade: Upgrade
+    upgrade: Mettre à niveau
     reinstall: Réinstaller
     installSelected: Installation par lots sélectionnée
     installSelectedRunning: Installation par lots...
@@ -396,7 +400,7 @@ systemDiagnostic:
     title: Matrice d'exécution intégrée
     unknown: inconnu
     unresolved: non résolu
-    version: 'Version: {{value}}'
+    version: 'Version : {{value}}'
     path: 'Chemin: {{value}}'
     boolean:
       'true': activé
@@ -412,9 +416,9 @@ systemDiagnostic:
       invalid: Invalide
       unknown: Inconnu
     npmConfig:
-      title: npm Configuration
+      title: Configuration npm
       registry: 'Registre: {{value}}'
-      cache: 'Cache: {{value}}'
+      cache: 'Cache : {{value}}'
       prefix: 'Préfixe/racine du paquet: {{value}}'
       mirror: 'Accélération du miroir: {{value}}'
     managedCommands:
@@ -454,19 +458,19 @@ system:
     actions:
       viewDetails: Voir les détails
     debug:
-      title: Commerce Preview Debugger
-      description: These switches only affect the current window preview. They do not modify the real Microsoft Store license state and they never trigger an actual purchase.
-      previewBadge: 'Preview: {{mode}}'
+      title: Débogueur d’aperçu commercial
+      description: Ces commutateurs n’affectent que l’aperçu de la fenêtre actuelle. Ils ne modifient pas l’état réel de la licence Microsoft Store et ne déclenchent jamais d’achat réel.
+      previewBadge: 'Aperçu : {{mode}}'
       modes:
-        live: Follow live state
-        nonStore: Non-Store runtime
-        inactive: Store edition, not purchased
-        active: Store edition, activated
+        live: Suivre l’état réel
+        nonStore: Runtime non Store
+        inactive: Édition Store, non achetée
+        active: Édition Store, activée
       descriptions:
-        live: Render the page from the current runtime and the real license snapshot.
-        nonStore: Simulate a non-Store runtime and keep only the Store-install handoff path visible.
-        inactive: Simulate the Store edition before purchase so you can review the pre-purchase layout.
-        active: Simulate the Store edition after activation so you can review the post-purchase layout.
+        live: Affiche la page à partir du runtime actuel et de l’instantané de licence réel.
+        nonStore: Simule un runtime non Store et ne conserve visible que le parcours de redirection vers l’installation Store.
+        inactive: Simule l’édition Store avant l’achat afin que vous puissiez examiner la mise en page avant achat.
+        active: Simule l’édition Store après l’activation afin que vous puissiez examiner la mise en page après achat.
   logQuickAccess:
     title: Accès rapide au journal
     description: Ouvrez directement les dossiers des journaux du bureau et de l'application Web pour réduire le temps de diagnostic.
@@ -524,16 +528,16 @@ system:
       failed: 'Échec de la mise à jour en arrière-plan: {{error}}'
       settings-disabled: Les prétéléchargements en arrière-plan sont désactivés. Vous pouvez les réactiver dans Paramètres.
       portable-mode: Le mode portable ignore les mises à jour en arrière-plan et conserve le runtime actuel en lecture seule.
-      managed-install: Auto-updates are disabled. Update delivery depends on your installation channel (e.g. Microsoft Store, Steam).
+      managed-install: Les mises à jour automatiques sont désactivées. Le mode de livraison des mises à jour dépend de votre canal d’installation (par ex. Microsoft Store, Steam).
       no-package-source: Aucune source de package actif n'est configurée, les mises à jour en arrière-plan ne peuvent donc pas démarrer.
     progress:
-      confirming: Waiting for confirmation
-      stoppingService: Stopping service
-      confirmingDescription: '{{version}} is ready to install. Confirm first if the current service should be stopped.'
-      stoppingServiceDescription: The current service is stopping now, then the new version will continue downloading and installing.
-      switchingDescription: Installation finished. Switching the active runtime to {{version}} now.
-      completedDescription: '{{version}} is installed and the homepage status is already synced.'
-      activeDescription: 'Processing {{version}}. Current stage: {{stage}}.'
+      confirming: En attente de confirmation
+      stoppingService: Arrêt du service
+      confirmingDescription: '{{version}} est prêt à être installé. Confirmez d’abord si le service actuel doit être arrêté.'
+      stoppingServiceDescription: Le service actuel est en cours d’arrêt, puis la nouvelle version poursuivra son téléchargement et son installation.
+      switchingDescription: Installation terminée. Basculement du runtime actif vers {{version}}.
+      completedDescription: '{{version}} est installé et l’état de la page d’accueil est déjà synchronisé.'
+      activeDescription: 'Traitement de {{version}}. Étape actuelle : {{stage}}.'
     actions:
       openVersionPage: Gestion des versions ouvertes
       installLatest: Installer le dernier
@@ -563,16 +567,16 @@ system:
         title: Installez votre première version
         description: Lorsqu'aucun package n'est encore installé, utilisez cet appel à l'action pour lancer l'assistant de configuration et terminer la première installation du runtime.
   services:
-    title: Managed Services
-    description: Monitor and control Desktop-managed services from one place.
-    viewDetails: Details
-    port: 'Port: {{port}}'
-    notReady: Not ready
-    installRequired: Installation required
-    enableRequired: Enable runtime
-    startFailed: Failed to start the service
-    stopFailed: Failed to stop the service
-    restartFailed: Failed to restart the service
+    title: Services gérés
+    description: Surveillez et contrôlez les services gérés par Desktop depuis un seul endroit.
+    viewDetails: Détails
+    port: 'Port : {{port}}'
+    notReady: Pas prêt
+    installRequired: Installation requise
+    enableRequired: Activer le runtime
+    startFailed: Échec du démarrage du service
+    stopFailed: Échec de l’arrêt du service
+    restartFailed: Échec du redémarrage du service
 themeToggle:
   switchToLight: Passer en mode lumière
   switchToDark: Passer en mode sombre

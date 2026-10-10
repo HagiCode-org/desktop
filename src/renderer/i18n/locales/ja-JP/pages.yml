@@ -1,59 +1,59 @@
 settings:
   title: 設定
-  loading: Loading settings module...
+  loading: 設定モジュールを読み込んでいます...
   tabs:
-    notification: Notification Center
-    dependencyManagement: Dependency Management
-    debugOptions: Debug Options
+    notification: 通知センター
+    dependencyManagement: 依存関係の管理
+    debugOptions: デバッグオプション
     region: サービス地域
-    language: Language Settings
+    language: 言語設定
     onboarding: オンボーディング
-    theme: Theme Settings
-    runtimeData: Runtime Data
+    theme: テーマ設定
+    runtimeData: ランタイムデータ
     updates: バックグラウンドアップデート
-    advanced: Advanced Settings
+    advanced: 詳細設定
   notification:
-    title: Notification Center
-    description: Validate the desktop notification pipeline and review the default notification payload used by the client.
-    testSectionTitle: Test Notification
-    testSectionDescription: Send a native desktop notification to verify the IPC bridge and OS notification transport are working.
-    testButton: Send Test Notification
-    sending: Sending...
-    testSuccess: Test notification sent
-    testSuccessDescription: If OS notification permissions are available, the desktop should already have received it.
-    testError: Failed to send test notification
-    testErrorDescription: 'Error detail: {{error}}'
-    previewTitle: Default Payload Preview
-    previewDescription: These fields are sent to the main process when the test notification runs.
-    testTitle: Test Notification
-    testBody: Desktop notifications are ready. Clicking this notification focuses Hagicode Desktop.
-    eventShown: Latest shown event
-    eventShownValue: Notification {{id}} was shown via {{transport}}
-    eventClicked: Latest click event
-    eventClickedValue: Notification {{id}} was clicked with action {{action}} via {{transport}}
-    eventPending: No notification events have been recorded yet.
+    title: 通知センター
+    description: デスクトップ通知の経路を検証し、クライアントが使用する既定の通知ペイロードを確認します。
+    testSectionTitle: テスト通知
+    testSectionDescription: ネイティブのデスクトップ通知を送信して、IPC ブリッジと OS の通知トランスポートが動作していることを確認します。
+    testButton: テスト通知を送信
+    sending: 送信中...
+    testSuccess: テスト通知を送信しました
+    testSuccessDescription: OS の通知権限が利用可能であれば、デスクトップにはすでに通知が届いているはずです。
+    testError: テスト通知を送信できませんでした
+    testErrorDescription: 'エラーの詳細: {{error}}'
+    previewTitle: 既定のペイロードのプレビュー
+    previewDescription: テスト通知の実行時に、これらのフィールドがメインプロセスへ送信されます。
+    testTitle: テスト通知
+    testBody: デスクトップ通知の準備ができました。この通知をクリックすると、Hagicode Desktop が前面に表示されます。
+    eventShown: 最後に表示されたイベント
+    eventShownValue: 通知 {{id}} が {{transport}} 経由で表示されました
+    eventClicked: 最後にクリックされたイベント
+    eventClickedValue: 通知 {{id}} が {{transport}} 経由でアクション {{action}} でクリックされました
+    eventPending: 通知イベントはまだ記録されていません。
     values:
-      focusWindow: Focus main window
-      openUrl: Open URL
+      focusWindow: メインウィンドウにフォーカス
+      openUrl: URL を開く
     fields:
-      title: Title
-      body: Body
-      level: Level
-      clickAction: Click action
-      duration: Duration
-      silent: Silent
+      title: タイトル
+      body: 本文
+      level: レベル
+      clickAction: クリック時の動作
+      duration: 表示時間
+      silent: サイレント
   languageSettings:
-    title: Language Settings
-    description: Switch the active Desktop language and refresh labels immediately.
-    helper: Language changes are applied to menus, tray labels, and settings tabs right away.
+    title: 言語設定
+    description: Desktop の表示言語を切り替え、ラベルをすぐに更新します。
+    helper: 言語の変更は、メニュー、トレイのラベル、設定タブにすぐに反映されます。
   themeSettings:
-    title: Theme Settings
-    description: A dedicated theme surface is reserved here for future light, dark, and visual preference controls.
+    title: テーマ設定
+    description: 将来のライト、ダーク、その他の外観設定のために、テーマ専用のエリアをここに確保しています。
   advancedSettings:
-    title: Advanced Settings
-    description: Reserve one place for logs, experiments, and advanced runtime controls.
+    title: 詳細設定
+    description: ログ、実験的機能、高度なランタイム制御をまとめる場所を確保しています。
   placeholders:
-    comingSoon: This settings module is registered in the new settings framework. Detailed controls will arrive in a follow-up change.
+    comingSoon: この設定モジュールは新しい設定フレームワークに登録されています。詳細なコントロールは今後の変更で追加されます。
   smartConfig:
     title: Smart Config プロンプト ガイダンス
     description: 解決されたプロンプトを確認し、それをサポートされている AI CLI にコピーし、構成フローを手動で完了します。
@@ -77,8 +77,8 @@ settings:
     title: バックグラウンドアップデート
     description: 自動チェック、バックグラウンドでの事前ダウンロード、検証されたアーカイブの保存を管理します。
     managedInstall:
-      title: Auto-updates are disabled
-      description: The application does not update itself automatically. How updates are delivered depends on the channel you used to install it, such as Microsoft Store or Steam.
+      title: 自動更新は無効です
+      description: アプリケーションは自動的には更新されません。更新の提供方法は、Microsoft Store や Steam など、インストールに使用したチャネルによって異なります。
     enabled:
       label: バックグラウンドでのプリダウンロードを有効にする
       description: 互換性のある新しいバージョンが見つかった場合は、現在のランタイムを切り替えることなく、バックグラウンドでアーカイブをダウンロードします。
@@ -99,65 +99,65 @@ settings:
       snapshotModel: ダッシュボードのリマインダーは、永続化されたメインプロセスのスナップショットによって駆動されるため、デスクトップのリロード後も、最後に知られた更新状態が残ります。
       retentionPolicy: 保持クリーンアップでは、キャッシュされたアーカイブとメタデータのみが削除されます。インストールされたバージョンのディレクトリはそのまま残ります。
   runtimeDataPath:
-    title: Runtime data storage path
-    description: Choose where Desktop stores runtime-managed files, logs, and other runtime data.
-    activePreset: 'Current effective preset: {{preset}}'
-    environmentOverrideBadge: Environment override active
-    lockedByRuntime: Locked by Microsoft Store
+    title: ランタイムデータの保存パス
+    description: Desktop がランタイム管理ファイル、ログ、その他のランタイムデータを保存する場所を選択します。
+    activePreset: '現在有効なプリセット: {{preset}}'
+    environmentOverrideBadge: 環境変数による上書きが有効
+    lockedByRuntime: Microsoft Store によりロックされています
     paths:
-      configuredRoot: 'Configured root: {{path}}'
-      effectiveRoot: 'Effective root: {{path}}'
-      environmentOverride: 'Environment override root: {{path}}'
+      configuredRoot: '設定されたルート: {{path}}'
+      effectiveRoot: '有効なルート: {{path}}'
+      environmentOverride: '環境変数で上書きされたルート: {{path}}'
     options:
       userData-runtime-data:
-        label: userData/runtime-data (default)
-        description: Stores runtime data under the Desktop Electron userData directory. Best for the default single-machine setup.
+        label: userData/runtime-data（既定）
+        description: ランタイムデータを Desktop の Electron userData ディレクトリ配下に保存します。既定の単一マシン構成に最適です。
       home-runtime-data:
         label: ~/.hagicode/runtime-data
-        description: Stores runtime data under the current user home directory. Best for deployments that need a stable shared path.
+        description: ランタイムデータを現在のユーザーのホームディレクトリ配下に保存します。固定の共有パスが必要な構成に最適です。
     warnings:
-      noMigration: Changing this setting only updates the target path. Desktop does not migrate existing runtime data automatically.
-      restart: Saving a changed preset restarts the managed backend so the new runtime data root takes effect immediately.
+      noMigration: この設定を変更しても、対象パスが更新されるだけです。Desktop は既存のランタイムデータを自動的には移行しません。
+      restart: 変更したプリセットを保存すると、管理対象のバックエンドが再起動され、新しいランタイムデータのルートがすぐに有効になります。
     actions:
-      save: Save Changes
-      saving: Saving...
-      cancel: Cancel
+      save: 変更を保存
+      saving: 保存中...
+      cancel: キャンセル
     messages:
-      unchanged: Runtime data path is already using this preset
-      saveSuccess: Runtime data path saved
-      restartSuccess: Runtime data path saved and managed services restarted
-      saveFailed: Failed to save runtime data path
+      unchanged: ランタイムデータのパスはすでにこのプリセットを使用しています
+      saveSuccess: ランタイムデータのパスを保存しました
+      restartSuccess: ランタイムデータのパスを保存し、管理対象サービスを再起動しました
+      saveFailed: ランタイムデータのパスを保存できませんでした
     errors:
-      saveErrorDetail: 'Save failed: {{error}}'
+      saveErrorDetail: '保存に失敗しました: {{error}}'
   debugOptions:
-    title: Debug Options
-    description: Control Desktop-managed npm behaviors for diagnosing package installation issues.
+    title: デバッグオプション
+    description: パッケージのインストール問題を診断するため、Desktop が管理する npm の動作を制御します。
     useIgnoreScriptsForManagedNpm:
-      label: npm uses `--ignore-scripts`
-      description: Make Desktop-managed npm installs and sync operations skip lifecycle scripts so postinstall-related failures are easier to isolate.
+      label: npm で `--ignore-scripts` を使用
+      description: Desktop が管理する npm のインストールと同期でライフサイクルスクリプトをスキップし、postinstall などに起因する失敗を切り分けやすくします。
     skipPurchaseSimulateSuccess:
-      label: Skip purchase, simulate success
-      shortLabel: Simulate tip success
-      description: When enabled, starting a tip purchase skips the Microsoft Store checkout, treats the path as purchase success for the selected tier, and still plays a random thank-you animation. Default is off. Does not write durable purchase counts.
+      label: 購入をスキップして成功をシミュレート
+      shortLabel: チップの成功をシミュレート
+      description: 有効にすると、チップの購入を開始しても Microsoft Store のチェックアウトをスキップし、選択したティアの購入が成功したものとして扱い、ランダムなお礼アニメーションも再生します。既定ではオフです。永続的な購入回数は書き込まれません。
     installDate:
-      label: Raw install date (msstoreRatingPrompt.installDate)
-      description: Shows the exact persisted raw install date string in local config. Click repeatedly and edit to update saved value.
+      label: インストール日の生の値（msstoreRatingPrompt.installDate）
+      description: ローカル設定に保存されているインストール日の文字列を、そのままの形で表示します。繰り返しクリックして編集すると、保存値を更新できます。
       placeholder: e.g. 2024-01-01T00:00:00.000Z
-      ageDays: 'Install age (days): {{value}}'
-      ageDaysUnknown: unknown
+      ageDays: 'インストール経過日数: {{value}}'
+      ageDaysUnknown: 不明
     notes:
-      scope: This setting only affects future Desktop-managed npm installs and sync operations.
-      npm: The npm switch only affects future Desktop-managed npm installs and sync operations. Saving it takes effect immediately and does not restart the managed service.
+      scope: この設定は、今後の Desktop 管理の npm のインストールと同期にのみ影響します。
+      npm: npm のスイッチは、今後の Desktop 管理の npm のインストールと同期にのみ影響します。保存するとすぐに有効になり、管理対象サービスは再起動されません。
     actions:
-      save: Save Changes
-      saving: Saving...
-      cancel: Cancel
+      save: 変更を保存
+      saving: 保存中...
+      cancel: キャンセル
     messages:
-      unchanged: Debug options are already using these values
-      saveSuccess: Debug options saved
-      saveFailed: Failed to save debug options
+      unchanged: デバッグオプションはすでにこれらの値になっています
+      saveSuccess: デバッグオプションを保存しました
+      saveFailed: デバッグオプションを保存できませんでした
     errors:
-      saveErrorDetail: 'Save failed: {{error}}'
+      saveErrorDetail: '保存に失敗しました: {{error}}'
 footer:
   copyright: © 2026 Hagicode Desktop
 quickStart:
@@ -240,6 +240,8 @@ versionManagement:
     incomplete: 不足している依存関係
     installed: インストール済み
     payloadInvalid: ペイロードが無効です
+    desktopIncompatible: Desktop と互換性なし
+    runtimeIncompatible: ランタイムと互換性なし
   actions:
     refresh: リフレッシュ
     install: インストールバージョン
@@ -304,14 +306,14 @@ versionManagement:
     flow: 'フロー：直接ダウンロード -> ダイジェスト検証 -> 展開 -> 完了'
     flowActive: '電流の流れ: {{stage}}'
   progressMessage:
-    queued: Queued
+    queued: 待機中
     direct-http: パッケージを直接ダウンロードしています
     source-fallback-active: 別の直接配信元を試行中
     no-sha256-required: 追加の検証は必要ありません
     sha256-verifying: パッケージの整合性の検証
     sha256-verified: 検証完了
     extracting-package: パッケージを抽出しています
-    switching-active-version: Switching the active version
+    switching-active-version: アクティブなバージョンを切り替えています
     installation-complete: インストール完了
 installProgressDialog:
   title: 依存関係のインストール
@@ -327,7 +329,7 @@ installProgressDialog:
     close: 閉じる
     retry: 再試行
 subscription:
-  eyebrow: Microsoft Store sponsor plan
+  eyebrow: Microsoft Store スポンサープラン
   title: Hagicode スポンサープラン
   description: Microsoft Store のスポンサープランの状態を確認し、ローカルスナップショットを更新し、この端末でスポンサー権限が有効かを確認します。
   loading: キャッシュされたスポンサー スナップショットを読み込んでいます...
@@ -338,11 +340,11 @@ subscription:
     refreshSuccess: Subscription status refreshed.
     refreshStale: Desktop kept the cached subscription snapshot because the Microsoft Store refresh did not complete.
     refreshFailed: 'Failed to refresh the subscription snapshot: {{error}}'
-    refreshFailedFallback: Microsoft Store refresh failed.
-    purchaseFailed: 'Purchase flow failed: {{error}}'
-    purchaseFailedFallback: Microsoft Store purchase failed.
-    openStoreFailed: 'Failed to open the Microsoft Store page: {{error}}'
-    openStoreFailedFallback: Microsoft Store page unavailable.
+    refreshFailedFallback: Microsoft Store の更新に失敗しました。
+    purchaseFailed: '購入フローに失敗しました: {{error}}'
+    purchaseFailedFallback: Microsoft Store での購入に失敗しました。
+    openStoreFailed: 'Microsoft Store のページを開けませんでした: {{error}}'
+    openStoreFailedFallback: Microsoft Store のページは現在利用できません。
   status:
     loading: 読み込み中
     active: 有効
@@ -364,13 +366,13 @@ subscription:
       description: この端末ではすでにスポンサー権限が有効です。ここで状態確認、購入フローの再表示、スナップショットの手動更新ができます。
       note: Your purchase is more than a receipt. It directly supports the ongoing maintenance, iteration, and follow-up work that keeps the feature reliable after launch.
   message:
-    ongoingTitle: Ongoing evolution needs real investment
+    ongoingTitle: 継続的な進化には、実際の投資が必要です
     ongoingDescription: Hagicode is not a one-and-done product. Keeping it useful means continued author time and recurring token spend for updates, validation, and tracking change.
-    perksTitle: Sponsors should receive thoughtful perks
-    perksDescription: We also plan to introduce fitting sponsor benefits over time, including more refined themes and other perks as they become ready.
+    perksTitle: スポンサーには心のこもった特典を
+    perksDescription: 今後、より洗練されたテーマなど、スポンサーにふさわしい特典も、準備が整い次第、順次導入していく予定です。
     unlockNoticeTitle: 現時点では機能解放はありません
     unlockNoticeDescription: スポンサープラン自体は他の製品機能を解放しません。別の独立機能を使うには、それぞれ別途購入が必要です。
-    inactivePrompt: If this direction matters to you, the sponsor plan is the direct way to support it.
+    inactivePrompt: この取り組みに価値を感じていただけたなら、スポンサープランが最も直接的な支援方法です。
     activeThanks: Thank you for the support. We will keep shaping sponsor-facing benefits with care as the product grows.
   actions:
     panelEyebrow: スポンサー操作
@@ -380,31 +382,31 @@ subscription:
     refreshing: 更新中...
     buy: スポンサープランを購入
     manage: Buy / Manage
-    subscribeViaStore: Subscribe in Microsoft Store
+    subscribeViaStore: Microsoft Store で購読
     installStoreApp: Store 版をインストール
     processing: 処理中...
     buyHint: Start the Microsoft Store flow to support continued AI Agent iteration and attach sponsor entitlements to this device.
     manageHint: Open the Microsoft Store purchase flow again if you want to confirm the sponsoring account or manage the current plan.
-    activeHint: Sponsor entitlements are already active on this device. Refresh once if you want to confirm the latest Microsoft Store state.
-    unsupportedHint: Purchase and management work only in the Microsoft Store edition of Hagicode Desktop.
+    activeHint: この端末ではすでにスポンサー権限が有効です。Microsoft Store の最新の状態を確認したい場合は、一度更新してください。
+    unsupportedHint: 購入と管理は、Hagicode Desktop の Microsoft Store 版でのみ利用できます。
     installHint: Open the sponsor plan in Microsoft Store first, then install or launch the Store edition of Hagicode Desktop to complete subscription and sync entitlements.
     secondaryLabel: Before you decide
     secondaryHint: Refresh first if you want Desktop to re-check Microsoft Store and confirm the latest local snapshot before you purchase or review the plan.
   summary:
-    planLabel: Plan
+    planLabel: プラン
     planName: Hagicode スポンサープラン
-    renewalLabel: Renewal or expiry
-    lastSyncLabel: Last successful sync
-    entitlementsLabel: Enabled entitlements
+    renewalLabel: 更新日または有効期限
+    lastSyncLabel: 最後に同期に成功した日時
+    entitlementsLabel: 有効な権限
     activeDetail: Sponsor entitlements are already available on this device.
     inactiveDetail: Purchasing here is what turns future sponsor benefits on for this device.
-    source: 'Source: {{value}}'
+    source: 'ソース: {{value}}'
   sourceValue:
-    initial: Current session default state
+    initial: 現在のセッションの既定の状態
     store: Microsoft Store
     fallback: Fallback snapshot
   mission:
-    eyebrow: Why sponsorship matters
+    eyebrow: スポンサーシップが大切な理由
     title: ご購入は保守と更新の支援につながります。
     description: これにより、モデル、CLI、ワークフローの変化を追い続けられます。
     points:
@@ -418,7 +420,7 @@ subscription:
         title: スポンサー権限を有効にする
         description: 購入後、この端末に対応する権限が表示され、そのまま保持されます。
   gratitude:
-    eyebrow: Sponsor message
+    eyebrow: スポンサーの皆さまへ
     title: Your support is already carrying real work
     description: The sponsor plan is designed as a practical way to keep ongoing product work funded while giving supporters clear recognition inside Desktop.
     points:
@@ -432,36 +434,36 @@ subscription:
         title: Future perks already have a delivery path
         description: The entitlement model is in place, so later sponsor-only additions can land cleanly without rebuilding the purchase foundation.
   benefits:
-    eyebrow: What this plan unlocks
-    title: Built to support creation first, then reward supporters well
-    description: The sponsor plan is intentionally simple today. It keeps the core mission clear while leaving room for polished, appropriate benefits as the product grows.
+    eyebrow: このプランで解放されるもの
+    title: まず創作を支え、そのうえで支援者にしっかり応える
+    description: スポンサープランは、現時点では意図的にシンプルにしています。中核となる使命を明確に保ちつつ、製品の成長に合わせて洗練された適切な特典を加える余地を残しています。
     items:
       recognition:
-        title: Sponsor identity in Desktop
-        description: Sponsor status can power visible recognition inside the app without depending on brittle one-off checks.
+        title: Desktop 内でのスポンサー表示
+        description: スポンサー状態を使えば、壊れやすい場当たり的なチェックに頼ることなく、アプリ内でスポンサーを分かりやすく表示できます。
       theme:
-        title: More refined themes and visual polish
-        description: Support gives us room to invest in better-crafted themes and other quality details that are easy to feel but expensive to maintain.
+        title: より洗練されたテーマと見た目の磨き込み
+        description: ご支援により、作り込まれたテーマや、感じ取りやすい反面、維持にコストのかかる品質面の細部に投資できます。
       future:
-        title: Future sponsor-only benefits
-        description: The current entitlement model reserves a clean path for later sponsor perks when they are ready to ship.
+        title: 今後のスポンサー限定特典
+        description: 現在の権限モデルは、今後のスポンサー特典を提供できるようになったときに備えて、整った受け皿を確保しています。
   snapshot:
-    eyebrow: Current device state
-    title: Store status and local entitlement details
-    description: Operational details stay visible here so the sponsor plan remains auditable on the current device.
+    eyebrow: 現在の端末の状態
+    title: Store の状態とローカルの権限の詳細
+    description: 現在の端末でスポンサープランを確認できるよう、運用上の詳細をここに表示しています。
     fields:
       status: 現在の状態
       planStoreId: Store ID
-      lastCheckedAt: Last checked
-      renewalDate: Renewal date
-      expirationDate: Expiry date
-      lastSuccessfulSync: Last successful sync
-      source: Snapshot source
+      lastCheckedAt: 最終確認日時
+      renewalDate: 更新日
+      expirationDate: 有効期限
+      lastSuccessfulSync: 最後に同期に成功した日時
+      source: スナップショットのソース
   entitlements:
-    title: Entitlement summary
+    title: 権限の概要
     activeDescription: These are the sponsor capability flags currently available on this device.
     inactiveDescription: These capability flags are reserved for sponsor-only Desktop experiences and become available after purchase.
-    enabled: Enabled
+    enabled: 有効
     disabled: Disabled
     names:
       sponsorBadge: sponsorBadge
@@ -470,19 +472,19 @@ subscription:
       sponsorBadge: Allows sponsor identity affordances in the Desktop experience.
       premiumFeatureGate: Reserved gate for future sponsor-only Desktop capabilities.
   diagnostics:
-    eyebrow: Technical trace
+    eyebrow: 技術的なトレース
     title: Diagnostics
     description: Cached-state recovery details stay visible so refresh failures do not look like entitlement loss.
-    lastSuccessfulSync: Last successful sync
-    source: Snapshot source
-    empty: No diagnostics recorded.
+    lastSuccessfulSync: 最後に同期に成功した日時
+    source: スナップショットのソース
+    empty: 診断情報は記録されていません。
   stale:
     title: Desktop は現在、最後に確認できた状態を表示しています
     description: Microsoft Store が直近の更新を完了できなかったため、Desktop はこのセッションで最後に確認できたスポンサー状態を消さずに保持しています。
   unsupported:
     title: Microsoft Store 版が必要です
-    description: Purchase and management actions only work in the Microsoft Store edition of Hagicode Desktop.
-    nonStoreDescription: This runtime is not the Microsoft Store edition. Use the buttons below to open the sponsor plan in Microsoft Store, then install or launch the Store edition of Hagicode Desktop to complete subscription and entitlement sync.
+    description: 購入と管理の操作は、Hagicode Desktop の Microsoft Store 版でのみ利用できます。
+    nonStoreDescription: このランタイムは Microsoft Store 版ではありません。下のボタンから Microsoft Store でスポンサープランを開き、Hagicode Desktop の Store 版をインストールまたは起動して、購読と権限の同期を完了してください。
   purchaseOutcome:
     title: 購入結果
     succeeded: 購入が完了し、Desktop はスポンサー スナップショットを更新しました。
@@ -504,7 +506,7 @@ turboEngine:
   errorTitle: TurboEngine スナップショットを取得できません
   errorDescription: 'Desktop は TurboEngine スナップショットを読み込めませんでした: {{error}}'
   hero:
-    title: TurboEngine workspace
+    title: TurboEngine ワークスペース
     activeDescription: TurboEngine is already licensed on this device. You can confirm the current Microsoft Store state, review diagnostics, and refresh whenever needed.
     inactiveDescription: TurboEngine uses a separate perpetual Microsoft Store license. This workspace lets you verify the current state, buy the license, and confirm the latest runtime diagnostics.
   article:
@@ -536,14 +538,14 @@ turboEngine:
         title: さらに多くのアバター素材
         description: 新しい内蔵 Agent アバターセットが 5 組追加されています。
   messages:
-    refreshSuccess: TurboEngine status refreshed.
+    refreshSuccess: TurboEngine の状態を更新しました。
     refreshStale: Desktop kept the cached TurboEngine snapshot because the Microsoft Store refresh did not complete.
-    refreshFailed: 'Failed to refresh the TurboEngine snapshot: {{error}}'
-    refreshFailedFallback: Microsoft Store refresh failed.
-    purchaseFailed: 'Purchase flow failed: {{error}}'
-    purchaseFailedFallback: Microsoft Store purchase failed.
-    openStoreFailed: 'Failed to open the Microsoft Store page: {{error}}'
-    openStoreFailedFallback: Microsoft Store page unavailable.
+    refreshFailed: 'TurboEngine のスナップショットを更新できませんでした: {{error}}'
+    refreshFailedFallback: Microsoft Store の更新に失敗しました。
+    purchaseFailed: '購入フローに失敗しました: {{error}}'
+    purchaseFailedFallback: Microsoft Store での購入に失敗しました。
+    openStoreFailed: 'Microsoft Store のページを開けませんでした: {{error}}'
+    openStoreFailedFallback: Microsoft Store のページは現在利用できません。
   status:
     loading: 読み込み中
     active: 有効
@@ -560,31 +562,31 @@ turboEngine:
     storeId: 'Store ID: {{storeId}}'
     storeIdLabel: Store ID
     statusLabel: ライセンス状態
-    lastCheckedLabel: Last checked
-    lastSuccessLabel: Last successful sync
+    lastCheckedLabel: 最終確認日時
+    lastSuccessLabel: 最後に同期に成功した日時
   actions:
     sectionTitle: ライセンス操作
     processing: 処理中...
-    manage: Open Store purchase flow
+    manage: Store の購入フローを開く
     buy: TurboEngine ライセンスを購入
     refresh: 状態を更新
     refreshing: 更新中...
-    openStoreProduct: Open TurboEngine in Store
+    openStoreProduct: Store で TurboEngine を開く
     installStoreApp: Store 版をインストール
     manageHint: Open Microsoft Store again if you need to confirm ownership or revisit the current TurboEngine license on this device.
     buyHint: Start the Microsoft Store flow for `9NSD809W18Z6`, then Desktop will refresh the TurboEngine entitlement state in the same session.
-    activeHint: TurboEngine is already licensed on this device. Refresh once if you want to confirm the latest Microsoft Store state.
+    activeHint: この端末ではすでに TurboEngine のライセンスが有効です。Microsoft Store の最新の状態を確認したい場合は、一度更新してください。
     handoffHint: In-app purchase and verification work only in the Microsoft Store edition. Use the Store handoff below when this runtime cannot complete the license flow itself.
   runtime:
-    sectionTitle: Runtime contract
+    sectionTitle: ランタイム契約
     supported: This runtime can query Microsoft Store directly and run the packaged TurboEngine purchase path for Store ID `9NSD809W18Z6`.
     unsupported: This runtime cannot complete Microsoft Store purchase APIs directly, so Desktop falls back to a Store handoff path instead of showing a broken in-app purchase button.
-    runtimeLabel: Runtime
-    sourceLabel: Snapshot source
-    storeEdition: Microsoft Store edition
-    nonStoreEdition: Non-Store runtime
+    runtimeLabel: ランタイム
+    sourceLabel: スナップショットのソース
+    storeEdition: Microsoft Store 版
+    nonStoreEdition: Store 版以外のランタイム
   sourceValue:
-    initial: Current session default state
+    initial: 現在のセッションの既定の状態
     store: Microsoft Store
     fallback: Fallback snapshot
   diagnostics:
@@ -595,8 +597,8 @@ turboEngine:
     description: Microsoft Store が直近の更新を完了できなかったため、Desktop はこのセッションで最後に確認できた TurboEngine 状態を消さずに保持しています。
   unsupported:
     title: Microsoft Store 版が必要です
-    description: Purchase and live verification only work in the Microsoft Store edition of Hagicode Desktop.
-    nonStoreDescription: This runtime is not the Microsoft Store edition. Use the buttons below to open the TurboEngine Store page, then install or launch the Store edition of Hagicode Desktop to complete purchase and verification.
+    description: 購入とライブ検証は、Hagicode Desktop の Microsoft Store 版でのみ利用できます。
+    nonStoreDescription: このランタイムは Microsoft Store 版ではありません。下のボタンから TurboEngine の Store ページを開き、Hagicode Desktop の Store 版をインストールまたは起動して、購入と検証を完了してください。
   purchaseOutcome:
     title: 購入結果
     succeeded: 購入が完了し、Desktop は TurboEngine ライセンスのスナップショットを更新しました。
@@ -618,9 +620,9 @@ ratingPrompt:
 donationItem:
   noPrivilegeNotice: チップは作者への感謝であり、特権・機能解除・権利は付きません。
   thankYouAnimation:
-    close: Click anywhere to close
-    title: Thank you for your tip
-    message: With your support, the author will have more resources to make HagiCode even better.
+    close: どこでもクリックして閉じる
+    title: チップをありがとうございます
+    message: いただいたご支援により、作者は HagiCode をさらに良くするためのリソースを確保できます。
   tiers:
     coffee:
       shortName: カプチーノ
@@ -629,26 +631,28 @@ donationItem:
     candy:
       shortName: カーニバル
   actions:
-    purchase: Donate now
-    purchasing: Processing...
+    purchase: 今すぐ寄付
+    purchasing: 処理中...
     purchaseTier: '{{shortName}} をチップ'
-    close: Close donation item
-    retrySync: Retry sync
-  purchaseCount: Donation count {{count}} (local record)
+    close: 寄付項目を閉じる
+    retrySync: 同期を再試行
+  purchaseCount: 寄付回数 {{count}}（ローカル記録）
   messages:
-    purchaseFailed: 'Donation failed: {{error}}'
-    dismissFailed: 'Failed to dismiss donation item: {{error}}'
-    reconcileFailed: 'Could not confirm unfinished tips: {{error}}'
-    reconcileSucceeded: Tip sync completed. You can tip again.
-    busy: Another tip operation is already in progress.
-    dismissed: Donation item dismissed
+    purchaseFailed: '寄付に失敗しました: {{error}}'
+    dismissFailed: '寄付項目を閉じられませんでした: {{error}}'
+    reconcileFailed: '未完了のチップを確認できませんでした: {{error}}'
+    reconcileSucceeded: チップの同期が完了しました。続けてチップを贈ることができます。
+    busy: 別のチップ操作がすでに進行中です。
+    dismissed: 寄付項目を閉じました
     tierThanks: '{{shortName}} のチップをありがとうございます！'
     purchaseOutcome:
-      succeeded: Donation completed. Thank you for supporting us!
-      already-purchased: Donation recorded. Thank you for your continued support!
-      canceled: Donation flow was canceled.
-      not-purchased: Donation flow ended without payment.
-      network-error: Donation failed due to a network error.
-      server-error: Donation failed due to a Microsoft Store service error.
-      not-supported: Donation is not supported in this runtime.
-      failed: Donation failed. Please try again later.
+      succeeded: 寄付が完了しました。ご支援ありがとうございます！
+      already-purchased: 寄付を記録しました。引き続きのご支援ありがとうございます！
+      canceled: 寄付フローはキャンセルされました。
+      not-purchased: 寄付フローは支払いなしで終了しました。
+      network-error: ネットワークエラーのため、寄付に失敗しました。
+      server-error: Microsoft Store のサービスエラーのため、寄付に失敗しました。
+      not-supported: このランタイムでは寄付はサポートされていません。
+      failed: 寄付に失敗しました。しばらくしてからもう一度お試しください。
+  headline: 作者は金欠寸前です。力を貸してください！
+  subheadline: 作者のトークンが尽きそうです。続けられるよう応援してください！

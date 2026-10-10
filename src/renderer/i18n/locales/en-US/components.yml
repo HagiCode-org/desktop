@@ -254,6 +254,19 @@ dependencyManagement:
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
     refreshHint: Refresh after the command finishes to re-check Desktop-managed dependencies.
   noDependencies: No dependencies detected
+  installToast:
+    manualDisabledTitle: Automatic installation is disabled
+    manualDisabledDescription: Finish the manual installation outside Desktop as instructed, then refresh the status.
+    completedTitle: Dependency installation finished
+    completedDescription: '{{success}} installed, {{failed}} failed'
+    failedTitle: Dependency installation failed
+    allFailedDescription: '{{count}} dependencies failed to install'
+    successTitle: Dependencies installed
+    successDescription: All dependencies were installed successfully
+    genericErrorDescription: An error occurred during installation
+    unknownError: Unknown error
+    singleFailedDescription: '{{name}} failed to install'
+    singleSuccessDescription: '{{name}} was installed successfully'
 packageSource:
   cardTitle: Package Source Configuration
   cardDescription: Configure and manage package sources for installation
@@ -314,6 +327,10 @@ packageSource:
     scanFailed: Failed to scan folder
     fetchFailed: Failed to fetch GitHub releases
     validateFailed: Failed to validate configuration
+    fetchIndexFailed: Failed to fetch versions from the HTTP index
+    channelFailed: Failed to set the channel preference
+    invalidConfig: Invalid configuration
+  channelSetSuccess: 'Channel preference set to: {{channel}}'
 tray:
   status:
     running: Running

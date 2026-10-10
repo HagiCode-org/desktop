@@ -117,7 +117,7 @@ launch:
     title: Installationsinformationen
     version: Installierte Version
     port: Service-Port
-    url: Service URL
+    url: Dienst-URL
   whatsNext:
     title: 'Sie können jetzt:'
     manage: Verwalten Sie Hagicode Server über die Hauptoberfläche
@@ -210,51 +210,6 @@ dependencyCheck:
     collapse: Details ausblenden
     currentVersion: Aktuelle Version
     requiredVersion: Erforderliche Version
-dependencyPreparation:
-  title: Abhängigkeiten vorbereiten
-  description: Installieren Sie die für HagiCode Desktop erforderlichen Befehlszeilenabhängigkeiten und wählen Sie mindestens einen Agent CLI zur Verwendung mit Codierungssitzungen aus.
-  loading: Vom Desktop verwaltete Abhängigkeiten werden überprüft...
-  refreshHint: Refresh after the command finishes to re-check Desktop-managed dependencies.
-  skip:
-    title: This step can be skipped
-    description: You can continue to the download step without installing dependencies now. The install action adds the selected packages to Desktop's managed Node/npm environment, and you can install them later inside the app.
-  environment:
-    title: Desktop-verwaltete Node/npm-Umgebung
-    description: Desktop installiert und überprüft verwaltete CLI-Pakete in seiner eigenen Node/npm-Umgebung. Lesen Sie die FAQ für aktuelle Pfad-, Paket- und Fehlerbehebungsdetails.
-    faqLinkLabel: Häufig gestellte Fragen zur Knotenumgebung anzeigen
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
-  required:
-    title: Erforderliche Abhängigkeiten
-    description: Diese Abhängigkeiten müssen installiert werden, bevor das Setup fortgesetzt werden kann.
-  optional:
-    title: Optionale Abhängigkeiten
-    description: Optionale Abhängigkeiten blockieren die Einrichtung nicht.
-  agentCli:
-    title: Auswahl des Agenten CLI
-    description: Wählen Sie mindestens einen Agenten CLI aus. Das ausgewählte CLI muss in der verwalteten npm-Umgebung von Desktop installiert werden.
-  blocking:
-    environment-unavailable:
-      title: Knoten/npm-Umgebung nicht verfügbar
-      description: Der Desktop kann nicht auf seine verwaltete Knoten-/npm-Umgebung zugreifen. Aktualisieren Sie, nachdem die Toolchain verfügbar ist, oder öffnen Sie die FAQ zur Knotenumgebung, um Details zur Fehlerbehebung zu erhalten.
-    required-packages-missing:
-      title: Erforderliche Abhängigkeiten fehlen
-      description: Installieren Sie die fehlenden erforderlichen Abhängigkeiten, bevor Sie fortfahren.
-    agent-cli-not-selected:
-      title: Wählen Sie einen Agenten CLI
-      description: Wählen Sie mindestens eine unterstützte Agent CLI-Abhängigkeit aus.
-    agent-cli-not-installed:
-      title: Der ausgewählte Agent CLI ist nicht installiert
-      description: Installieren Sie mindestens ein ausgewähltes Agent CLI-Paket in der verwalteten npm-Umgebung von Desktop.
-  actions:
-    install: Bestätigen und installieren
-    refresh: Aktualisieren
-    retry: Versuchen Sie es noch einmal
-    recheck: Überprüfen Sie es noch einmal
-  complete:
-    title: Abhängigkeiten sind fertig
-    description: Erforderliche Abhängigkeiten sind installiert und mindestens ein ausgewählter Agent CLI ist bereit.
-  error:
-    title: Die Vorbereitung der Abhängigkeit ist fehlgeschlagen
 legal:
   title: Endbenutzer-Lizenzvereinbarung und Datenschutzrichtlinie
   descriptionFull: Bestätigen Sie vor dem Herunterladen des HagiCode-Servers die aktuellen Überarbeitungen der EULA und der Datenschutzrichtlinie. Die offiziellen Dokumente werden in Ihrem Standardbrowser geöffnet.
@@ -276,13 +231,13 @@ legal:
   decline: Ablehnen und beenden
   declining: Verlassen...
   refresh: Rechtliche Metadaten aktualisieren
-  lastUpdated: 'Last updated: {{date}}'
+  lastUpdated: 'Zuletzt aktualisiert: {{date}}'
   source:
-    fresh: Latest
-    cache: Cached
-    unavailable: Unavailable
-  openEula: Open EULA
-  openPrivacy: Open Privacy Policy
+    fresh: Aktuell
+    cache: Zwischengespeichert
+    unavailable: Nicht verfügbar
+  openEula: EULA öffnen
+  openPrivacy: Datenschutzrichtlinie öffnen
   metadata:
     remote: Neueste rechtliche Metadaten geladen
     cache: Verwendung der letzten erfolgreich zwischengespeicherten rechtlichen Metadaten

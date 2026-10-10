@@ -45,6 +45,8 @@ common:
   operationFailed: 操作失敗
   confirmDelete: 確定要刪除嗎？
   confirmAction: 確定要繼續嗎？
+  unknownError: 未知錯誤
+  notAvailable: 暫無
 header:
   title: 設定
   runningSuccessfully: 運行成功
@@ -187,18 +189,18 @@ dependencyManagement:
     readOnlyHelp: 目前處於外部唯讀模式，鏡像設定不會影響依賴管理行為。
     saveFailed: 儲存鏡像設定失敗
   vendoredRuntime:
-    title: Desktop-managed runtimes
-    description: Vendored runtimes are staged and supervised by Desktop instead of npm package management.
-    managedByDesktop: Managed directly by Desktop
+    title: Desktop 託管執行階段
+    description: Vendored 執行階段由 Desktop 負責預置與託管，不透過 npm 套件管理進行安裝。
+    managedByDesktop: 由 Desktop 直接管理
     runtimeState: 運行狀態
-    runtimeRoot: Runtime root
+    runtimeRoot: 執行階段目錄
     packagedRoot: 打包來源目錄
     packagedArchivePath: 打包封存檔
     packagedMarkerPath: 打包標記
-    metadataPath: Metadata path
-    healthUrl: Local URL
-    diagnostics: Diagnostics
-    reinstallHint: This vendored runtime ships with Desktop packaging. Reinstall Desktop to restore a damaged packaged copy.
+    metadataPath: 中繼資料路徑
+    healthUrl: 本機位址
+    diagnostics: 診斷資訊
+    reinstallHint: 此 vendored 執行階段隨 Desktop 安裝套件一併發佈。若打包副本損毀，請重新安裝 Desktop 以還原。
     primaryDescriptions:
       installed: 執行階段檔案已安裝，並符合最新的 Desktop 執行階段契約。
       packaged: 打包封存檔已就緒，但可寫入的執行階段尚未啟用。
@@ -212,23 +214,23 @@ dependencyManagement:
       removed: 已移除
       failed: 驗證失敗
     status:
-      ready: Ready
-      running: Running
-      stopped: Stopped
-      missing: Missing
-      damaged: Damaged
+      ready: 就緒
+      running: 運作中
+      stopped: 已停止
+      missing: 缺失
+      damaged: 已損毀
       enable-required: 需要啟用
       extracting: 解壓中
     actions:
       enable: 啟用執行階段
-      start: Start
-      stop: Stop
-      restart: Restart
-      repair: Repair staged runtime
-      openLogs: Open logs
-      openRuntimeRoot: Open runtime root
-      openUrl: Open local URL
-      reinstallDesktop: Reinstall Desktop
+      start: 啟動
+      stop: 停止
+      restart: 重新啟動
+      repair: 修復預置執行階段
+      openLogs: 開啟日誌目錄
+      openRuntimeRoot: 開啟執行階段目錄
+      openUrl: 開啟本機位址
+      reinstallDesktop: 重新安裝 Desktop
     activationInline: 正在解壓執行階段... {{percent}}%
     activationStage:
       idle: 閒置
@@ -241,13 +243,13 @@ dependencyManagement:
       failed: 啟用失敗
   package:
     version: 版本
-    requiredVersion: Required version
-    versionMismatch: Current version {{current}} does not satisfy {{required}}.
+    requiredVersion: 要求版本
+    versionMismatch: 目前版本 {{current}} 不符合 {{required}}。
     packageName: 包名
     category: 分類
   packageStatus:
     installed: 已安裝
-    outdated: Upgrade required
+    outdated: 需要升級
     not-installed: 未安裝
     unknown: 未知
   uninstall:
@@ -270,9 +272,9 @@ dependencyManagement:
     codex:
       description: 用於編碼工作流程的 OpenAI Codex Agent CLI。
     pi:
-      description: PI coding agent CLI distributed through the official @earendil-works/pi-coding-agent npm package.
+      description: 透過官方 @earendil-works/pi-coding-agent npm 套件分發的 PI 編碼代理 CLI。
     reasonix:
-      description: Reasonix coding agent CLI distributed through the official reasonix npm package.
+      description: 透過官方 reasonix npm 套件分發的 Reasonix 編碼代理 CLI。
     githubCopilot:
       description: 透過官方 @github/copilot npm 包分發的 GitHub Copilot CLI。
     codebuddy:
@@ -285,6 +287,8 @@ dependencyManagement:
       description: 透過官方 @google/gemini-cli npm 包分發的 Gemini CLI。
     impeccable:
       description: 為 AI 編碼代理提供設計技能、命令與反模式檢測的 Impeccable 工具。
+    ohMyPi:
+      description: 透過官方 @oh-my-pi/pi-coding-agent 套件分發的 Oh My Pi 編碼代理 CLI。
   categories:
     bootstrap: 舊版相容
     workflow: 工作流程
@@ -338,7 +342,7 @@ dependencyManagement:
     refresh: 重新整理
     install: 安裝
     installed: 已安裝
-    upgrade: Upgrade
+    upgrade: 升級
     reinstall: 重新安裝
     installSelected: 批量安裝已選項
     installSelectedRunning: 正在批量安裝...
@@ -454,19 +458,19 @@ system:
     actions:
       viewDetails: 查看詳情
     debug:
-      title: Commerce Preview Debugger
-      description: These switches only affect the current window preview. They do not modify the real Microsoft Store license state and they never trigger an actual purchase.
-      previewBadge: 'Preview: {{mode}}'
+      title: 商業區預覽調試
+      description: 這裡的切換只影響目前視窗中的頁面呈現，不會修改真實的 Microsoft Store 授權狀態，也不會觸發實際購買。
+      previewBadge: 預覽：{{mode}}
       modes:
-        live: Follow live state
-        nonStore: Non-Store runtime
-        inactive: Store edition, not purchased
-        active: Store edition, activated
+        live: 跟隨真實狀態
+        nonStore: 非 Store 執行階段
+        inactive: Store 版，未購買
+        active: Store 版，已啟用
       descriptions:
-        live: Render the page from the current runtime and the real license snapshot.
-        nonStore: Simulate a non-Store runtime and keep only the Store-install handoff path visible.
-        inactive: Simulate the Store edition before purchase so you can review the pre-purchase layout.
-        active: Simulate the Store edition after activation so you can review the post-purchase layout.
+        live: 依據目前執行階段與真實授權快照來呈現頁面。
+        nonStore: 模擬非 Store 執行階段，僅顯示安裝 Store 版的引導流程。
+        inactive: 模擬 Store 版尚未購買的狀態，方便預覽購買前的頁面。
+        active: 模擬 Store 版已啟用的狀態，方便預覽購買後的頁面。
   logQuickAccess:
     title: 日誌快捷訪問
     description: 直接開啟 Desktop 與 Web App 的日誌目錄，減少排障時的路徑尋找成本。
@@ -524,7 +528,7 @@ system:
       failed: 背景更新失敗：{{error}}
       settings-disabled: 你已關閉背景自動下載，可在設定頁重新啟用。
       portable-mode: portable mode 下已跳過背景更新，目前運行環境保持唯讀。
-      managed-install: Auto-updates are disabled. Update delivery depends on your installation channel (e.g. Microsoft Store, Steam).
+      managed-install: 自動更新已停用。更新方式取決於您的安裝管道（例如 Microsoft Store、Steam）。
       no-package-source: 尚未配置有效的軟體包來源，無法執行後台更新。
     progress:
       confirming: 等待確認
@@ -563,16 +567,16 @@ system:
         title: 先安裝第一個版本
         description: 如果目前還沒有安裝任何版本，可以從這裡啟動精靈，完成首次下載、依賴安裝與服務啟動。
   services:
-    title: Managed Services
-    description: Monitor and control Desktop-managed services from one place.
-    viewDetails: Details
-    port: 'Port: {{port}}'
-    notReady: Not ready
-    installRequired: Installation required
+    title: 託管服務
+    description: 在同一處監控並控制由 Desktop 託管的各項服務。
+    viewDetails: 詳情
+    port: 連接埠：{{port}}
+    notReady: 未就緒
+    installRequired: 需要安裝
     enableRequired: 啟用執行階段
-    startFailed: Failed to start the service
-    stopFailed: Failed to stop the service
-    restartFailed: Failed to restart the service
+    startFailed: 服務啟動失敗
+    stopFailed: 服務停止失敗
+    restartFailed: 服務重新啟動失敗
 themeToggle:
   switchToLight: 切換到亮色模式
   switchToDark: 切換到暗色模式

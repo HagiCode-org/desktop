@@ -94,8 +94,8 @@ webServiceStatus:
   startButton: Запустить службу
   dependencyReadinessButton: Открытое управление зависимостями
   managedStartup:
-    label: Managed service startup
-    description: Choose which managed services should start together when you launch Hagicode.
+    label: Совместный запуск управляемых служб
+    description: Выберите, какие управляемые службы должны запускаться вместе при запуске Hagicode.
   dependencyReadinessAlert:
     title: Зависимости не готовы
     message: Перед запуском Hagicode установите необходимые зависимости, управляемые рабочим столом; дополнительные зависимости не блокируют запуск базовой службы.
@@ -145,41 +145,41 @@ webServiceStatus:
     copyError: Не удалось скопировать журнал запуска.
     copyEmpty: Нет содержимого журнала для копирования
   startupProgress:
-    title: Starting service
-    description: Desktop is checking the active version, validating required dependencies, and waiting for the local Hagicode service to finish booting.
-    successTitle: Service is ready
-    successDescription: The local service completed startup checks and is ready to open.
-    failureTitle: Startup did not finish
-    failureDescription: Desktop hit a problem while starting the service. Review the failure log or close this dialog and continue troubleshooting.
-    currentStepLabel: Current progress
-    waitingHint: Startup can take several seconds. Desktop keeps this dialog updated with the current step and execution status.
+    title: Запуск службы
+    description: Desktop проверяет активную версию, убеждается в готовности необходимых зависимостей и ждёт, пока локальная служба Hagicode завершит запуск.
+    successTitle: Служба готова
+    successDescription: Локальная служба прошла проверки запуска и готова к открытию.
+    failureTitle: Запуск не завершён
+    failureDescription: При запуске службы Desktop столкнулся с проблемой. Просмотрите журнал сбоев или закройте это окно и продолжите поиск причины.
+    currentStepLabel: Текущий прогресс
+    waitingHint: Запуск может занять несколько секунд. Desktop обновляет это окно, показывая текущий шаг и состояние выполнения.
     states:
-      pending: Pending
-      active: In progress
-      completed: Completed
-      failed: Failed
+      pending: Ожидается
+      active: Выполняется
+      completed: Завершено
+      failed: Не удалось
     actions:
-      close: Close
+      close: Закрыть
       done: Готово
-      openFailureLog: View failure log
+      openFailureLog: Просмотреть журнал сбоев
     meta:
-      version: Active version
-      port: Port
-      accessUrl: Access URL
+      version: Активная версия
+      port: Порт
+      accessUrl: URL доступа
     stepLabels:
-      checkingVersion: Check version
-      checkingDependencies: Check dependencies
-      spawning: Start service process
-      waitingListening: Wait for listening port
-      healthCheck: Run health check
-      running: Startup complete
+      checkingVersion: Проверка версии
+      checkingDependencies: Проверка зависимостей
+      spawning: Запуск процесса службы
+      waitingListening: Ожидание прослушиваемого порта
+      healthCheck: Проверка работоспособности
+      running: Запуск завершён
     stepDescriptions:
-      checkingVersion: Confirm that the active version, entry point, and startup metadata are ready for this launch.
-      checkingDependencies: Validate that Desktop-managed required dependencies are ready before the service starts.
-      spawning: Create the managed service process and inject the runtime environment prepared by Desktop.
-      waitingListening: Wait for the service to bind the configured port and make the local access address reachable.
-      healthCheck: Probe the booted service and confirm the Web API is ready to serve requests.
-      running: Every startup check passed and the local Hagicode service is ready to open.
+      checkingVersion: Проверка того, что активная версия, точка входа и метаданные запуска готовы к текущему запуску.
+      checkingDependencies: Проверка готовности необходимых зависимостей, управляемых Desktop, перед запуском службы.
+      spawning: Создание управляемого процесса службы и передача ему среды выполнения, подготовленной Desktop.
+      waitingListening: Ожидание, пока служба привяжется к настроенному порту и локальный адрес станет доступным.
+      healthCheck: Опрос запущенной службы и подтверждение того, что Web API готов обрабатывать запросы.
+      running: Все проверки запуска пройдены, локальная служба Hagicode готова к открытию.
   toast:
     noActiveVersion: Для веб-журналов не выбрана активная версия.
     openLogsSuccess: Открыта папка веб-журналов активной версии
@@ -254,6 +254,19 @@ dependencyManagement:
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
     refreshHint: Обновите после завершения команды, чтобы повторно проверить зависимости, управляемые рабочим столом.
   noDependencies: Зависимости не обнаружены
+  installToast:
+    manualDisabledTitle: Автоматическая установка отключена
+    manualDisabledDescription: Завершите ручную установку вне Desktop согласно инструкции, затем обновите статус.
+    completedTitle: Установка зависимостей завершена
+    completedDescription: 'Установлено: {{success}}, не удалось: {{failed}}'
+    failedTitle: Установка зависимостей не удалась
+    allFailedDescription: 'Не удалось установить зависимостей: {{count}}'
+    successTitle: Зависимости установлены
+    successDescription: Все зависимости успешно установлены
+    genericErrorDescription: Во время установки произошла ошибка
+    unknownError: Неизвестная ошибка
+    singleFailedDescription: Не удалось установить {{name}}
+    singleSuccessDescription: '{{name}} успешно установлен'
 packageSource:
   cardTitle: Конфигурация исходного кода пакета
   cardDescription: Настройка источников пакетов для установки и управление ими
@@ -273,6 +286,7 @@ packageSource:
     scanButton: Сканировать доступные версии
     scanning: Сканирование...
     notFound: Папка не существует или недоступна
+    currentPath: 'Текущий путь: {{path}}'
   http:
     url:
       label: Пакет URL
@@ -312,6 +326,11 @@ packageSource:
     scanFailed: Не удалось просканировать папку
     fetchFailed: Не удалось получить GitHub выпусков.
     validateFailed: Не удалось проверить конфигурацию
+    fetchIndexFailed: Не удалось получить версии из HTTP-индекса
+    channelFailed: Не удалось задать предпочтительный канал
+    invalidConfig: Недопустимая конфигурация
+  notSet: Не задано
+  channelSetSuccess: 'Предпочтительный канал установлен: {{channel}}'
 tray:
   status:
     running: Бег

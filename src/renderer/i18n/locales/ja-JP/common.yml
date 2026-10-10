@@ -45,6 +45,8 @@ common:
   operationFailed: 操作が失敗しました
   confirmDelete: 削除してもよろしいですか?
   confirmAction: 続行してもよろしいですか?
+  unknownError: 不明なエラー
+  notAvailable: 該当なし
 header:
   title: 設定
   runningSuccessfully: 正常に実行されました
@@ -95,7 +97,7 @@ mirror:
   mirrorUrl: ミラー URL
   detectedAt: 検出場所
   official: 公式npm
-  taobao: Taobao NPM Mirror
+  taobao: Taobao npm ミラー
   redetect: 再検出
   info: NPM ツールは、ダウンロードを高速化するためにこのミラーを自動的に使用します。
   regions:
@@ -187,67 +189,67 @@ dependencyManagement:
     readOnlyHelp: 依存関係管理が外部の読み取り専用モードの間は、ミラー設定は効果を持ちません。
     saveFailed: ミラー設定の保存に失敗しました
   vendoredRuntime:
-    title: Desktop-managed runtimes
-    description: Vendored runtimes are staged and supervised by Desktop instead of npm package management.
-    managedByDesktop: Managed directly by Desktop
+    title: Desktop 管理のランタイム
+    description: 同梱ランタイムは、npm パッケージ管理ではなく Desktop がステージングして管理します。
+    managedByDesktop: Desktop が直接管理
     runtimeState: ランタイム状態
-    runtimeRoot: Runtime root
-    packagedRoot: Packaged source root
-    packagedArchivePath: Packaged archive
-    packagedMarkerPath: Packaged marker
-    metadataPath: Metadata path
-    healthUrl: Local URL
-    diagnostics: Diagnostics
-    reinstallHint: This vendored runtime ships with Desktop packaging. Reinstall Desktop to restore a damaged packaged copy.
+    runtimeRoot: ランタイムのルート
+    packagedRoot: パッケージ化されたソースのルート
+    packagedArchivePath: パッケージ化されたアーカイブ
+    packagedMarkerPath: パッケージ化されたマーカー
+    metadataPath: メタデータのパス
+    healthUrl: ローカル URL
+    diagnostics: 診断情報
+    reinstallHint: この同梱ランタイムは Desktop のパッケージに含まれています。パッケージ化されたコピーが破損している場合は、Desktop を再インストールして復元してください。
     primaryDescriptions:
       installed: ランタイム ファイルはインストール済みで、最新の Desktop ランタイム契約に一致しています。
-      packaged: Packaged archive is ready, but the writable runtime has not been enabled yet.
+      packaged: パッケージ化されたアーカイブは準備できていますが、書き込み可能なランタイムはまだ有効化されていません。
       not-installed: Desktop 管理場所には、まだこのランタイム ファイルがインストールされていません。
       removed: ランタイム ファイルは Desktop 管理場所から削除されました。
       failed: ランタイム ファイルが不完全であるか、検証に失敗しました。
     installStatus:
       installed: インストール済み
-      packaged: Packaged
+      packaged: パッケージ化済み
       not-installed: 未インストール
       removed: 削除済み
       failed: 検証失敗
     status:
-      ready: Ready
-      running: Running
-      stopped: Stopped
-      missing: Missing
-      damaged: Damaged
-      enable-required: Enable required
-      extracting: Extracting
+      ready: 準備完了
+      running: 実行中
+      stopped: 停止中
+      missing: 見つかりません
+      damaged: 破損
+      enable-required: 有効化が必要
+      extracting: 展開中
     actions:
-      enable: Enable Runtime
-      start: Start
-      stop: Stop
-      restart: Restart
-      repair: Repair staged runtime
-      openLogs: Open logs
-      openRuntimeRoot: Open runtime root
-      openUrl: Open local URL
-      reinstallDesktop: Reinstall Desktop
-    activationInline: Extracting runtime... {{percent}}%
+      enable: ランタイムを有効化
+      start: 開始
+      stop: 停止
+      restart: 再起動
+      repair: ステージング済みランタイムを修復
+      openLogs: ログを開く
+      openRuntimeRoot: ランタイムのルートを開く
+      openUrl: ローカル URL を開く
+      reinstallDesktop: Desktop を再インストール
+    activationInline: ランタイムを展開しています... {{percent}}%
     activationStage:
-      idle: Idle
-      validating-source: Validating packaged source
-      preparing-staging: Preparing staging directory
-      extracting: Extracting archive
-      validating-runtime: Validating extracted runtime
-      swapping-runtime: Promoting extracted runtime
-      completed: Activation complete
-      failed: Activation failed
+      idle: 待機中
+      validating-source: パッケージ化されたソースを検証しています
+      preparing-staging: ステージングディレクトリを準備しています
+      extracting: アーカイブを展開しています
+      validating-runtime: 展開したランタイムを検証しています
+      swapping-runtime: 展開したランタイムへ切り替えています
+      completed: 有効化が完了しました
+      failed: 有効化に失敗しました
   package:
     version: バージョン
-    requiredVersion: Required version
-    versionMismatch: Current version {{current}} does not satisfy {{required}}.
+    requiredVersion: 必要なバージョン
+    versionMismatch: 現在のバージョン {{current}} は {{required}} を満たしていません。
     packageName: パッケージ
     category: カテゴリ
   packageStatus:
     installed: インストール済み
-    outdated: Upgrade required
+    outdated: アップグレードが必要
     not-installed: インストールされていません
     unknown: 不明
   uninstall:
@@ -270,9 +272,9 @@ dependencyManagement:
     codex:
       description: ワークフローのコーディング用のエージェント OpenAI Codex。
     pi:
-      description: PI coding agent CLI distributed through the official @earendil-works/pi-coding-agent npm package.
+      description: 公式の @earendil-works/pi-coding-agent npm パッケージを通じて配布される PI コーディングエージェント CLI。
     reasonix:
-      description: Reasonix coding agent CLI distributed through the official reasonix npm package.
+      description: 公式の reasonix npm パッケージを通じて配布される Reasonix コーディングエージェント CLI。
     githubCopilot:
       description: GitHub Copilot CLI は公式 @github/copilot npm パッケージを通じて配布されます。
     codebuddy:
@@ -285,6 +287,8 @@ dependencyManagement:
       description: Google Gemini CLI 公式 @google/gemini-cli npm パッケージを通じて配布されます。
     impeccable:
       description: AI コーディングエージェント向けの設計スキル、コマンド、アンチパターン検出を提供する Impeccable ツール。
+    ohMyPi:
+      description: 公式の @oh-my-pi/pi-coding-agent パッケージを通じて配布される Oh My Pi コーディングエージェント CLI。
   categories:
     bootstrap: 旧互換
     workflow: ワークフロー
@@ -292,16 +296,16 @@ dependencyManagement:
     developer-tool: 開発者ツール
   bootstrap:
     title: 旧 CLI
-    selectorLabel: Install target
+    selectorLabel: インストール対象
     selectorHint: Desktop はスタンドアロンの hagiscript CLI をもうインストールしません。これらのラベルは旧 UI 互換のためだけに残されています。
     currentTarget: '旧ターゲット: {{target}}'
-    customVersionLabel: Custom version
-    customVersionPlaceholder: Enter a version such as 0.2.3
+    customVersionLabel: カスタムバージョン
+    customVersionPlaceholder: 0.2.3 のようなバージョンを入力
     customVersionDescription: スタンドアロン hagiscript のバージョンは、Desktop 管理の依存関係フローではもう使用されません。
     targetOptions:
-      latest: Latest stable
-      dev: Development build
-      version: Exact version
+      latest: 最新の安定版
+      dev: 開発ビルド
+      version: バージョンを指定
   dependencyGate:
     title: Desktop SDK の準備がまだ完了していません
     missing: Desktop による管理 npm 環境の準備が完了するまで、他の依存関係操作は無効のままです。
@@ -338,7 +342,7 @@ dependencyManagement:
     refresh: リフレッシュ
     install: インストール
     installed: インストール済み
-    upgrade: Upgrade
+    upgrade: アップグレード
     reinstall: 再インストール
     installSelected: バッチインストールが選択されました
     installSelectedRunning: 一括インストール中...
@@ -454,19 +458,19 @@ system:
     actions:
       viewDetails: 詳細を表示
     debug:
-      title: Commerce Preview Debugger
-      description: These switches only affect the current window preview. They do not modify the real Microsoft Store license state and they never trigger an actual purchase.
-      previewBadge: 'Preview: {{mode}}'
+      title: コマースプレビューのデバッグ
+      description: ここでの切り替えは、現在のウィンドウのプレビュー表示にのみ影響します。実際の Microsoft Store のライセンス状態は変更されず、実際の購入も行われません。
+      previewBadge: 'プレビュー: {{mode}}'
       modes:
-        live: Follow live state
-        nonStore: Non-Store runtime
-        inactive: Store edition, not purchased
-        active: Store edition, activated
+        live: 実際の状態に従う
+        nonStore: Store 版以外のランタイム
+        inactive: Store 版・未購入
+        active: Store 版・有効化済み
       descriptions:
-        live: Render the page from the current runtime and the real license snapshot.
-        nonStore: Simulate a non-Store runtime and keep only the Store-install handoff path visible.
-        inactive: Simulate the Store edition before purchase so you can review the pre-purchase layout.
-        active: Simulate the Store edition after activation so you can review the post-purchase layout.
+        live: 現在のランタイムと実際のライセンススナップショットに基づいてページを表示します。
+        nonStore: Store 版以外のランタイムをシミュレートし、Store 版へ切り替えるための案内のみを表示します。
+        inactive: 購入前の Store 版をシミュレートし、購入前のレイアウトを確認できます。
+        active: 有効化後の Store 版をシミュレートし、購入後のレイアウトを確認できます。
   logQuickAccess:
     title: ログのクイックアクセス
     description: 診断時間を短縮するには、デスクトップおよび Web アプリのログ フォルダーを直接開きます。
@@ -524,16 +528,16 @@ system:
       failed: 'バックグラウンド更新に失敗しました: {{error}}'
       settings-disabled: バックグラウンドのプリダウンロードは無効になっています。設定で再度オンにできます。
       portable-mode: ポータブル モードでは、バックグラウンド更新がスキップされ、現在のランタイムが読み取り専用に保たれます。
-      managed-install: Auto-updates are disabled. Update delivery depends on your installation channel (e.g. Microsoft Store, Steam).
+      managed-install: 自動更新は無効です。更新の提供方法は、インストール経路（Microsoft Store、Steam など）によって異なります。
       no-package-source: アクティブなパッケージ ソースが構成されていないため、バックグラウンド更新を開始できません。
     progress:
-      confirming: Waiting for confirmation
-      stoppingService: Stopping service
-      confirmingDescription: '{{version}} is ready to install. Confirm first if the current service should be stopped.'
-      stoppingServiceDescription: The current service is stopping now, then the new version will continue downloading and installing.
-      switchingDescription: Installation finished. Switching the active runtime to {{version}} now.
-      completedDescription: '{{version}} is installed and the homepage status is already synced.'
-      activeDescription: 'Processing {{version}}. Current stage: {{stage}}.'
+      confirming: 確認待ち
+      stoppingService: サービスを停止しています
+      confirmingDescription: '{{version}} をインストールする準備ができました。現在のサービスを停止してよいか、先にご確認ください。'
+      stoppingServiceDescription: 現在のサービスを停止しています。その後、新しいバージョンのダウンロードとインストールを続行します。
+      switchingDescription: インストールが完了しました。アクティブなランタイムを {{version}} に切り替えています。
+      completedDescription: '{{version}} のインストールが完了し、ホームの状態も同期されました。'
+      activeDescription: '{{version}} を処理しています。現在のステージ: {{stage}}。'
     actions:
       openVersionPage: オープンなバージョン管理
       installLatest: 最新のインストール
@@ -563,16 +567,16 @@ system:
         title: 最初のバージョンをインストールする
         description: パッケージがまだインストールされていない場合は、このアクション呼び出しを使用してセットアップ ウィザードを起動し、最初のランタイム インストールを完了します。
   services:
-    title: Managed Services
-    description: Monitor and control Desktop-managed services from one place.
-    viewDetails: Details
-    port: 'Port: {{port}}'
-    notReady: Not ready
-    installRequired: Installation required
-    enableRequired: Enable runtime
-    startFailed: Failed to start the service
-    stopFailed: Failed to stop the service
-    restartFailed: Failed to restart the service
+    title: 管理対象サービス
+    description: Desktop が管理する各サービスを 1 か所で監視・操作できます。
+    viewDetails: 詳細
+    port: 'ポート: {{port}}'
+    notReady: 準備できていません
+    installRequired: インストールが必要
+    enableRequired: ランタイムを有効化
+    startFailed: サービスを開始できませんでした
+    stopFailed: サービスを停止できませんでした
+    restartFailed: サービスを再起動できませんでした
 themeToggle:
   switchToLight: ライトモードに切り替える
   switchToDark: ダークモードに切り替える

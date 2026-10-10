@@ -210,51 +210,6 @@ dependencyCheck:
     collapse: 隱藏詳情
     currentVersion: 目前版本
     requiredVersion: 要求版本
-dependencyPreparation:
-  title: 準備依賴項
-  description: 安裝 HagiCode Desktop 必要的命令列依賴項，並選擇至少一個用於編碼會話的 Agent CLI。
-  loading: 正在檢查 Desktop 託管的依賴項...
-  refreshHint: Refresh after the command finishes to re-check Desktop-managed dependencies.
-  skip:
-    title: 此步驟可以跳過
-    description: 您可以先繼續到下載步驟，暫時不安裝依賴。安裝操作會把所選套件加入 Desktop 託管的 Node/npm 環境，之後也可以在應用內再安裝。
-  environment:
-    title: Desktop 託管的 Node/npm 環境
-    description: Desktop 會在自己的 Node/npm 環境中安裝並偵測託管 CLI 套件。路徑、套件管理和排障細節請閱讀 FAQ。
-    faqLinkLabel: 查看 Node 環境 FAQ
-    faqUrl: https://docs.hagicode.com/faq/desktop-node-environment/
-  required:
-    title: 必需依賴項
-    description: 這些依賴項必須安裝完成後才能繼續引導。
-  optional:
-    title: 可選依賴項
-    description: 可選依賴項不會阻塞引導。
-  agentCli:
-    title: Agent CLI 選擇
-    description: 請選擇至少一個 Agent CLI。選取的 CLI 必須安裝在 Desktop 託管 npm 環境中。
-  blocking:
-    environment-unavailable:
-      title: Node/npm 環境不可用
-      description: Desktop 目前無法存取託管的 Node/npm 環境。請在內建工具鏈可用後刷新。
-    required-packages-missing:
-      title: 缺少必需依賴項
-      description: 請先安裝缺失的必需依賴項。
-    agent-cli-not-selected:
-      title: 請選擇 Agent CLI
-      description: 至少選擇一個受支援的 Agent CLI 依賴項。
-    agent-cli-not-installed:
-      title: 選取的 Agent CLI 尚未安裝
-      description: 請將至少一個選取的 Agent CLI 安裝到 Desktop 託管 npm 環境中。
-  actions:
-    install: 確認並安裝
-    refresh: 重新整理
-    retry: 重試
-    recheck: 重新檢查
-  complete:
-    title: 依賴項已就緒
-    description: 必需相依性已安裝，且至少一個選取的 Agent CLI 已可用。
-  error:
-    title: 依賴項準備失敗
 legal:
   title: 終端使用者許可協議與隱私權政策
   descriptionFull: 在繼續下載 HagiCode Server 之前，請先確認目前 EULA 與隱私權政策版本。正式文件會在預設瀏覽器中開啟。
@@ -276,13 +231,13 @@ legal:
   decline: 拒絕並退出
   declining: 正在退出...
   refresh: 刷新協議訊息
-  lastUpdated: 'Last updated: {{date}}'
+  lastUpdated: 更新時間：{{date}}
   source:
-    fresh: Latest
-    cache: Cached
-    unavailable: Unavailable
-  openEula: Open EULA
-  openPrivacy: Open Privacy Policy
+    fresh: 最新
+    cache: 已快取
+    unavailable: 不可用
+  openEula: 開啟 EULA
+  openPrivacy: 開啟隱私權政策
   metadata:
     remote: 已載入最新協定版本
     cache: 正在使用最近快取的協定版本

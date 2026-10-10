@@ -45,6 +45,8 @@ common:
   operationFailed: Операция не удалась
   confirmDelete: Вы уверены, что хотите удалить?
   confirmAction: Вы уверены, что хотите продолжить?
+  unknownError: Неизвестная ошибка
+  notAvailable: Н/Д
 header:
   title: Настройки
   runningSuccessfully: Успешно работает
@@ -95,7 +97,7 @@ mirror:
   mirrorUrl: Зеркало URL
   detectedAt: Обнаружено в
   official: Официальный npm
-  taobao: Taobao NPM Mirror
+  taobao: Зеркало npm Taobao
   redetect: Повторное обнаружение
   info: NPM инструменты будут автоматически использовать это зеркало для более быстрой загрузки.
   regions:
@@ -187,67 +189,67 @@ dependencyManagement:
     readOnlyHelp: Настройки зеркала не влияют на поведение, пока управление зависимостями находится во внешнем режиме только для чтения.
     saveFailed: Не удалось сохранить настройки зеркала.
   vendoredRuntime:
-    title: Desktop-managed runtimes
-    description: Vendored runtimes are staged and supervised by Desktop instead of npm package management.
-    managedByDesktop: Managed directly by Desktop
+    title: Среды выполнения под управлением Desktop
+    description: Встроенные среды выполнения разворачиваются и контролируются самим Desktop, а не устанавливаются через управление пакетами npm.
+    managedByDesktop: Управляется напрямую Desktop
     runtimeState: Состояние runtime
-    runtimeRoot: Runtime root
-    packagedRoot: Packaged source root
-    packagedArchivePath: Packaged archive
-    packagedMarkerPath: Packaged marker
-    metadataPath: Metadata path
-    healthUrl: Local URL
-    diagnostics: Diagnostics
-    reinstallHint: This vendored runtime ships with Desktop packaging. Reinstall Desktop to restore a damaged packaged copy.
+    runtimeRoot: Каталог среды выполнения
+    packagedRoot: Каталог упакованного источника
+    packagedArchivePath: Упакованный архив
+    packagedMarkerPath: Маркер упаковки
+    metadataPath: Путь к метаданным
+    healthUrl: Локальный URL
+    diagnostics: Диагностика
+    reinstallHint: Эта встроенная среда выполнения поставляется в составе Desktop. Переустановите Desktop, чтобы восстановить повреждённую упакованную копию.
     primaryDescriptions:
       installed: Файлы runtime установлены и соответствуют актуальному контракту runtime Desktop.
-      packaged: Packaged archive is ready, but the writable runtime has not been enabled yet.
+      packaged: Упакованный архив готов, но записываемая среда выполнения ещё не включена.
       not-installed: Файлы runtime еще не установлены в расположении, которым управляет Desktop.
       removed: Файлы runtime были удалены из расположения, которым управляет Desktop.
       failed: Файлы runtime неполные или не прошли проверку.
     installStatus:
       installed: Установлено
-      packaged: Packaged
+      packaged: Упаковано
       not-installed: Не установлено
       removed: Удалено
       failed: Проверка не пройдена
     status:
-      ready: Ready
-      running: Running
-      stopped: Stopped
-      missing: Missing
-      damaged: Damaged
-      enable-required: Enable required
-      extracting: Extracting
+      ready: Готово
+      running: Работает
+      stopped: Остановлено
+      missing: Отсутствует
+      damaged: Повреждено
+      enable-required: Требуется включение
+      extracting: Извлечение
     actions:
-      enable: Enable Runtime
-      start: Start
-      stop: Stop
-      restart: Restart
-      repair: Repair staged runtime
-      openLogs: Open logs
-      openRuntimeRoot: Open runtime root
-      openUrl: Open local URL
-      reinstallDesktop: Reinstall Desktop
-    activationInline: Extracting runtime... {{percent}}%
+      enable: Включить среду выполнения
+      start: Запустить
+      stop: Остановить
+      restart: Перезапустить
+      repair: Восстановить подготовленную среду
+      openLogs: Открыть журналы
+      openRuntimeRoot: Открыть каталог среды выполнения
+      openUrl: Открыть локальный URL
+      reinstallDesktop: Переустановить Desktop
+    activationInline: Извлечение среды выполнения... {{percent}}%
     activationStage:
-      idle: Idle
-      validating-source: Validating packaged source
-      preparing-staging: Preparing staging directory
-      extracting: Extracting archive
-      validating-runtime: Validating extracted runtime
-      swapping-runtime: Promoting extracted runtime
-      completed: Activation complete
-      failed: Activation failed
+      idle: Ожидание
+      validating-source: Проверка упакованного источника
+      preparing-staging: Подготовка промежуточного каталога
+      extracting: Извлечение архива
+      validating-runtime: Проверка извлечённой среды выполнения
+      swapping-runtime: Переключение на извлечённую среду выполнения
+      completed: Активация завершена
+      failed: Сбой активации
   package:
     version: Версия
-    requiredVersion: Required version
-    versionMismatch: Current version {{current}} does not satisfy {{required}}.
+    requiredVersion: Требуемая версия
+    versionMismatch: Текущая версия {{current}} не соответствует требованию {{required}}.
     packageName: Пакет
     category: Категория
   packageStatus:
     installed: Установлено
-    outdated: Upgrade required
+    outdated: Требуется обновление
     not-installed: Не установлено
     unknown: Неизвестно
   uninstall:
@@ -270,9 +272,9 @@ dependencyManagement:
     codex:
       description: OpenAI Codex Агент CLI для рабочих процессов кодирования.
     pi:
-      description: PI coding agent CLI distributed through the official @earendil-works/pi-coding-agent npm package.
+      description: Агент программирования PI (CLI) распространяется через официальный пакет @earendil-works/pi-coding-agent npm.
     reasonix:
-      description: Reasonix coding agent CLI distributed through the official reasonix npm package.
+      description: Агент программирования Reasonix (CLI) распространяется через официальный пакет reasonix npm.
     githubCopilot:
       description: GitHub Copilot CLI распространяется через официальный пакет @github/copilot npm.
     codebuddy:
@@ -285,6 +287,8 @@ dependencyManagement:
       description: Google Gemini CLI распространяется через официальный пакет @google/gemini-cli npm.
     impeccable:
       description: Инструмент Impeccable для дизайн-навыков, команд и обнаружения анти-паттернов у ИИ-агентов для программирования.
+    ohMyPi:
+      description: Агент программирования Oh My Pi (CLI) распространяется через официальный пакет @oh-my-pi/pi-coding-agent.
   categories:
     bootstrap: Наследие
     workflow: Рабочий процесс
@@ -292,16 +296,16 @@ dependencyManagement:
     developer-tool: Инструмент разработчика
   bootstrap:
     title: Старый CLI
-    selectorLabel: Install target
+    selectorLabel: Цель установки
     selectorHint: Desktop больше не устанавливает отдельный hagiscript CLI. Эти подписи сохранены только для совместимости со старыми интерфейсами.
     currentTarget: 'Устаревшая цель: {{target}}'
-    customVersionLabel: Custom version
-    customVersionPlaceholder: Enter a version such as 0.2.3
+    customVersionLabel: Пользовательская версия
+    customVersionPlaceholder: Введите версию, например 0.2.3
     customVersionDescription: Отдельные версии hagiscript больше не используются в потоках зависимостей, управляемых Desktop.
     targetOptions:
-      latest: Latest stable
-      dev: Development build
-      version: Exact version
+      latest: Последняя стабильная
+      dev: Сборка для разработки
+      version: Точная версия
   dependencyGate:
     title: SDK Desktop еще не готов
     missing: Остальные действия с зависимостями останутся отключенными, пока Desktop не завершит подготовку управляемой npm-среды.
@@ -338,7 +342,7 @@ dependencyManagement:
     refresh: Обновить
     install: Установить
     installed: Установлено
-    upgrade: Upgrade
+    upgrade: Обновить
     reinstall: Переустановить
     installSelected: Выбрана пакетная установка
     installSelectedRunning: Пакетная установка...
@@ -454,19 +458,19 @@ system:
     actions:
       viewDetails: Подробнее
     debug:
-      title: Commerce Preview Debugger
-      description: These switches only affect the current window preview. They do not modify the real Microsoft Store license state and they never trigger an actual purchase.
-      previewBadge: 'Preview: {{mode}}'
+      title: Отладка предпросмотра коммерческой панели
+      description: Эти переключатели влияют только на предпросмотр в текущем окне. Они не изменяют реальное состояние лицензии Microsoft Store и никогда не запускают настоящую покупку.
+      previewBadge: 'Предпросмотр: {{mode}}'
       modes:
-        live: Follow live state
-        nonStore: Non-Store runtime
-        inactive: Store edition, not purchased
-        active: Store edition, activated
+        live: Следовать реальному состоянию
+        nonStore: Среда выполнения не из Store
+        inactive: Версия Store, не куплена
+        active: Версия Store, активирована
       descriptions:
-        live: Render the page from the current runtime and the real license snapshot.
-        nonStore: Simulate a non-Store runtime and keep only the Store-install handoff path visible.
-        inactive: Simulate the Store edition before purchase so you can review the pre-purchase layout.
-        active: Simulate the Store edition after activation so you can review the post-purchase layout.
+        live: Отображать страницу по текущей среде выполнения и реальному снимку лицензии.
+        nonStore: Имитировать среду выполнения не из Store и показывать только путь перехода к установке версии из Store.
+        inactive: Имитировать версию Store до покупки, чтобы просмотреть вид страницы до оплаты.
+        active: Имитировать версию Store после активации, чтобы просмотреть вид страницы после покупки.
   logQuickAccess:
     title: Быстрый доступ к журналу
     description: Откройте папки журналов рабочего стола и веб-приложения напрямую, чтобы сократить время диагностики.
@@ -524,16 +528,16 @@ system:
       failed: 'Фоновое обновление не удалось: {{error}}'
       settings-disabled: Фоновая предварительная загрузка отключена. Вы можете снова включить их в настройках.
       portable-mode: Портативный режим пропускает фоновые обновления и сохраняет текущую среду выполнения только для чтения.
-      managed-install: Auto-updates are disabled. Update delivery depends on your installation channel (e.g. Microsoft Store, Steam).
+      managed-install: Автообновления отключены. Способ получения обновлений зависит от канала установки (например, Microsoft Store, Steam).
       no-package-source: Активный источник пакета не настроен, поэтому запуск фоновых обновлений невозможен.
     progress:
-      confirming: Waiting for confirmation
-      stoppingService: Stopping service
-      confirmingDescription: '{{version}} is ready to install. Confirm first if the current service should be stopped.'
-      stoppingServiceDescription: The current service is stopping now, then the new version will continue downloading and installing.
-      switchingDescription: Installation finished. Switching the active runtime to {{version}} now.
-      completedDescription: '{{version}} is installed and the homepage status is already synced.'
-      activeDescription: 'Processing {{version}}. Current stage: {{stage}}.'
+      confirming: Ожидание подтверждения
+      stoppingService: Остановка службы
+      confirmingDescription: Версия {{version}} готова к установке. Сначала подтвердите, можно ли остановить текущую службу.
+      stoppingServiceDescription: Текущая служба останавливается, затем продолжится загрузка и установка новой версии.
+      switchingDescription: Установка завершена. Выполняется переключение активной среды выполнения на {{version}}.
+      completedDescription: Версия {{version}} установлена, состояние на главной странице уже синхронизировано.
+      activeDescription: 'Обработка {{version}}. Текущий этап: {{stage}}.'
     actions:
       openVersionPage: Открытое управление версиями
       installLatest: Установить последнюю версию
@@ -563,16 +567,16 @@ system:
         title: Установите свою первую версию
         description: Если пакет еще не установлен, используйте этот призыв к действию, чтобы запустить мастер установки и завершить первую установку во время выполнения.
   services:
-    title: Managed Services
-    description: Monitor and control Desktop-managed services from one place.
-    viewDetails: Details
-    port: 'Port: {{port}}'
-    notReady: Not ready
-    installRequired: Installation required
-    enableRequired: Enable runtime
-    startFailed: Failed to start the service
-    stopFailed: Failed to stop the service
-    restartFailed: Failed to restart the service
+    title: Управляемые службы
+    description: Отслеживайте и контролируйте управляемые Desktop службы в одном месте.
+    viewDetails: Подробнее
+    port: 'Порт: {{port}}'
+    notReady: Не готово
+    installRequired: Требуется установка
+    enableRequired: Включить среду выполнения
+    startFailed: Не удалось запустить службу
+    stopFailed: Не удалось остановить службу
+    restartFailed: Не удалось перезапустить службу
 themeToggle:
   switchToLight: Переключиться в светлый режим
   switchToDark: Переключиться в темный режим

@@ -210,51 +210,6 @@ dependencyCheck:
     collapse: Скрыть детали
     currentVersion: Текущая версия
     requiredVersion: Требуемая версия
-dependencyPreparation:
-  title: Подготовьте зависимости
-  description: Установите зависимости командной строки, необходимые для HagiCode Desktop, и выберите хотя бы один агент CLI для использования в сеансах кодирования.
-  loading: Проверка зависимостей, управляемых настольным компьютером...
-  refreshHint: Refresh after the command finishes to re-check Desktop-managed dependencies.
-  skip:
-    title: This step can be skipped
-    description: You can continue to the download step without installing dependencies now. The install action adds the selected packages to Desktop's managed Node/npm environment, and you can install them later inside the app.
-  environment:
-    title: Управляемая настольным компьютером среда Node/npm
-    description: Desktop устанавливает и проверяет управляемые пакеты CLI в своей собственной среде Node/npm. Прочтите FAQ, чтобы узнать текущий путь, пакет и сведения об устранении неполадок.
-    faqLinkLabel: Посмотреть часто задаваемые вопросы по среде Node
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
-  required:
-    title: Необходимые зависимости
-    description: Эти зависимости необходимо установить, прежде чем установка сможет продолжиться.
-  optional:
-    title: Дополнительные зависимости
-    description: Необязательные зависимости не блокируют установку.
-  agentCli:
-    title: Выбор агента CLI
-    description: Выберите хотя бы одного агента CLI. Выбранный CLI должен быть установлен в управляемой среде npm Desktop.
-  blocking:
-    environment-unavailable:
-      title: Узел/среда npm недоступна
-      description: Рабочий стол не может получить доступ к своей управляемой среде Node/npm. Обновите страницу после того, как набор инструментов станет доступен, или откройте раздел Часто задаваемые вопросы по среде Node, чтобы получить подробную информацию об устранении неполадок.
-    required-packages-missing:
-      title: Отсутствуют необходимые зависимости
-      description: Прежде чем продолжить, установите недостающие необходимые зависимости.
-    agent-cli-not-selected:
-      title: Выберите агента CLI
-      description: Выберите хотя бы одну поддерживаемую зависимость агента CLI.
-    agent-cli-not-installed:
-      title: Выбранный агент CLI не установлен
-      description: Установите хотя бы один выбранный пакет агента CLI в управляемую среду npm Desktop.
-  actions:
-    install: Подтвердите и установите
-    refresh: Обновить
-    retry: Повторить попытку
-    recheck: Перепроверить
-  complete:
-    title: Зависимости готовы
-    description: Необходимые зависимости установлены и по крайней мере один выбранный Агент CLI готов.
-  error:
-    title: Подготовка зависимостей не удалась
 legal:
   title: Лицензионное соглашение с конечным пользователем и политика конфиденциальности
   descriptionFull: Перед загрузкой HagiCode Server подтвердите текущие версии EULA и Политики конфиденциальности. Официальные документы открываются в браузере по умолчанию.
@@ -276,13 +231,13 @@ legal:
   decline: Отказ и выход
   declining: Выход...
   refresh: Обновить юридические метаданные
-  lastUpdated: 'Last updated: {{date}}'
+  lastUpdated: 'Последнее обновление: {{date}}'
   source:
-    fresh: Latest
-    cache: Cached
-    unavailable: Unavailable
-  openEula: Open EULA
-  openPrivacy: Open Privacy Policy
+    fresh: Актуально
+    cache: Из кэша
+    unavailable: Недоступно
+  openEula: Открыть EULA
+  openPrivacy: Открыть политику конфиденциальности
   metadata:
     remote: Загружены последние юридические метаданные
     cache: Использование последних успешных кэшированных юридических метаданных

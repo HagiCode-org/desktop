@@ -240,6 +240,8 @@ versionManagement:
     incomplete: 缺少依赖项
     installed: 已安装
     payloadInvalid: 软件包无效
+    desktopIncompatible: Desktop 不兼容
+    runtimeIncompatible: 运行时不兼容
   actions:
     refresh: 刷新
     install: 安装版本
@@ -655,3 +657,5 @@ donationItem:
       server-error: 续命失败，商店服务异常。
       not-supported: 当前运行环境不支持续命。
       failed: '续命失败，请稍后重试。'
+  headline: 作者快穷死了，救救作者
+  subheadline: 作者的 token 要耗尽了，快为作者续命

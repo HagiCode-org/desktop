@@ -254,6 +254,19 @@ dependencyManagement:
     faqUrl: https://docs.hagicode.com/faq/desktop-node-environment/
     refreshHint: 命令执行完成后刷新一次，以重新检测 Desktop 托管依赖。
   noDependencies: 未检测到依赖
+  installToast:
+    manualDisabledTitle: 自动安装已禁用
+    manualDisabledDescription: 请按提示在 Desktop 外部完成手动安装后再刷新状态。
+    completedTitle: 依赖安装完成
+    completedDescription: '{{success}} 个依赖安装成功，{{failed}} 个失败'
+    failedTitle: 依赖安装失败
+    allFailedDescription: '{{count}} 个依赖安装失败'
+    successTitle: 依赖安装成功
+    successDescription: 所有依赖已成功安装
+    genericErrorDescription: 安装过程中出现错误
+    unknownError: 未知错误
+    singleFailedDescription: '{{name}} 安装失败'
+    singleSuccessDescription: '{{name}} 已成功安装'
 packageSource:
   cardTitle: 包源配置
   cardDescription: 配置和管理用于安装的包源
@@ -314,6 +327,10 @@ packageSource:
     scanFailed: 扫描文件夹失败
     fetchFailed: 获取 GitHub 版本失败
     validateFailed: 验证配置失败
+    fetchIndexFailed: 从 HTTP 索引获取版本失败
+    channelFailed: 设置渠道偏好失败
+    invalidConfig: 配置无效
+  channelSetSuccess: 渠道偏好已设置为：{{channel}}
 tray:
   status:
     running: 运行中

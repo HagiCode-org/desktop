@@ -240,6 +240,8 @@ versionManagement:
     incomplete: Missing Dependencies
     installed: Installed
     payloadInvalid: Payload invalid
+    desktopIncompatible: Desktop incompatible
+    runtimeIncompatible: Runtime incompatible
   actions:
     refresh: Refresh
     install: Install Version
@@ -655,3 +657,5 @@ donationItem:
       server-error: Donation failed due to a Microsoft Store service error.
       not-supported: Donation is not supported in this runtime.
       failed: 'Donation failed. Please try again later.'
+  headline: The author is nearly broke — please lend a hand!
+  subheadline: The author's tokens are running out. Help keep them going!

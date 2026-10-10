@@ -210,51 +210,6 @@ dependencyCheck:
     collapse: Ocultar detalhes
     currentVersion: Versão Atual
     requiredVersion: Versão necessária
-dependencyPreparation:
-  title: Preparar Dependências
-  description: Instale as dependências de linha de comando exigidas pelo HagiCode Desktop e selecione pelo menos um Agente CLI para usar com sessões de codificação.
-  loading: Verificando dependências gerenciadas pelo Desktop...
-  refreshHint: Refresh after the command finishes to re-check Desktop-managed dependencies.
-  skip:
-    title: This step can be skipped
-    description: You can continue to the download step without installing dependencies now. The install action adds the selected packages to Desktop's managed Node/npm environment, and you can install them later inside the app.
-  environment:
-    title: Ambiente Node/npm gerenciado por desktop
-    description: O Desktop instala e verifica pacotes CLI gerenciados em seu próprio ambiente Node/npm. Leia o FAQ para obter detalhes sobre o caminho atual, o pacote e a solução de problemas.
-    faqLinkLabel: Ver perguntas frequentes sobre o ambiente Node
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
-  required:
-    title: Dependências necessárias
-    description: Essas dependências devem ser instaladas antes que a instalação possa continuar.
-  optional:
-    title: Dependências opcionais
-    description: Dependências opcionais não bloqueiam a configuração.
-  agentCli:
-    title: Seleção de agente CLI
-    description: Selecione pelo menos um Agente CLI. O CLI selecionado deve ser instalado no ambiente npm gerenciado do Desktop.
-  blocking:
-    environment-unavailable:
-      title: Ambiente Node/npm indisponível
-      description: O desktop não pode acessar seu ambiente Node/npm gerenciado. Atualize depois que a cadeia de ferramentas estiver disponível ou abra as Perguntas frequentes sobre o ambiente Node para obter detalhes de solução de problemas.
-    required-packages-missing:
-      title: As dependências necessárias estão faltando
-      description: Instale as dependências necessárias ausentes antes de continuar.
-    agent-cli-not-selected:
-      title: Selecione um agente CLI
-      description: Escolha pelo menos uma dependência do Agente CLI compatível.
-    agent-cli-not-installed:
-      title: O agente selecionado CLI não está instalado
-      description: Instale pelo menos um pacote do Agente CLI selecionado no ambiente npm gerenciado do Desktop.
-  actions:
-    install: Confirme e instale
-    refresh: Atualizar
-    retry: Tentar novamente
-    recheck: Verifique novamente
-  complete:
-    title: As dependências estão prontas
-    description: As dependências necessárias estão instaladas e pelo menos um Agente CLI selecionado está pronto.
-  error:
-    title: Falha na preparação da dependência
 legal:
   title: Contrato de licença de usuário final e política de privacidade
   descriptionFull: Antes de baixar o HagiCode Server, confirme as revisões atuais do EULA e da Política de Privacidade. Os documentos oficiais são abertos no seu navegador padrão.
@@ -276,13 +231,13 @@ legal:
   decline: Recusar e sair
   declining: Saindo...
   refresh: Atualizar metadados jurídicos
-  lastUpdated: 'Last updated: {{date}}'
+  lastUpdated: 'Última atualização: {{date}}'
   source:
-    fresh: Latest
-    cache: Cached
-    unavailable: Unavailable
-  openEula: Open EULA
-  openPrivacy: Open Privacy Policy
+    fresh: Mais recente
+    cache: Em cache
+    unavailable: Indisponível
+  openEula: Abrir EULA
+  openPrivacy: Abrir Política de Privacidade
   metadata:
     remote: Últimos metadados legais carregados
     cache: Usando os últimos metadados legais armazenados em cache com êxito

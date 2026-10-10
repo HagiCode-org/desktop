@@ -210,51 +210,6 @@ dependencyCheck:
     collapse: 세부정보 숨기기
     currentVersion: 현재 버전
     requiredVersion: 필요한 버전
-dependencyPreparation:
-  title: 종속성 준비
-  description: HagiCode Desktop에 필요한 명령줄 종속성을 설치하고 코딩 세션에 사용할 하나 이상의 에이전트 CLI를 선택합니다.
-  loading: 데스크톱 관리 종속성을 확인하는 중...
-  refreshHint: Refresh after the command finishes to re-check Desktop-managed dependencies.
-  skip:
-    title: This step can be skipped
-    description: You can continue to the download step without installing dependencies now. The install action adds the selected packages to Desktop's managed Node/npm environment, and you can install them later inside the app.
-  environment:
-    title: 데스크탑 관리 노드/npm 환경
-    description: Desktop은 자체 Node/0 환경에서 관리되는 패키지를 설치하고 확인합니다. 현재 경로, 패키지 및 문제 해결 세부 정보는 FAQ를 읽어보세요.
-    faqLinkLabel: 노드 환경 FAQ 보기
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
-  required:
-    title: 필수 종속성
-    description: 설치를 계속하려면 먼저 이러한 종속성을 설치해야 합니다.
-  optional:
-    title: 선택적 종속성
-    description: 선택적 종속성은 설정을 차단하지 않습니다.
-  agentCli:
-    title: 에이전트 CLI 선택
-    description: 에이전트 CLI를 하나 이상 선택하세요. 선택한 CLI는 Desktop의 관리되는 npm 환경에 설치되어야 합니다.
-  blocking:
-    environment-unavailable:
-      title: 노드/npm 환경을 사용할 수 없습니다.
-      description: 데스크톱은 관리되는 Node/npm 환경에 액세스할 수 없습니다. 도구 체인을 사용할 수 있게 된 후 새로 고치거나 노드 환경 FAQ를 열어 문제 해결 세부 정보를 확인하세요.
-    required-packages-missing:
-      title: 필수 종속성이 누락되었습니다.
-      description: 계속하기 전에 누락된 필수 종속성을 설치하세요.
-    agent-cli-not-selected:
-      title: 에이전트 선택 CLI
-      description: 지원되는 Agent CLI 종속성을 하나 이상 선택하십시오.
-    agent-cli-not-installed:
-      title: 선택한 에이전트 CLI이 설치되지 않았습니다.
-      description: Desktop의 관리형 npm 환경에 선택한 Agent CLI 패키지를 하나 이상 설치하세요.
-  actions:
-    install: 확인 및 설치
-    refresh: 새로고침
-    retry: 재시도
-    recheck: 재확인
-  complete:
-    title: 종속 항목이 준비되었습니다.
-    description: 필수 종속성이 설치되어 있고 선택된 하나 이상의 에이전트 CLI이 준비되었습니다.
-  error:
-    title: 종속성 준비 실패
 legal:
   title: 최종 사용자 라이센스 계약 및 개인정보 보호정책
   descriptionFull: HagiCode Server를 다운로드하기 전에 현재 EULA 및 개인정보 보호정책 개정을 확인하세요. 공식 문서는 기본 브라우저에서 열립니다.
@@ -276,13 +231,13 @@ legal:
   decline: 거절하고 나가기
   declining: 종료 중...
   refresh: 법적 메타데이터 새로 고침
-  lastUpdated: 'Last updated: {{date}}'
+  lastUpdated: '마지막 업데이트: {{date}}'
   source:
-    fresh: Latest
-    cache: Cached
-    unavailable: Unavailable
-  openEula: Open EULA
-  openPrivacy: Open Privacy Policy
+    fresh: 최신
+    cache: 캐시됨
+    unavailable: 사용할 수 없음
+  openEula: EULA 열기
+  openPrivacy: 개인정보 보호정책 열기
   metadata:
     remote: 최신 법률 메타데이터가 로드되었습니다.
     cache: 마지막으로 성공적으로 캐시된 법적 메타데이터 사용

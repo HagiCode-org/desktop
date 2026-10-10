@@ -24,7 +24,7 @@ docs:
   button: Ouvrir {{tool}} documents
   failed: Échec de l'ouverture du lien de documentation
 metadata:
-  source: 'Source:'
+  source: 'Source :'
   promptPath: 'Chemin d''accès:'
   activeVersion: 'Version active:'
   workingDirectory: 'Répertoire de travail suggéré:'

@@ -1,59 +1,59 @@
 settings:
   title: Paramètres
-  loading: Loading settings module...
+  loading: Chargement du module de paramètres...
   tabs:
-    notification: Notification Center
-    dependencyManagement: Dependency Management
-    debugOptions: Debug Options
+    notification: Centre de notifications
+    dependencyManagement: Gestion des dépendances
+    debugOptions: Options de débogage
     region: Région de service
-    language: Language Settings
+    language: Paramètres de langue
     onboarding: Intégration
-    theme: Theme Settings
-    runtimeData: Runtime Data
+    theme: Paramètres du thème
+    runtimeData: Données du runtime
     updates: Mises à jour en arrière-plan
-    advanced: Advanced Settings
+    advanced: Paramètres avancés
   notification:
-    title: Notification Center
-    description: Validate the desktop notification pipeline and review the default notification payload used by the client.
-    testSectionTitle: Test Notification
-    testSectionDescription: Send a native desktop notification to verify the IPC bridge and OS notification transport are working.
-    testButton: Send Test Notification
-    sending: Sending...
-    testSuccess: Test notification sent
-    testSuccessDescription: If OS notification permissions are available, the desktop should already have received it.
-    testError: Failed to send test notification
-    testErrorDescription: 'Error detail: {{error}}'
-    previewTitle: Default Payload Preview
-    previewDescription: These fields are sent to the main process when the test notification runs.
-    testTitle: Test Notification
-    testBody: Desktop notifications are ready. Clicking this notification focuses Hagicode Desktop.
-    eventShown: Latest shown event
-    eventShownValue: Notification {{id}} was shown via {{transport}}
-    eventClicked: Latest click event
-    eventClickedValue: Notification {{id}} was clicked with action {{action}} via {{transport}}
-    eventPending: No notification events have been recorded yet.
+    title: Centre de notifications
+    description: Validez le pipeline de notifications du bureau et consultez la charge utile de notification par défaut utilisée par le client.
+    testSectionTitle: Notification de test
+    testSectionDescription: Envoyez une notification de bureau native pour vérifier que le pont IPC et le transport de notifications du système fonctionnent.
+    testButton: Envoyer une notification de test
+    sending: Envoi...
+    testSuccess: Notification de test envoyée
+    testSuccessDescription: Si les autorisations de notification du système sont disponibles, le bureau devrait déjà l’avoir reçue.
+    testError: Échec de l’envoi de la notification de test
+    testErrorDescription: 'Détail de l’erreur : {{error}}'
+    previewTitle: Aperçu de la charge utile par défaut
+    previewDescription: Ces champs sont envoyés au processus principal lors de l’exécution de la notification de test.
+    testTitle: Notification de test
+    testBody: Les notifications de bureau sont prêtes. Cliquer sur cette notification place Hagicode Desktop au premier plan.
+    eventShown: Dernier événement d’affichage
+    eventShownValue: La notification {{id}} a été affichée via {{transport}}
+    eventClicked: Dernier événement de clic
+    eventClickedValue: Clic sur la notification {{id}} avec l’action {{action}} via {{transport}}
+    eventPending: Aucun événement de notification n’a encore été enregistré.
     values:
-      focusWindow: Focus main window
-      openUrl: Open URL
+      focusWindow: Mettre la fenêtre principale au premier plan
+      openUrl: Ouvrir l’URL
     fields:
-      title: Title
-      body: Body
-      level: Level
-      clickAction: Click action
-      duration: Duration
-      silent: Silent
+      title: Titre
+      body: Corps
+      level: Niveau
+      clickAction: Action au clic
+      duration: Durée
+      silent: Silencieux
   languageSettings:
-    title: Language Settings
-    description: Switch the active Desktop language and refresh labels immediately.
-    helper: Language changes are applied to menus, tray labels, and settings tabs right away.
+    title: Paramètres de langue
+    description: Changez la langue d’affichage active de Desktop et actualisez immédiatement les libellés.
+    helper: Les changements de langue sont appliqués immédiatement aux menus, aux libellés de la zone de notification et aux onglets des paramètres.
   themeSettings:
-    title: Theme Settings
-    description: A dedicated theme surface is reserved here for future light, dark, and visual preference controls.
+    title: Paramètres du thème
+    description: Un espace dédié au thème est réservé ici pour de futurs contrôles du mode clair, du mode sombre et des préférences visuelles.
   advancedSettings:
-    title: Advanced Settings
-    description: Reserve one place for logs, experiments, and advanced runtime controls.
+    title: Paramètres avancés
+    description: Un emplacement unique réservé aux journaux, aux expérimentations et aux contrôles avancés du runtime.
   placeholders:
-    comingSoon: This settings module is registered in the new settings framework. Detailed controls will arrive in a follow-up change.
+    comingSoon: Ce module de paramètres est enregistré dans le nouveau cadre des paramètres. Les contrôles détaillés arriveront dans une prochaine modification.
   smartConfig:
     title: Conseils d’invite Smart Config
     description: Examinez l'invite résolue, copiez-la dans n'importe quel AI CLI pris en charge et terminez le flux de configuration manuellement.
@@ -77,8 +77,8 @@ settings:
     title: Mises à jour en arrière-plan
     description: Gérez les vérifications automatiques, les prétéléchargements en arrière-plan et la conservation vérifiée des archives.
     managedInstall:
-      title: Auto-updates are disabled
-      description: The application does not update itself automatically. How updates are delivered depends on the channel you used to install it, such as Microsoft Store or Steam.
+      title: Les mises à jour automatiques sont désactivées
+      description: L’application ne se met pas à jour automatiquement. Le mode de livraison des mises à jour dépend du canal utilisé pour l’installer, par exemple Microsoft Store ou Steam.
     enabled:
       label: Activer les prétéléchargements en arrière-plan
       description: Lorsqu'une version plus récente compatible est trouvée, téléchargez l'archive en arrière-plan sans changer le runtime actuel.
@@ -99,65 +99,65 @@ settings:
       snapshotModel: Le rappel du tableau de bord est piloté par un instantané persistant du processus principal, de sorte que le dernier état de mise à jour connu survit aux rechargements du bureau.
       retentionPolicy: Le nettoyage de rétention supprime uniquement les archives et les métadonnées mises en cache. Les répertoires des versions installées restent intacts.
   runtimeDataPath:
-    title: Runtime data storage path
-    description: Choose where Desktop stores runtime-managed files, logs, and other runtime data.
-    activePreset: 'Current effective preset: {{preset}}'
-    environmentOverrideBadge: Environment override active
-    lockedByRuntime: Locked by Microsoft Store
+    title: Chemin de stockage des données du runtime
+    description: Choisissez où Desktop stocke les fichiers gérés par le runtime, les journaux et les autres données du runtime.
+    activePreset: 'Préréglage effectif actuel : {{preset}}'
+    environmentOverrideBadge: Remplacement par variable d’environnement actif
+    lockedByRuntime: Verrouillé par Microsoft Store
     paths:
-      configuredRoot: 'Configured root: {{path}}'
-      effectiveRoot: 'Effective root: {{path}}'
-      environmentOverride: 'Environment override root: {{path}}'
+      configuredRoot: 'Racine configurée : {{path}}'
+      effectiveRoot: 'Racine effective : {{path}}'
+      environmentOverride: 'Racine de remplacement par variable d’environnement : {{path}}'
     options:
       userData-runtime-data:
-        label: userData/runtime-data (default)
-        description: Stores runtime data under the Desktop Electron userData directory. Best for the default single-machine setup.
+        label: userData/runtime-data (par défaut)
+        description: Stocke les données du runtime dans le répertoire userData d’Electron de Desktop. Idéal pour la configuration par défaut sur une seule machine.
       home-runtime-data:
         label: ~/.hagicode/runtime-data
-        description: Stores runtime data under the current user home directory. Best for deployments that need a stable shared path.
+        description: Stocke les données du runtime dans le répertoire personnel de l’utilisateur actuel. Idéal pour les déploiements nécessitant un chemin partagé stable.
     warnings:
-      noMigration: Changing this setting only updates the target path. Desktop does not migrate existing runtime data automatically.
-      restart: Saving a changed preset restarts the managed backend so the new runtime data root takes effect immediately.
+      noMigration: Modifier ce paramètre met uniquement à jour le chemin cible. Desktop ne migre pas automatiquement les données du runtime existantes.
+      restart: L’enregistrement d’un préréglage modifié redémarre le backend géré afin que la nouvelle racine des données du runtime prenne effet immédiatement.
     actions:
-      save: Save Changes
-      saving: Saving...
-      cancel: Cancel
+      save: Enregistrer les modifications
+      saving: Enregistrement...
+      cancel: Annuler
     messages:
-      unchanged: Runtime data path is already using this preset
-      saveSuccess: Runtime data path saved
-      restartSuccess: Runtime data path saved and managed services restarted
-      saveFailed: Failed to save runtime data path
+      unchanged: Le chemin des données du runtime utilise déjà ce préréglage
+      saveSuccess: Chemin des données du runtime enregistré
+      restartSuccess: Chemin des données du runtime enregistré et services gérés redémarrés
+      saveFailed: Échec de l’enregistrement du chemin des données du runtime
     errors:
-      saveErrorDetail: 'Save failed: {{error}}'
+      saveErrorDetail: 'Échec de l’enregistrement : {{error}}'
   debugOptions:
-    title: Debug Options
-    description: Control Desktop-managed npm behaviors for diagnosing package installation issues.
+    title: Options de débogage
+    description: Contrôlez les comportements npm gérés par Desktop pour diagnostiquer les problèmes d’installation de packages.
     useIgnoreScriptsForManagedNpm:
-      label: npm uses `--ignore-scripts`
-      description: Make Desktop-managed npm installs and sync operations skip lifecycle scripts so postinstall-related failures are easier to isolate.
+      label: npm utilise `--ignore-scripts`
+      description: Fait ignorer les scripts de cycle de vie aux installations et synchronisations npm gérées par Desktop, afin d’isoler plus facilement les échecs liés à postinstall.
     skipPurchaseSimulateSuccess:
-      label: Skip purchase, simulate success
-      shortLabel: Simulate tip success
-      description: When enabled, starting a tip purchase skips the Microsoft Store checkout, treats the path as purchase success for the selected tier, and still plays a random thank-you animation. Default is off. Does not write durable purchase counts.
+      label: Ignorer l’achat, simuler le succès
+      shortLabel: Simuler le succès du pourboire
+      description: Lorsque cette option est activée, le lancement d’un achat de pourboire ignore le paiement Microsoft Store, considère le parcours comme un achat réussi pour le palier sélectionné et joue tout de même une animation de remerciement aléatoire. Désactivée par défaut. N’enregistre pas de compteurs d’achats durables.
     installDate:
-      label: Raw install date (msstoreRatingPrompt.installDate)
-      description: Shows the exact persisted raw install date string in local config. Click repeatedly and edit to update saved value.
+      label: Date d’installation brute (msstoreRatingPrompt.installDate)
+      description: Affiche la chaîne exacte de la date d’installation brute persistée dans la configuration locale. Cliquez plusieurs fois, puis modifiez pour mettre à jour la valeur enregistrée.
       placeholder: e.g. 2024-01-01T00:00:00.000Z
-      ageDays: 'Install age (days): {{value}}'
-      ageDaysUnknown: unknown
+      ageDays: 'Ancienneté de l’installation (jours) : {{value}}'
+      ageDaysUnknown: inconnue
     notes:
-      scope: This setting only affects future Desktop-managed npm installs and sync operations.
-      npm: The npm switch only affects future Desktop-managed npm installs and sync operations. Saving it takes effect immediately and does not restart the managed service.
+      scope: Ce paramètre n’affecte que les futures installations et synchronisations npm gérées par Desktop.
+      npm: Le commutateur npm n’affecte que les futures installations et synchronisations npm gérées par Desktop. L’enregistrement prend effet immédiatement et ne redémarre pas le service géré.
     actions:
-      save: Save Changes
-      saving: Saving...
-      cancel: Cancel
+      save: Enregistrer les modifications
+      saving: Enregistrement...
+      cancel: Annuler
     messages:
-      unchanged: Debug options are already using these values
-      saveSuccess: Debug options saved
-      saveFailed: Failed to save debug options
+      unchanged: Les options de débogage utilisent déjà ces valeurs
+      saveSuccess: Options de débogage enregistrées
+      saveFailed: Échec de l’enregistrement des options de débogage
     errors:
-      saveErrorDetail: 'Save failed: {{error}}'
+      saveErrorDetail: 'Échec de l’enregistrement : {{error}}'
 footer:
   copyright: © 2026 Hagicode Desktop
 quickStart:
@@ -240,6 +240,8 @@ versionManagement:
     incomplete: Dépendances manquantes
     installed: Installé
     payloadInvalid: Charge utile invalide
+    desktopIncompatible: Incompatible avec Desktop
+    runtimeIncompatible: Incompatible avec le runtime
   actions:
     refresh: Actualiser
     install: Installer la version
@@ -304,14 +306,14 @@ versionManagement:
     flow: 'Flux : Téléchargement direct -> Vérification de l’empreinte -> Extraction -> Terminé'
     flowActive: 'Flux de courant: {{stage}}'
   progressMessage:
-    queued: Queued
+    queued: En file d’attente
     direct-http: Téléchargement direct du package
     source-fallback-active: Nouvelle tentative depuis une autre source directe
     no-sha256-required: Aucune vérification supplémentaire requise
     sha256-verifying: Vérification de l'intégrité du paquet
     sha256-verified: Vérification terminée
     extracting-package: Extraction du package
-    switching-active-version: Switching the active version
+    switching-active-version: Basculement de la version active
     installation-complete: Installation terminée
 installProgressDialog:
   title: Installation des dépendances
@@ -327,7 +329,7 @@ installProgressDialog:
     close: Fermer
     retry: Réessayer
 subscription:
-  eyebrow: Microsoft Store sponsor plan
+  eyebrow: Programme de soutien Microsoft Store
   title: Programme de soutien Hagicode
   description: Consultez l'état du programme de soutien Microsoft Store, actualisez l'instantané local et confirmez si les droits de soutien sont déjà actifs sur cet appareil.
   loading: Lecture de l'instantané de soutien en cache...
@@ -338,11 +340,11 @@ subscription:
     refreshSuccess: Subscription status refreshed.
     refreshStale: Desktop kept the cached subscription snapshot because the Microsoft Store refresh did not complete.
     refreshFailed: 'Failed to refresh the subscription snapshot: {{error}}'
-    refreshFailedFallback: Microsoft Store refresh failed.
-    purchaseFailed: 'Purchase flow failed: {{error}}'
-    purchaseFailedFallback: Microsoft Store purchase failed.
-    openStoreFailed: 'Failed to open the Microsoft Store page: {{error}}'
-    openStoreFailedFallback: Microsoft Store page unavailable.
+    refreshFailedFallback: Échec de l’actualisation de Microsoft Store.
+    purchaseFailed: 'Échec du parcours d’achat : {{error}}'
+    purchaseFailedFallback: Échec de l’achat sur Microsoft Store.
+    openStoreFailed: 'Échec de l’ouverture de la page Microsoft Store : {{error}}'
+    openStoreFailedFallback: Page Microsoft Store indisponible.
   status:
     loading: Chargement
     active: Actif
@@ -364,13 +366,13 @@ subscription:
       description: Les droits de soutien sont déjà actifs sur cet appareil. Vous pouvez confirmer l'état, rouvrir l'achat ou actualiser l'instantané manuellement.
       note: Your purchase is more than a receipt. It directly supports the ongoing maintenance, iteration, and follow-up work that keeps the feature reliable after launch.
   message:
-    ongoingTitle: Ongoing evolution needs real investment
+    ongoingTitle: Une évolution continue demande un véritable investissement
     ongoingDescription: Hagicode is not a one-and-done product. Keeping it useful means continued author time and recurring token spend for updates, validation, and tracking change.
-    perksTitle: Sponsors should receive thoughtful perks
-    perksDescription: We also plan to introduce fitting sponsor benefits over time, including more refined themes and other perks as they become ready.
+    perksTitle: Les sponsors méritent des avantages bien pensés
+    perksDescription: Nous prévoyons également d’introduire progressivement des avantages adaptés pour les sponsors, notamment des thèmes plus raffinés et d’autres bonus au fur et à mesure qu’ils seront prêts.
     unlockNoticeTitle: Aucun déverrouillage de fonctionnalité pour le moment
     unlockNoticeDescription: Le programme de soutien ne déverrouille pas d'autres fonctionnalités du produit. Les autres capacités indépendantes nécessitent toujours un achat séparé.
-    inactivePrompt: If this direction matters to you, the sponsor plan is the direct way to support it.
+    inactivePrompt: Si cette orientation compte pour vous, le programme de soutien est le moyen direct de la soutenir.
     activeThanks: Thank you for the support. We will keep shaping sponsor-facing benefits with care as the product grows.
   actions:
     panelEyebrow: Actions de soutien
@@ -380,31 +382,31 @@ subscription:
     refreshing: Actualisation...
     buy: Acheter le programme de soutien
     manage: Buy / Manage
-    subscribeViaStore: Subscribe in Microsoft Store
+    subscribeViaStore: S’abonner sur Microsoft Store
     installStoreApp: Installer l'édition Store
     processing: Traitement...
     buyHint: Start the Microsoft Store flow to support continued AI Agent iteration and attach sponsor entitlements to this device.
     manageHint: Open the Microsoft Store purchase flow again if you want to confirm the sponsoring account or manage the current plan.
-    activeHint: Sponsor entitlements are already active on this device. Refresh once if you want to confirm the latest Microsoft Store state.
-    unsupportedHint: Purchase and management work only in the Microsoft Store edition of Hagicode Desktop.
+    activeHint: Les droits de soutien sont déjà actifs sur cet appareil. Actualisez une fois si vous souhaitez confirmer le dernier état de Microsoft Store.
+    unsupportedHint: L’achat et la gestion ne fonctionnent que dans l’édition Microsoft Store de Hagicode Desktop.
     installHint: Open the sponsor plan in Microsoft Store first, then install or launch the Store edition of Hagicode Desktop to complete subscription and sync entitlements.
     secondaryLabel: Before you decide
     secondaryHint: Refresh first if you want Desktop to re-check Microsoft Store and confirm the latest local snapshot before you purchase or review the plan.
   summary:
-    planLabel: Plan
+    planLabel: Programme
     planName: Programme de soutien Hagicode
-    renewalLabel: Renewal or expiry
-    lastSyncLabel: Last successful sync
-    entitlementsLabel: Enabled entitlements
+    renewalLabel: Renouvellement ou expiration
+    lastSyncLabel: Dernière synchronisation réussie
+    entitlementsLabel: Droits activés
     activeDetail: Sponsor entitlements are already available on this device.
     inactiveDetail: Purchasing here is what turns future sponsor benefits on for this device.
-    source: 'Source: {{value}}'
+    source: 'Source : {{value}}'
   sourceValue:
-    initial: Current session default state
+    initial: État par défaut de la session actuelle
     store: Microsoft Store
     fallback: Fallback snapshot
   mission:
-    eyebrow: Why sponsorship matters
+    eyebrow: Pourquoi le soutien compte
     title: Votre achat aide à financer la maintenance et les mises à jour.
     description: Nous pouvons ainsi continuer à suivre les changements des modèles, du CLI et des flux de travail.
     points:
@@ -418,7 +420,7 @@ subscription:
         title: Activer les droits de soutien
         description: Après l'achat, cet appareil affichera et conservera les droits correspondants.
   gratitude:
-    eyebrow: Sponsor message
+    eyebrow: Message aux sponsors
     title: Your support is already carrying real work
     description: The sponsor plan is designed as a practical way to keep ongoing product work funded while giving supporters clear recognition inside Desktop.
     points:
@@ -432,36 +434,36 @@ subscription:
         title: Future perks already have a delivery path
         description: The entitlement model is in place, so later sponsor-only additions can land cleanly without rebuilding the purchase foundation.
   benefits:
-    eyebrow: What this plan unlocks
-    title: Built to support creation first, then reward supporters well
-    description: The sponsor plan is intentionally simple today. It keeps the core mission clear while leaving room for polished, appropriate benefits as the product grows.
+    eyebrow: Ce que ce programme débloque
+    title: Conçu pour soutenir d’abord la création, puis bien récompenser ceux qui nous soutiennent
+    description: Le programme de soutien est volontairement simple aujourd’hui. Il garde la mission principale claire tout en laissant de la place à des avantages soignés et adaptés à mesure que le produit grandit.
     items:
       recognition:
-        title: Sponsor identity in Desktop
-        description: Sponsor status can power visible recognition inside the app without depending on brittle one-off checks.
+        title: Identité de sponsor dans Desktop
+        description: Le statut de sponsor peut alimenter une reconnaissance visible dans l’application sans dépendre de vérifications ponctuelles fragiles.
       theme:
-        title: More refined themes and visual polish
-        description: Support gives us room to invest in better-crafted themes and other quality details that are easy to feel but expensive to maintain.
+        title: Thèmes plus raffinés et finitions visuelles
+        description: Le soutien nous donne les moyens d’investir dans des thèmes mieux conçus et d’autres détails de qualité, faciles à ressentir mais coûteux à maintenir.
       future:
-        title: Future sponsor-only benefits
-        description: The current entitlement model reserves a clean path for later sponsor perks when they are ready to ship.
+        title: Futurs avantages réservés aux sponsors
+        description: Le modèle de droits actuel réserve une voie claire pour les futurs avantages réservés aux sponsors lorsqu’ils seront prêts à être livrés.
   snapshot:
-    eyebrow: Current device state
-    title: Store status and local entitlement details
-    description: Operational details stay visible here so the sponsor plan remains auditable on the current device.
+    eyebrow: État actuel de l’appareil
+    title: État du Store et détails des droits locaux
+    description: Les détails opérationnels restent visibles ici afin que le programme de soutien reste vérifiable sur l’appareil actuel.
     fields:
       status: Statut actuel
       planStoreId: Store ID
-      lastCheckedAt: Last checked
-      renewalDate: Renewal date
-      expirationDate: Expiry date
-      lastSuccessfulSync: Last successful sync
-      source: Snapshot source
+      lastCheckedAt: Dernière vérification
+      renewalDate: Date de renouvellement
+      expirationDate: Date d’expiration
+      lastSuccessfulSync: Dernière synchronisation réussie
+      source: Source de l’instantané
   entitlements:
-    title: Entitlement summary
+    title: Résumé des droits
     activeDescription: These are the sponsor capability flags currently available on this device.
     inactiveDescription: These capability flags are reserved for sponsor-only Desktop experiences and become available after purchase.
-    enabled: Enabled
+    enabled: Activé
     disabled: Disabled
     names:
       sponsorBadge: sponsorBadge
@@ -470,19 +472,19 @@ subscription:
       sponsorBadge: Allows sponsor identity affordances in the Desktop experience.
       premiumFeatureGate: Reserved gate for future sponsor-only Desktop capabilities.
   diagnostics:
-    eyebrow: Technical trace
+    eyebrow: Trace technique
     title: Diagnostics
     description: Cached-state recovery details stay visible so refresh failures do not look like entitlement loss.
-    lastSuccessfulSync: Last successful sync
-    source: Snapshot source
-    empty: No diagnostics recorded.
+    lastSuccessfulSync: Dernière synchronisation réussie
+    source: Source de l’instantané
+    empty: Aucun diagnostic enregistré.
   stale:
     title: Desktop affiche actuellement le dernier état connu
     description: Microsoft Store n'a pas terminé la dernière actualisation. Desktop conserve donc le dernier état de soutien confirmé pendant cette session au lieu de l'effacer.
   unsupported:
     title: Version Microsoft Store requise
-    description: Purchase and management actions only work in the Microsoft Store edition of Hagicode Desktop.
-    nonStoreDescription: This runtime is not the Microsoft Store edition. Use the buttons below to open the sponsor plan in Microsoft Store, then install or launch the Store edition of Hagicode Desktop to complete subscription and entitlement sync.
+    description: Les actions d’achat et de gestion ne fonctionnent que dans l’édition Microsoft Store de Hagicode Desktop.
+    nonStoreDescription: Ce runtime n’est pas l’édition Microsoft Store. Utilisez les boutons ci-dessous pour ouvrir le programme de soutien dans Microsoft Store, puis installez ou lancez l’édition Store de Hagicode Desktop afin de finaliser l’abonnement et la synchronisation des droits.
   purchaseOutcome:
     title: Résultat de l'achat
     succeeded: L'achat est terminé et Desktop a actualisé l'instantané de soutien.
@@ -504,7 +506,7 @@ turboEngine:
   errorTitle: Instantané TurboEngine indisponible
   errorDescription: 'Desktop n''a pas pu charger l''instantané TurboEngine : {{error}}'
   hero:
-    title: TurboEngine workspace
+    title: Espace de travail TurboEngine
     activeDescription: TurboEngine is already licensed on this device. You can confirm the current Microsoft Store state, review diagnostics, and refresh whenever needed.
     inactiveDescription: TurboEngine uses a separate perpetual Microsoft Store license. This workspace lets you verify the current state, buy the license, and confirm the latest runtime diagnostics.
   article:
@@ -536,14 +538,14 @@ turboEngine:
         title: Plus de ressources d'avatar
         description: Cinq nouveaux ensembles intégrés d'avatars d'agent sont inclus.
   messages:
-    refreshSuccess: TurboEngine status refreshed.
+    refreshSuccess: État de TurboEngine actualisé.
     refreshStale: Desktop kept the cached TurboEngine snapshot because the Microsoft Store refresh did not complete.
-    refreshFailed: 'Failed to refresh the TurboEngine snapshot: {{error}}'
-    refreshFailedFallback: Microsoft Store refresh failed.
-    purchaseFailed: 'Purchase flow failed: {{error}}'
-    purchaseFailedFallback: Microsoft Store purchase failed.
-    openStoreFailed: 'Failed to open the Microsoft Store page: {{error}}'
-    openStoreFailedFallback: Microsoft Store page unavailable.
+    refreshFailed: 'Échec de l’actualisation de l’instantané TurboEngine : {{error}}'
+    refreshFailedFallback: Échec de l’actualisation de Microsoft Store.
+    purchaseFailed: 'Échec du parcours d’achat : {{error}}'
+    purchaseFailedFallback: Échec de l’achat sur Microsoft Store.
+    openStoreFailed: 'Échec de l’ouverture de la page Microsoft Store : {{error}}'
+    openStoreFailedFallback: Page Microsoft Store indisponible.
   status:
     loading: Chargement
     active: Actif
@@ -557,34 +559,34 @@ turboEngine:
     unsupported: Store indisponible
   summary:
     productName: Licence perpétuelle TurboEngine
-    storeId: 'Store ID: {{storeId}}'
+    storeId: 'Store ID : {{storeId}}'
     storeIdLabel: Store ID
     statusLabel: État de la licence
-    lastCheckedLabel: Last checked
-    lastSuccessLabel: Last successful sync
+    lastCheckedLabel: Dernière vérification
+    lastSuccessLabel: Dernière synchronisation réussie
   actions:
     sectionTitle: Actions de la licence
     processing: Traitement...
-    manage: Open Store purchase flow
+    manage: Ouvrir le parcours d’achat du Store
     buy: Acheter la licence TurboEngine
     refresh: Actualiser l'état
     refreshing: Actualisation...
-    openStoreProduct: Open TurboEngine in Store
+    openStoreProduct: Ouvrir TurboEngine dans le Store
     installStoreApp: Installer l'édition Store
     manageHint: Open Microsoft Store again if you need to confirm ownership or revisit the current TurboEngine license on this device.
     buyHint: Start the Microsoft Store flow for `9NSD809W18Z6`, then Desktop will refresh the TurboEngine entitlement state in the same session.
-    activeHint: TurboEngine is already licensed on this device. Refresh once if you want to confirm the latest Microsoft Store state.
+    activeHint: TurboEngine est déjà sous licence sur cet appareil. Actualisez une fois si vous souhaitez confirmer le dernier état de Microsoft Store.
     handoffHint: In-app purchase and verification work only in the Microsoft Store edition. Use the Store handoff below when this runtime cannot complete the license flow itself.
   runtime:
-    sectionTitle: Runtime contract
+    sectionTitle: Contrat du runtime
     supported: This runtime can query Microsoft Store directly and run the packaged TurboEngine purchase path for Store ID `9NSD809W18Z6`.
     unsupported: This runtime cannot complete Microsoft Store purchase APIs directly, so Desktop falls back to a Store handoff path instead of showing a broken in-app purchase button.
     runtimeLabel: Runtime
-    sourceLabel: Snapshot source
-    storeEdition: Microsoft Store edition
-    nonStoreEdition: Non-Store runtime
+    sourceLabel: Source de l’instantané
+    storeEdition: Édition Microsoft Store
+    nonStoreEdition: Runtime non Store
   sourceValue:
-    initial: Current session default state
+    initial: État par défaut de la session actuelle
     store: Microsoft Store
     fallback: Fallback snapshot
   diagnostics:
@@ -595,8 +597,8 @@ turboEngine:
     description: Microsoft Store n'a pas terminé la dernière actualisation. Desktop conserve donc le dernier état TurboEngine confirmé pendant cette session au lieu de l'effacer.
   unsupported:
     title: Version Microsoft Store requise
-    description: Purchase and live verification only work in the Microsoft Store edition of Hagicode Desktop.
-    nonStoreDescription: This runtime is not the Microsoft Store edition. Use the buttons below to open the TurboEngine Store page, then install or launch the Store edition of Hagicode Desktop to complete purchase and verification.
+    description: L’achat et la vérification en direct ne fonctionnent que dans l’édition Microsoft Store de Hagicode Desktop.
+    nonStoreDescription: Ce runtime n’est pas l’édition Microsoft Store. Utilisez les boutons ci-dessous pour ouvrir la page Store de TurboEngine, puis installez ou lancez l’édition Store de Hagicode Desktop afin de finaliser l’achat et la vérification.
   purchaseOutcome:
     title: Résultat de l'achat
     succeeded: L'achat est terminé et Desktop a actualisé l'instantané de licence TurboEngine.
@@ -618,9 +620,9 @@ ratingPrompt:
 donationItem:
   noPrivilegeNotice: Les pourboires remercient l'auteur. Ils n'offrent aucun privilège, fonctionnalité ni droit.
   thankYouAnimation:
-    close: Click anywhere to close
-    title: Thank you for your tip
-    message: With your support, the author will have more resources to make HagiCode even better.
+    close: Cliquez n’importe où pour fermer
+    title: Merci pour votre pourboire
+    message: Grâce à votre soutien, l’auteur disposera de davantage de ressources pour améliorer encore HagiCode.
   tiers:
     coffee:
       shortName: Cappuccino
@@ -629,26 +631,28 @@ donationItem:
     candy:
       shortName: Carnaval
   actions:
-    purchase: Donate now
-    purchasing: Processing...
+    purchase: Faire un don
+    purchasing: Traitement...
     purchaseTier: Offrir {{shortName}}
-    close: Close donation item
-    retrySync: Retry sync
-  purchaseCount: Donation count {{count}} (local record)
+    close: Fermer l’élément de don
+    retrySync: Réessayer la synchronisation
+  purchaseCount: 'Nombre de dons : {{count}} (enregistrement local)'
   messages:
-    purchaseFailed: 'Donation failed: {{error}}'
-    dismissFailed: 'Failed to dismiss donation item: {{error}}'
-    reconcileFailed: 'Could not confirm unfinished tips: {{error}}'
-    reconcileSucceeded: Tip sync completed. You can tip again.
-    busy: Another tip operation is already in progress.
-    dismissed: Donation item dismissed
+    purchaseFailed: 'Échec du don : {{error}}'
+    dismissFailed: 'Échec de la fermeture de l’élément de don : {{error}}'
+    reconcileFailed: 'Impossible de confirmer les pourboires inachevés : {{error}}'
+    reconcileSucceeded: Synchronisation des pourboires terminée. Vous pouvez à nouveau offrir un pourboire.
+    busy: Une autre opération de pourboire est déjà en cours.
+    dismissed: Élément de don fermé
     tierThanks: Merci pour le pourboire {{shortName}} !
     purchaseOutcome:
-      succeeded: Donation completed. Thank you for supporting us!
-      already-purchased: Donation recorded. Thank you for your continued support!
-      canceled: Donation flow was canceled.
-      not-purchased: Donation flow ended without payment.
-      network-error: Donation failed due to a network error.
-      server-error: Donation failed due to a Microsoft Store service error.
-      not-supported: Donation is not supported in this runtime.
-      failed: Donation failed. Please try again later.
+      succeeded: Don effectué. Merci de nous soutenir !
+      already-purchased: Don enregistré. Merci de votre soutien continu !
+      canceled: Le parcours de don a été annulé.
+      not-purchased: Le parcours de don s’est terminé sans paiement.
+      network-error: Le don a échoué en raison d’une erreur réseau.
+      server-error: Le don a échoué en raison d’une erreur du service Microsoft Store.
+      not-supported: Le don n’est pas pris en charge dans ce runtime.
+      failed: Le don a échoué. Veuillez réessayer plus tard.
+  headline: L’auteur est presque à sec — un petit coup de main, s’il vous plaît !
+  subheadline: Les tokens de l’auteur s’épuisent. Aidez-le à tenir !

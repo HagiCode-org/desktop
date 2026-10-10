@@ -45,6 +45,8 @@ common:
   operationFailed: Operation failed
   confirmDelete: Are you sure you want to delete?
   confirmAction: Are you sure you want to proceed?
+  unknownError: Unknown error
+  notAvailable: N/A
 header:
   title: Settings
   runningSuccessfully: Running Successfully

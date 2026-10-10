@@ -1,59 +1,59 @@
 settings:
   title: 설정
-  loading: Loading settings module...
+  loading: 설정 모듈을 로드하는 중...
   tabs:
-    notification: Notification Center
-    dependencyManagement: Dependency Management
-    debugOptions: Debug Options
+    notification: 알림 센터
+    dependencyManagement: 종속성 관리
+    debugOptions: 디버그 옵션
     region: 서비스 지역
-    language: Language Settings
+    language: 언어 설정
     onboarding: 온보딩
-    theme: Theme Settings
-    runtimeData: Runtime Data
+    theme: 테마 설정
+    runtimeData: 런타임 데이터
     updates: 배경 업데이트
-    advanced: Advanced Settings
+    advanced: 고급 설정
   notification:
-    title: Notification Center
-    description: Validate the desktop notification pipeline and review the default notification payload used by the client.
-    testSectionTitle: Test Notification
-    testSectionDescription: Send a native desktop notification to verify the IPC bridge and OS notification transport are working.
-    testButton: Send Test Notification
-    sending: Sending...
-    testSuccess: Test notification sent
-    testSuccessDescription: If OS notification permissions are available, the desktop should already have received it.
-    testError: Failed to send test notification
-    testErrorDescription: 'Error detail: {{error}}'
-    previewTitle: Default Payload Preview
-    previewDescription: These fields are sent to the main process when the test notification runs.
-    testTitle: Test Notification
-    testBody: Desktop notifications are ready. Clicking this notification focuses Hagicode Desktop.
-    eventShown: Latest shown event
-    eventShownValue: Notification {{id}} was shown via {{transport}}
-    eventClicked: Latest click event
-    eventClickedValue: Notification {{id}} was clicked with action {{action}} via {{transport}}
-    eventPending: No notification events have been recorded yet.
+    title: 알림 센터
+    description: 데스크톱 알림 파이프라인을 검증하고 클라이언트가 사용하는 기본 알림 페이로드를 확인합니다.
+    testSectionTitle: 테스트 알림
+    testSectionDescription: 네이티브 데스크톱 알림을 보내 IPC 브리지와 OS 알림 전송이 정상적으로 작동하는지 확인합니다.
+    testButton: 테스트 알림 보내기
+    sending: 보내는 중...
+    testSuccess: 테스트 알림을 보냈습니다
+    testSuccessDescription: OS 알림 권한이 허용되어 있다면 데스크톱에 이미 알림이 도착했을 것입니다.
+    testError: 테스트 알림을 보내지 못했습니다
+    testErrorDescription: '오류 세부 정보: {{error}}'
+    previewTitle: 기본 페이로드 미리보기
+    previewDescription: 테스트 알림을 실행할 때 이 필드가 메인 프로세스로 전송됩니다.
+    testTitle: 테스트 알림
+    testBody: 데스크톱 알림이 준비되었습니다. 이 알림을 클릭하면 Hagicode Desktop이 포커스를 받습니다.
+    eventShown: 최근 표시된 이벤트
+    eventShownValue: '알림 {{id}} 표시됨 (전송: {{transport}})'
+    eventClicked: 최근 클릭 이벤트
+    eventClickedValue: '알림 {{id}} 클릭됨 (동작: {{action}}, 전송: {{transport}})'
+    eventPending: 기록된 알림 이벤트가 아직 없습니다.
     values:
-      focusWindow: Focus main window
-      openUrl: Open URL
+      focusWindow: 메인 창 포커스
+      openUrl: URL 열기
     fields:
-      title: Title
-      body: Body
-      level: Level
-      clickAction: Click action
-      duration: Duration
-      silent: Silent
+      title: 제목
+      body: 본문
+      level: 수준
+      clickAction: 클릭 동작
+      duration: 표시 시간
+      silent: 무음
   languageSettings:
-    title: Language Settings
-    description: Switch the active Desktop language and refresh labels immediately.
-    helper: Language changes are applied to menus, tray labels, and settings tabs right away.
+    title: 언어 설정
+    description: 활성 Desktop 언어를 전환하고 레이블을 즉시 새로 고칩니다.
+    helper: 언어 변경 사항은 메뉴, 트레이 레이블, 설정 탭에 즉시 적용됩니다.
   themeSettings:
-    title: Theme Settings
-    description: A dedicated theme surface is reserved here for future light, dark, and visual preference controls.
+    title: 테마 설정
+    description: 향후 라이트, 다크 및 시각적 환경설정 컨트롤을 위한 전용 테마 영역이 여기에 마련되어 있습니다.
   advancedSettings:
-    title: Advanced Settings
-    description: Reserve one place for logs, experiments, and advanced runtime controls.
+    title: 고급 설정
+    description: 로그, 실험 기능, 고급 런타임 제어를 위한 공간을 한곳에 마련해 둡니다.
   placeholders:
-    comingSoon: This settings module is registered in the new settings framework. Detailed controls will arrive in a follow-up change.
+    comingSoon: 이 설정 모듈은 새 설정 프레임워크에 등록되었습니다. 세부 컨트롤은 후속 변경 사항에서 제공될 예정입니다.
   smartConfig:
     title: 스마트 구성 프롬프트 안내
     description: 해결된 프롬프트를 검토하고 이를 지원되는 AI CLI에 복사한 후 구성 흐름을 수동으로 완료합니다.
@@ -77,8 +77,8 @@ settings:
     title: 배경 업데이트
     description: 자동 검사, 백그라운드 사전 다운로드, 확인된 아카이브 보존을 관리합니다.
     managedInstall:
-      title: Auto-updates are disabled
-      description: The application does not update itself automatically. How updates are delivered depends on the channel you used to install it, such as Microsoft Store or Steam.
+      title: 자동 업데이트가 비활성화되었습니다
+      description: 애플리케이션은 스스로 자동 업데이트하지 않습니다. 업데이트 제공 방식은 Microsoft Store나 Steam 등 설치할 때 사용한 채널에 따라 다릅니다.
     enabled:
       label: 백그라운드 사전 다운로드 활성화
       description: 호환되는 최신 버전이 발견되면 현재 런타임을 전환하지 않고 백그라운드에서 아카이브를 다운로드하세요.
@@ -99,65 +99,65 @@ settings:
       snapshotModel: 대시보드 미리 알림은 지속되는 기본 프로세스 스냅샷에 의해 구동되므로 마지막으로 알려진 업데이트 상태는 데스크톱을 다시 로드해도 유지됩니다.
       retentionPolicy: 보존 정리는 캐시된 아카이브와 메타데이터만 제거합니다. 설치된 버전 디렉토리는 그대로 유지됩니다.
   runtimeDataPath:
-    title: Runtime data storage path
-    description: Choose where Desktop stores runtime-managed files, logs, and other runtime data.
-    activePreset: 'Current effective preset: {{preset}}'
-    environmentOverrideBadge: Environment override active
-    lockedByRuntime: Locked by Microsoft Store
+    title: 런타임 데이터 저장 경로
+    description: Desktop이 런타임 관리 파일, 로그 및 기타 런타임 데이터를 저장할 위치를 선택합니다.
+    activePreset: '현재 적용 중인 프리셋: {{preset}}'
+    environmentOverrideBadge: 환경 변수 재정의 활성
+    lockedByRuntime: Microsoft Store에 의해 잠김
     paths:
-      configuredRoot: 'Configured root: {{path}}'
-      effectiveRoot: 'Effective root: {{path}}'
-      environmentOverride: 'Environment override root: {{path}}'
+      configuredRoot: '구성된 루트: {{path}}'
+      effectiveRoot: '적용 중인 루트: {{path}}'
+      environmentOverride: '환경 변수 재정의 루트: {{path}}'
     options:
       userData-runtime-data:
-        label: userData/runtime-data (default)
-        description: Stores runtime data under the Desktop Electron userData directory. Best for the default single-machine setup.
+        label: userData/runtime-data (기본값)
+        description: 런타임 데이터를 Desktop Electron userData 디렉터리 아래에 저장합니다. 기본 단일 시스템 설정에 가장 적합합니다.
       home-runtime-data:
         label: ~/.hagicode/runtime-data
-        description: Stores runtime data under the current user home directory. Best for deployments that need a stable shared path.
+        description: 런타임 데이터를 현재 사용자 홈 디렉터리 아래에 저장합니다. 안정적인 공유 경로가 필요한 배포에 가장 적합합니다.
     warnings:
-      noMigration: Changing this setting only updates the target path. Desktop does not migrate existing runtime data automatically.
-      restart: Saving a changed preset restarts the managed backend so the new runtime data root takes effect immediately.
+      noMigration: 이 설정을 변경하면 대상 경로만 업데이트됩니다. Desktop은 기존 런타임 데이터를 자동으로 마이그레이션하지 않습니다.
+      restart: 변경된 프리셋을 저장하면 관리형 백엔드가 다시 시작되어 새 런타임 데이터 루트가 즉시 적용됩니다.
     actions:
-      save: Save Changes
-      saving: Saving...
-      cancel: Cancel
+      save: 변경 사항 저장
+      saving: 저장 중...
+      cancel: 취소
     messages:
-      unchanged: Runtime data path is already using this preset
-      saveSuccess: Runtime data path saved
-      restartSuccess: Runtime data path saved and managed services restarted
-      saveFailed: Failed to save runtime data path
+      unchanged: 런타임 데이터 경로가 이미 이 프리셋을 사용하고 있습니다
+      saveSuccess: 런타임 데이터 경로가 저장되었습니다
+      restartSuccess: 런타임 데이터 경로가 저장되었고 관리형 서비스가 다시 시작되었습니다
+      saveFailed: 런타임 데이터 경로를 저장하지 못했습니다
     errors:
-      saveErrorDetail: 'Save failed: {{error}}'
+      saveErrorDetail: '저장 실패: {{error}}'
   debugOptions:
-    title: Debug Options
-    description: Control Desktop-managed npm behaviors for diagnosing package installation issues.
+    title: 디버그 옵션
+    description: 패키지 설치 문제를 진단하기 위해 Desktop이 관리하는 npm 동작을 제어합니다.
     useIgnoreScriptsForManagedNpm:
-      label: npm uses `--ignore-scripts`
-      description: Make Desktop-managed npm installs and sync operations skip lifecycle scripts so postinstall-related failures are easier to isolate.
+      label: npm에서 `--ignore-scripts` 사용
+      description: Desktop이 관리하는 npm 설치 및 동기화 작업에서 라이프사이클 스크립트를 건너뛰어 postinstall 관련 실패를 더 쉽게 분리할 수 있도록 합니다.
     skipPurchaseSimulateSuccess:
-      label: Skip purchase, simulate success
-      shortLabel: Simulate tip success
-      description: When enabled, starting a tip purchase skips the Microsoft Store checkout, treats the path as purchase success for the selected tier, and still plays a random thank-you animation. Default is off. Does not write durable purchase counts.
+      label: 구매 건너뛰기, 성공 시뮬레이션
+      shortLabel: 후원 성공 시뮬레이션
+      description: 활성화하면 후원 구매를 시작할 때 Microsoft Store 결제를 건너뛰고 선택한 등급에 대해 구매 성공으로 처리하며, 무작위 감사 애니메이션도 그대로 재생합니다. 기본값은 꺼짐입니다. 영구 구매 횟수는 기록하지 않습니다.
     installDate:
-      label: Raw install date (msstoreRatingPrompt.installDate)
-      description: Shows the exact persisted raw install date string in local config. Click repeatedly and edit to update saved value.
+      label: 설치 날짜 원본 값 (msstoreRatingPrompt.installDate)
+      description: 로컬 구성에 저장된 원본 설치 날짜 문자열을 그대로 표시합니다. 반복해서 클릭한 후 편집하면 저장된 값이 업데이트됩니다.
       placeholder: e.g. 2024-01-01T00:00:00.000Z
-      ageDays: 'Install age (days): {{value}}'
-      ageDaysUnknown: unknown
+      ageDays: '설치 경과 일수: {{value}}'
+      ageDaysUnknown: 알 수 없음
     notes:
-      scope: This setting only affects future Desktop-managed npm installs and sync operations.
-      npm: The npm switch only affects future Desktop-managed npm installs and sync operations. Saving it takes effect immediately and does not restart the managed service.
+      scope: 이 설정은 이후 Desktop이 관리하는 npm 설치 및 동기화 작업에만 영향을 줍니다.
+      npm: npm 스위치는 이후 Desktop이 관리하는 npm 설치 및 동기화 작업에만 영향을 줍니다. 저장하면 즉시 적용되며 관리형 서비스는 다시 시작되지 않습니다.
     actions:
-      save: Save Changes
-      saving: Saving...
-      cancel: Cancel
+      save: 변경 사항 저장
+      saving: 저장 중...
+      cancel: 취소
     messages:
-      unchanged: Debug options are already using these values
-      saveSuccess: Debug options saved
-      saveFailed: Failed to save debug options
+      unchanged: 디버그 옵션이 이미 이 값을 사용하고 있습니다
+      saveSuccess: 디버그 옵션이 저장되었습니다
+      saveFailed: 디버그 옵션을 저장하지 못했습니다
     errors:
-      saveErrorDetail: 'Save failed: {{error}}'
+      saveErrorDetail: '저장 실패: {{error}}'
 footer:
   copyright: © 2026 Hagicode Desktop
 quickStart:
@@ -240,6 +240,8 @@ versionManagement:
     incomplete: 누락된 종속성
     installed: 설치됨
     payloadInvalid: 유효하지 않은 페이로드
+    desktopIncompatible: Desktop 비호환
+    runtimeIncompatible: 런타임 비호환
   actions:
     refresh: 새로고침
     install: 버전 설치
@@ -304,14 +306,14 @@ versionManagement:
     flow: '흐름: 직접 다운로드 -> 다이제스트 확인 -> 압축 해제 -> 완료'
     flowActive: '전류 흐름: {{stage}}'
   progressMessage:
-    queued: Queued
+    queued: 대기열에 있음
     direct-http: 패키지를 직접 다운로드하는 중
     source-fallback-active: 다른 직접 다운로드 소스를 재시도하는 중
     no-sha256-required: 추가 확인이 필요하지 않습니다
     sha256-verifying: 패키지 무결성 확인
     sha256-verified: 확인 완료
     extracting-package: 패키지 추출 중
-    switching-active-version: Switching the active version
+    switching-active-version: 활성 버전 전환 중
     installation-complete: 설치 완료
 installProgressDialog:
   title: 종속성 설치
@@ -327,7 +329,7 @@ installProgressDialog:
     close: 닫기
     retry: 재시도
 subscription:
-  eyebrow: Microsoft Store sponsor plan
+  eyebrow: Microsoft Store 후원자 플랜
   title: Hagicode 후원자 플랜
   description: Microsoft Store 후원자 플랜 상태를 확인하고 로컬 스냅샷을 새로고쳐 이 기기에서 후원 권한이 이미 활성화되어 있는지 확인합니다.
   loading: 캐시된 후원 스냅샷을 읽는 중...
@@ -338,11 +340,11 @@ subscription:
     refreshSuccess: Subscription status refreshed.
     refreshStale: Desktop kept the cached subscription snapshot because the Microsoft Store refresh did not complete.
     refreshFailed: 'Failed to refresh the subscription snapshot: {{error}}'
-    refreshFailedFallback: Microsoft Store refresh failed.
-    purchaseFailed: 'Purchase flow failed: {{error}}'
-    purchaseFailedFallback: Microsoft Store purchase failed.
-    openStoreFailed: 'Failed to open the Microsoft Store page: {{error}}'
-    openStoreFailedFallback: Microsoft Store page unavailable.
+    refreshFailedFallback: Microsoft Store 새로고침에 실패했습니다.
+    purchaseFailed: '구매 흐름 실패: {{error}}'
+    purchaseFailedFallback: Microsoft Store 구매에 실패했습니다.
+    openStoreFailed: 'Microsoft Store 페이지를 열지 못했습니다: {{error}}'
+    openStoreFailedFallback: Microsoft Store 페이지를 사용할 수 없습니다.
   status:
     loading: 불러오는 중
     active: 활성화됨
@@ -364,13 +366,13 @@ subscription:
       description: 이 기기에서는 이미 후원 권한이 활성화되어 있습니다. 여기서 상태를 확인하고, 구매 흐름을 다시 열거나, 스냅샷을 수동으로 새로고칠 수 있습니다.
       note: Your purchase is more than a receipt. It directly supports the ongoing maintenance, iteration, and follow-up work that keeps the feature reliable after launch.
   message:
-    ongoingTitle: Ongoing evolution needs real investment
+    ongoingTitle: 지속적인 발전에는 실질적인 투자가 필요합니다
     ongoingDescription: Hagicode is not a one-and-done product. Keeping it useful means continued author time and recurring token spend for updates, validation, and tracking change.
-    perksTitle: Sponsors should receive thoughtful perks
-    perksDescription: We also plan to introduce fitting sponsor benefits over time, including more refined themes and other perks as they become ready.
+    perksTitle: 후원자에게는 정성 어린 혜택이 제공되어야 합니다
+    perksDescription: 더 정교한 테마를 비롯해 준비되는 대로 후원자에게 어울리는 혜택도 시간을 두고 선보일 계획입니다.
     unlockNoticeTitle: 현재는 기능 잠금 해제가 없습니다
     unlockNoticeDescription: 후원자 플랜 자체로는 다른 제품 기능이 열리지 않습니다. 별도 기능을 사용하려면 해당 라이선스를 따로 구매해야 합니다.
-    inactivePrompt: If this direction matters to you, the sponsor plan is the direct way to support it.
+    inactivePrompt: 이 방향이 중요하다고 생각하신다면 후원자 플랜이 가장 직접적인 후원 방법입니다.
     activeThanks: Thank you for the support. We will keep shaping sponsor-facing benefits with care as the product grows.
   actions:
     panelEyebrow: 후원 작업
@@ -380,31 +382,31 @@ subscription:
     refreshing: 새로고치는 중...
     buy: 후원자 플랜 구매
     manage: Buy / Manage
-    subscribeViaStore: Subscribe in Microsoft Store
+    subscribeViaStore: Microsoft Store에서 구독
     installStoreApp: Store 버전 설치
     processing: 처리 중...
     buyHint: Start the Microsoft Store flow to support continued AI Agent iteration and attach sponsor entitlements to this device.
     manageHint: Open the Microsoft Store purchase flow again if you want to confirm the sponsoring account or manage the current plan.
-    activeHint: Sponsor entitlements are already active on this device. Refresh once if you want to confirm the latest Microsoft Store state.
-    unsupportedHint: Purchase and management work only in the Microsoft Store edition of Hagicode Desktop.
+    activeHint: 이 기기에서는 후원 권한이 이미 활성화되어 있습니다. 최신 Microsoft Store 상태를 확인하려면 한 번 새로고침하세요.
+    unsupportedHint: 구매 및 관리는 Hagicode Desktop의 Microsoft Store 버전에서만 사용할 수 있습니다.
     installHint: Open the sponsor plan in Microsoft Store first, then install or launch the Store edition of Hagicode Desktop to complete subscription and sync entitlements.
     secondaryLabel: Before you decide
     secondaryHint: Refresh first if you want Desktop to re-check Microsoft Store and confirm the latest local snapshot before you purchase or review the plan.
   summary:
-    planLabel: Plan
+    planLabel: 플랜
     planName: Hagicode 후원자 플랜
-    renewalLabel: Renewal or expiry
-    lastSyncLabel: Last successful sync
-    entitlementsLabel: Enabled entitlements
+    renewalLabel: 갱신 또는 만료
+    lastSyncLabel: 마지막으로 성공한 동기화
+    entitlementsLabel: 활성화된 권한
     activeDetail: Sponsor entitlements are already available on this device.
     inactiveDetail: Purchasing here is what turns future sponsor benefits on for this device.
-    source: 'Source: {{value}}'
+    source: '출처: {{value}}'
   sourceValue:
-    initial: Current session default state
+    initial: 현재 세션 기본 상태
     store: Microsoft Store
     fallback: Fallback snapshot
   mission:
-    eyebrow: Why sponsorship matters
+    eyebrow: 후원이 중요한 이유
     title: 구매는 유지보수와 업데이트를 계속 이어 가는 데 도움이 됩니다.
     description: 이를 통해 모델, CLI, 워크플로 변화에 계속 대응할 수 있습니다.
     points:
@@ -418,7 +420,7 @@ subscription:
         title: 후원 권한 활성화
         description: 구매 후 이 기기에 해당 권한이 표시되고 그대로 유지됩니다.
   gratitude:
-    eyebrow: Sponsor message
+    eyebrow: 후원자에게 전하는 말
     title: Your support is already carrying real work
     description: The sponsor plan is designed as a practical way to keep ongoing product work funded while giving supporters clear recognition inside Desktop.
     points:
@@ -432,36 +434,36 @@ subscription:
         title: Future perks already have a delivery path
         description: The entitlement model is in place, so later sponsor-only additions can land cleanly without rebuilding the purchase foundation.
   benefits:
-    eyebrow: What this plan unlocks
-    title: Built to support creation first, then reward supporters well
-    description: The sponsor plan is intentionally simple today. It keeps the core mission clear while leaving room for polished, appropriate benefits as the product grows.
+    eyebrow: 이 플랜으로 제공되는 혜택
+    title: 먼저 창작을 지원하고, 그다음 후원자에게 더 잘 보답하도록 설계했습니다
+    description: 후원자 플랜은 현재 의도적으로 단순하게 유지되어 있습니다. 핵심 목적을 분명하게 유지하면서, 제품이 성장함에 따라 세련되고 적절한 혜택을 추가할 여지를 남겨 둡니다.
     items:
       recognition:
-        title: Sponsor identity in Desktop
-        description: Sponsor status can power visible recognition inside the app without depending on brittle one-off checks.
+        title: Desktop 내 후원자 표시
+        description: 후원 상태를 바탕으로 불안정한 일회성 확인에 의존하지 않고도 앱 안에서 눈에 띄는 후원자 표시를 제공할 수 있습니다.
       theme:
-        title: More refined themes and visual polish
-        description: Support gives us room to invest in better-crafted themes and other quality details that are easy to feel but expensive to maintain.
+        title: 더 정교한 테마와 시각적 완성도
+        description: 후원은 체감하기는 쉽지만 유지하는 데 비용이 많이 드는 정교한 테마와 기타 품질 디테일에 투자할 여력을 줍니다.
       future:
-        title: Future sponsor-only benefits
-        description: The current entitlement model reserves a clean path for later sponsor perks when they are ready to ship.
+        title: 향후 후원자 전용 혜택
+        description: 현재 권한 모델은 후원자 혜택이 출시 준비를 마치면 깔끔하게 제공할 수 있도록 경로를 확보해 두었습니다.
   snapshot:
-    eyebrow: Current device state
-    title: Store status and local entitlement details
-    description: Operational details stay visible here so the sponsor plan remains auditable on the current device.
+    eyebrow: 현재 기기 상태
+    title: Store 상태와 로컬 권한 세부 정보
+    description: 운영 세부 정보를 여기에 계속 표시하여 현재 기기에서 후원자 플랜을 검증할 수 있도록 합니다.
     fields:
       status: 현재 상태
       planStoreId: Store ID
-      lastCheckedAt: Last checked
-      renewalDate: Renewal date
-      expirationDate: Expiry date
-      lastSuccessfulSync: Last successful sync
-      source: Snapshot source
+      lastCheckedAt: 마지막 확인
+      renewalDate: 갱신일
+      expirationDate: 만료일
+      lastSuccessfulSync: 마지막으로 성공한 동기화
+      source: 스냅샷 출처
   entitlements:
-    title: Entitlement summary
+    title: 권한 요약
     activeDescription: These are the sponsor capability flags currently available on this device.
     inactiveDescription: These capability flags are reserved for sponsor-only Desktop experiences and become available after purchase.
-    enabled: Enabled
+    enabled: 활성화됨
     disabled: Disabled
     names:
       sponsorBadge: sponsorBadge
@@ -470,19 +472,19 @@ subscription:
       sponsorBadge: Allows sponsor identity affordances in the Desktop experience.
       premiumFeatureGate: Reserved gate for future sponsor-only Desktop capabilities.
   diagnostics:
-    eyebrow: Technical trace
+    eyebrow: 기술 추적
     title: Diagnostics
     description: Cached-state recovery details stay visible so refresh failures do not look like entitlement loss.
-    lastSuccessfulSync: Last successful sync
-    source: Snapshot source
-    empty: No diagnostics recorded.
+    lastSuccessfulSync: 마지막으로 성공한 동기화
+    source: 스냅샷 출처
+    empty: 기록된 진단 정보가 없습니다.
   stale:
     title: Desktop가 현재 마지막으로 확인된 상태를 표시하고 있습니다
     description: Microsoft Store가 최근 새로고침을 완료하지 못했기 때문에 Desktop는 이 세션에서 마지막으로 확인된 후원 상태를 지우지 않고 유지합니다.
   unsupported:
     title: Microsoft Store 버전이 필요합니다
-    description: Purchase and management actions only work in the Microsoft Store edition of Hagicode Desktop.
-    nonStoreDescription: This runtime is not the Microsoft Store edition. Use the buttons below to open the sponsor plan in Microsoft Store, then install or launch the Store edition of Hagicode Desktop to complete subscription and entitlement sync.
+    description: 구매 및 관리 작업은 Hagicode Desktop의 Microsoft Store 버전에서만 사용할 수 있습니다.
+    nonStoreDescription: 이 런타임은 Microsoft Store 버전이 아닙니다. 아래 버튼을 사용해 Microsoft Store에서 후원자 플랜을 연 다음, Hagicode Desktop의 Store 버전을 설치하거나 실행하여 구독과 권한 동기화를 완료하세요.
   purchaseOutcome:
     title: 구매 결과
     succeeded: 구매가 완료되었고 Desktop가 후원 스냅샷을 새로고쳤습니다.
@@ -504,7 +506,7 @@ turboEngine:
   errorTitle: TurboEngine 스냅샷을 불러올 수 없습니다
   errorDescription: 'Desktop가 TurboEngine 스냅샷을 불러오지 못했습니다: {{error}}'
   hero:
-    title: TurboEngine workspace
+    title: TurboEngine 작업 공간
     activeDescription: TurboEngine is already licensed on this device. You can confirm the current Microsoft Store state, review diagnostics, and refresh whenever needed.
     inactiveDescription: TurboEngine uses a separate perpetual Microsoft Store license. This workspace lets you verify the current state, buy the license, and confirm the latest runtime diagnostics.
   article:
@@ -536,14 +538,14 @@ turboEngine:
         title: 더 많은 아바타 리소스
         description: 새로운 내장 Agent 아바타 세트 다섯 가지가 포함됩니다.
   messages:
-    refreshSuccess: TurboEngine status refreshed.
+    refreshSuccess: TurboEngine 상태를 새로고침했습니다.
     refreshStale: Desktop kept the cached TurboEngine snapshot because the Microsoft Store refresh did not complete.
-    refreshFailed: 'Failed to refresh the TurboEngine snapshot: {{error}}'
-    refreshFailedFallback: Microsoft Store refresh failed.
-    purchaseFailed: 'Purchase flow failed: {{error}}'
-    purchaseFailedFallback: Microsoft Store purchase failed.
-    openStoreFailed: 'Failed to open the Microsoft Store page: {{error}}'
-    openStoreFailedFallback: Microsoft Store page unavailable.
+    refreshFailed: 'TurboEngine 스냅샷을 새로고치지 못했습니다: {{error}}'
+    refreshFailedFallback: Microsoft Store 새로고침에 실패했습니다.
+    purchaseFailed: '구매 흐름 실패: {{error}}'
+    purchaseFailedFallback: Microsoft Store 구매에 실패했습니다.
+    openStoreFailed: 'Microsoft Store 페이지를 열지 못했습니다: {{error}}'
+    openStoreFailedFallback: Microsoft Store 페이지를 사용할 수 없습니다.
   status:
     loading: 불러오는 중
     active: 활성화됨
@@ -560,31 +562,31 @@ turboEngine:
     storeId: 'Store ID: {{storeId}}'
     storeIdLabel: Store ID
     statusLabel: 라이선스 상태
-    lastCheckedLabel: Last checked
-    lastSuccessLabel: Last successful sync
+    lastCheckedLabel: 마지막 확인
+    lastSuccessLabel: 마지막으로 성공한 동기화
   actions:
     sectionTitle: 라이선스 작업
     processing: 처리 중...
-    manage: Open Store purchase flow
+    manage: Store 구매 흐름 열기
     buy: TurboEngine 라이선스 구매
     refresh: 상태 새로고침
     refreshing: 새로고치는 중...
-    openStoreProduct: Open TurboEngine in Store
+    openStoreProduct: Store에서 TurboEngine 열기
     installStoreApp: Store 버전 설치
     manageHint: Open Microsoft Store again if you need to confirm ownership or revisit the current TurboEngine license on this device.
     buyHint: Start the Microsoft Store flow for `9NSD809W18Z6`, then Desktop will refresh the TurboEngine entitlement state in the same session.
-    activeHint: TurboEngine is already licensed on this device. Refresh once if you want to confirm the latest Microsoft Store state.
+    activeHint: 이 기기에는 이미 TurboEngine 라이선스가 있습니다. 최신 Microsoft Store 상태를 확인하려면 한 번 새로고침하세요.
     handoffHint: In-app purchase and verification work only in the Microsoft Store edition. Use the Store handoff below when this runtime cannot complete the license flow itself.
   runtime:
-    sectionTitle: Runtime contract
+    sectionTitle: 런타임 계약
     supported: This runtime can query Microsoft Store directly and run the packaged TurboEngine purchase path for Store ID `9NSD809W18Z6`.
     unsupported: This runtime cannot complete Microsoft Store purchase APIs directly, so Desktop falls back to a Store handoff path instead of showing a broken in-app purchase button.
-    runtimeLabel: Runtime
-    sourceLabel: Snapshot source
-    storeEdition: Microsoft Store edition
-    nonStoreEdition: Non-Store runtime
+    runtimeLabel: 런타임
+    sourceLabel: 스냅샷 출처
+    storeEdition: Microsoft Store 버전
+    nonStoreEdition: Store 외 런타임
   sourceValue:
-    initial: Current session default state
+    initial: 현재 세션 기본 상태
     store: Microsoft Store
     fallback: Fallback snapshot
   diagnostics:
@@ -595,8 +597,8 @@ turboEngine:
     description: Microsoft Store가 최근 새로고침을 완료하지 못했기 때문에 Desktop는 이 세션에서 마지막으로 확인된 TurboEngine 상태를 지우지 않고 유지합니다.
   unsupported:
     title: Microsoft Store 버전이 필요합니다
-    description: Purchase and live verification only work in the Microsoft Store edition of Hagicode Desktop.
-    nonStoreDescription: This runtime is not the Microsoft Store edition. Use the buttons below to open the TurboEngine Store page, then install or launch the Store edition of Hagicode Desktop to complete purchase and verification.
+    description: 구매 및 실시간 확인은 Hagicode Desktop의 Microsoft Store 버전에서만 사용할 수 있습니다.
+    nonStoreDescription: 이 런타임은 Microsoft Store 버전이 아닙니다. 아래 버튼을 사용해 TurboEngine Store 페이지를 연 다음, Hagicode Desktop의 Store 버전을 설치하거나 실행하여 구매와 확인을 완료하세요.
   purchaseOutcome:
     title: 구매 결과
     succeeded: 구매가 완료되었고 Desktop가 TurboEngine 라이선스 스냅샷을 새로고쳤습니다.
@@ -618,9 +620,9 @@ ratingPrompt:
 donationItem:
   noPrivilegeNotice: 후원은 작가에 대한 응원이며 특권·기능 해제·권한을 제공하지 않습니다.
   thankYouAnimation:
-    close: Click anywhere to close
-    title: Thank you for your tip
-    message: With your support, the author will have more resources to make HagiCode even better.
+    close: 아무 곳이나 클릭하여 닫기
+    title: 후원해 주셔서 감사합니다
+    message: 여러분의 후원 덕분에 작가가 HagiCode를 더욱 훌륭하게 만들 수 있는 여력이 더 생깁니다.
   tiers:
     coffee:
       shortName: 카푸치노
@@ -629,26 +631,28 @@ donationItem:
     candy:
       shortName: 카니발
   actions:
-    purchase: Donate now
-    purchasing: Processing...
+    purchase: 지금 후원하기
+    purchasing: 처리 중...
     purchaseTier: '{{shortName}} 후원'
-    close: Close donation item
-    retrySync: Retry sync
-  purchaseCount: Donation count {{count}} (local record)
+    close: 후원 항목 닫기
+    retrySync: 동기화 다시 시도
+  purchaseCount: 후원 횟수 {{count}}회 (로컬 기록)
   messages:
-    purchaseFailed: 'Donation failed: {{error}}'
-    dismissFailed: 'Failed to dismiss donation item: {{error}}'
-    reconcileFailed: 'Could not confirm unfinished tips: {{error}}'
-    reconcileSucceeded: Tip sync completed. You can tip again.
-    busy: Another tip operation is already in progress.
-    dismissed: Donation item dismissed
+    purchaseFailed: '후원 실패: {{error}}'
+    dismissFailed: '후원 항목을 닫지 못했습니다: {{error}}'
+    reconcileFailed: '완료되지 않은 후원을 확인하지 못했습니다: {{error}}'
+    reconcileSucceeded: 후원 동기화가 완료되었습니다. 다시 후원할 수 있습니다.
+    busy: 다른 후원 작업이 이미 진행 중입니다.
+    dismissed: 후원 항목을 닫았습니다
     tierThanks: '{{shortName}} 후원 감사합니다!'
     purchaseOutcome:
-      succeeded: Donation completed. Thank you for supporting us!
-      already-purchased: Donation recorded. Thank you for your continued support!
-      canceled: Donation flow was canceled.
-      not-purchased: Donation flow ended without payment.
-      network-error: Donation failed due to a network error.
-      server-error: Donation failed due to a Microsoft Store service error.
-      not-supported: Donation is not supported in this runtime.
-      failed: Donation failed. Please try again later.
+      succeeded: 후원이 완료되었습니다. 응원해 주셔서 감사합니다!
+      already-purchased: 후원이 기록되었습니다. 계속 응원해 주셔서 감사합니다!
+      canceled: 후원 절차가 취소되었습니다.
+      not-purchased: 결제 없이 후원 절차가 종료되었습니다.
+      network-error: 네트워크 오류로 후원에 실패했습니다.
+      server-error: Microsoft Store 서비스 오류로 후원에 실패했습니다.
+      not-supported: 이 런타임에서는 후원을 지원하지 않습니다.
+      failed: 후원에 실패했습니다. 나중에 다시 시도하세요.
+  headline: 작가가 거의 파산 직전입니다. 도와주세요!
+  subheadline: 작가의 토큰이 바닥나고 있습니다. 계속 이어 갈 수 있도록 도와주세요!

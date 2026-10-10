@@ -94,8 +94,8 @@ webServiceStatus:
   startButton: Iniciar servicio
   dependencyReadinessButton: Gestión de dependencia abierta
   managedStartup:
-    label: Managed service startup
-    description: Choose which managed services should start together when you launch Hagicode.
+    label: Inicio de servicios administrados
+    description: Elige qué servicios administrados deben iniciarse a la vez cuando inicias Hagicode.
   dependencyReadinessAlert:
     title: Las dependencias no están listas
     message: Instale las dependencias requeridas administradas por el escritorio antes de iniciar Hagicode; las dependencias opcionales no bloquean el inicio del servicio base.
@@ -145,41 +145,41 @@ webServiceStatus:
     copyError: No se pudo copiar el registro de inicio
     copyEmpty: No hay contenido de registro para copiar
   startupProgress:
-    title: Starting service
-    description: Desktop is checking the active version, validating required dependencies, and waiting for the local Hagicode service to finish booting.
-    successTitle: Service is ready
-    successDescription: The local service completed startup checks and is ready to open.
-    failureTitle: Startup did not finish
-    failureDescription: Desktop hit a problem while starting the service. Review the failure log or close this dialog and continue troubleshooting.
-    currentStepLabel: Current progress
-    waitingHint: Startup can take several seconds. Desktop keeps this dialog updated with the current step and execution status.
+    title: Iniciando servicio
+    description: Desktop está comprobando la versión activa, validando las dependencias necesarias y esperando a que el servicio local de Hagicode termine de arrancar.
+    successTitle: El servicio está listo
+    successDescription: El servicio local completó las comprobaciones de inicio y está listo para abrirse.
+    failureTitle: El inicio no se completó
+    failureDescription: Desktop encontró un problema al iniciar el servicio. Revisa el registro de errores o cierra este cuadro de diálogo y sigue solucionando el problema.
+    currentStepLabel: Progreso actual
+    waitingHint: El inicio puede tardar varios segundos. Desktop mantiene este cuadro de diálogo actualizado con el paso actual y el estado de ejecución.
     states:
-      pending: Pending
-      active: In progress
-      completed: Completed
-      failed: Failed
+      pending: Pendiente
+      active: En progreso
+      completed: Completado
+      failed: Fallido
     actions:
-      close: Close
+      close: Cerrar
       done: Listo
-      openFailureLog: View failure log
+      openFailureLog: Ver registro de errores
     meta:
-      version: Active version
-      port: Port
-      accessUrl: Access URL
+      version: Versión activa
+      port: Puerto
+      accessUrl: URL de acceso
     stepLabels:
-      checkingVersion: Check version
-      checkingDependencies: Check dependencies
-      spawning: Start service process
-      waitingListening: Wait for listening port
-      healthCheck: Run health check
-      running: Startup complete
+      checkingVersion: Comprobar versión
+      checkingDependencies: Comprobar dependencias
+      spawning: Iniciar proceso del servicio
+      waitingListening: Esperar al puerto de escucha
+      healthCheck: Ejecutar comprobación de estado
+      running: Inicio completado
     stepDescriptions:
-      checkingVersion: Confirm that the active version, entry point, and startup metadata are ready for this launch.
-      checkingDependencies: Validate that Desktop-managed required dependencies are ready before the service starts.
-      spawning: Create the managed service process and inject the runtime environment prepared by Desktop.
-      waitingListening: Wait for the service to bind the configured port and make the local access address reachable.
-      healthCheck: Probe the booted service and confirm the Web API is ready to serve requests.
-      running: Every startup check passed and the local Hagicode service is ready to open.
+      checkingVersion: Confirma que la versión activa, el punto de entrada y los metadatos de inicio están listos para este arranque.
+      checkingDependencies: Valida que las dependencias necesarias administradas por Desktop estén listas antes de iniciar el servicio.
+      spawning: Crea el proceso del servicio administrado e inyecta el entorno de ejecución preparado por Desktop.
+      waitingListening: Espera a que el servicio se vincule al puerto configurado y haga accesible la dirección de acceso local.
+      healthCheck: Sondea el servicio iniciado y confirma que la API web está lista para atender solicitudes.
+      running: Todas las comprobaciones de inicio se superaron y el servicio local de Hagicode está listo para abrirse.
   toast:
     noActiveVersion: No se ha seleccionado ninguna versión activa para los registros web
     openLogsSuccess: Se abrió la carpeta de registros web de la versión activa
@@ -254,6 +254,19 @@ dependencyManagement:
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
     refreshHint: Actualice después de que finalice el comando para volver a verificar las dependencias administradas por el escritorio.
   noDependencies: No se detectaron dependencias
+  installToast:
+    manualDisabledTitle: La instalación automática está desactivada
+    manualDisabledDescription: Termina la instalación manual fuera de Desktop según las instrucciones y luego actualiza el estado.
+    completedTitle: Instalación de dependencias finalizada
+    completedDescription: '{{success}} instaladas, {{failed}} fallidas'
+    failedTitle: Falló la instalación de dependencias
+    allFailedDescription: No se pudieron instalar {{count}} dependencias
+    successTitle: Dependencias instaladas
+    successDescription: Todas las dependencias se instalaron correctamente
+    genericErrorDescription: Se produjo un error durante la instalación
+    unknownError: Error desconocido
+    singleFailedDescription: No se pudo instalar {{name}}
+    singleSuccessDescription: '{{name}} se instaló correctamente'
 packageSource:
   cardTitle: Configuración de origen del paquete
   cardDescription: Configurar y administrar fuentes de paquetes para la instalación
@@ -273,6 +286,7 @@ packageSource:
     scanButton: Escanear versiones disponibles
     scanning: Escaneando...
     notFound: La carpeta no existe o no es accesible
+    currentPath: 'Ruta actual: {{path}}'
   http:
     url:
       label: Paquete URL
@@ -312,6 +326,11 @@ packageSource:
     scanFailed: No se pudo escanear la carpeta
     fetchFailed: No se pudieron recuperar GitHub versiones
     validateFailed: No se pudo validar la configuración
+    fetchIndexFailed: No se pudieron obtener las versiones del índice HTTP
+    channelFailed: No se pudo establecer la preferencia de canal
+    invalidConfig: Configuración no válida
+  notSet: Sin definir
+  channelSetSuccess: 'Preferencia de canal establecida en: {{channel}}'
 tray:
   status:
     running: corriendo

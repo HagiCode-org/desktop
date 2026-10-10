@@ -94,8 +94,8 @@ webServiceStatus:
   startButton: Dienst starten
   dependencyReadinessButton: Öffnen Sie das Abhängigkeitsmanagement
   managedStartup:
-    label: Managed service startup
-    description: Choose which managed services should start together when you launch Hagicode.
+    label: Gemeinsamer Start verwalteter Dienste
+    description: Wählen Sie aus, welche verwalteten Dienste gemeinsam gestartet werden sollen, wenn Sie Hagicode starten.
   dependencyReadinessAlert:
     title: Abhängigkeiten sind noch nicht bereit
     message: Installieren Sie die erforderlichen vom Desktop verwalteten Abhängigkeiten, bevor Sie mit Hagicode beginnen. Optionale Abhängigkeiten blockieren den Start des Basisdienstes nicht.
@@ -112,7 +112,7 @@ webServiceStatus:
     detail: Der Service-Port ist noch nicht zugänglich
     detailWithPort: Port {{port}} ist noch nicht erreichbar
   details:
-    serviceUrl: Service URL
+    serviceUrl: Dienst-URL
     uptime: Betriebszeit
     restartCount: Zählung neu starten
     port: Hafen
@@ -145,41 +145,41 @@ webServiceStatus:
     copyError: Das Startprotokoll konnte nicht kopiert werden
     copyEmpty: Kein Protokollinhalt zum Kopieren
   startupProgress:
-    title: Starting service
-    description: Desktop is checking the active version, validating required dependencies, and waiting for the local Hagicode service to finish booting.
-    successTitle: Service is ready
-    successDescription: The local service completed startup checks and is ready to open.
-    failureTitle: Startup did not finish
-    failureDescription: Desktop hit a problem while starting the service. Review the failure log or close this dialog and continue troubleshooting.
-    currentStepLabel: Current progress
-    waitingHint: Startup can take several seconds. Desktop keeps this dialog updated with the current step and execution status.
+    title: Dienst wird gestartet
+    description: Desktop prüft die aktive Version, validiert erforderliche Abhängigkeiten und wartet, bis der lokale Hagicode-Dienst vollständig gestartet ist.
+    successTitle: Dienst ist bereit
+    successDescription: Der lokale Dienst hat die Startprüfungen abgeschlossen und kann geöffnet werden.
+    failureTitle: Start nicht abgeschlossen
+    failureDescription: Beim Starten des Dienstes ist in Desktop ein Problem aufgetreten. Prüfen Sie das Fehlerprotokoll oder schließen Sie diesen Dialog und setzen Sie die Fehlersuche fort.
+    currentStepLabel: Aktueller Fortschritt
+    waitingHint: Der Start kann einige Sekunden dauern. Desktop hält diesen Dialog mit dem aktuellen Schritt und dem Ausführungsstatus auf dem Laufenden.
     states:
-      pending: Pending
-      active: In progress
-      completed: Completed
-      failed: Failed
+      pending: Ausstehend
+      active: In Bearbeitung
+      completed: Abgeschlossen
+      failed: Fehlgeschlagen
     actions:
-      close: Close
+      close: Schließen
       done: Fertig
-      openFailureLog: View failure log
+      openFailureLog: Fehlerprotokoll anzeigen
     meta:
-      version: Active version
+      version: Aktive Version
       port: Port
-      accessUrl: Access URL
+      accessUrl: Zugriffs-URL
     stepLabels:
-      checkingVersion: Check version
-      checkingDependencies: Check dependencies
-      spawning: Start service process
-      waitingListening: Wait for listening port
-      healthCheck: Run health check
-      running: Startup complete
+      checkingVersion: Version prüfen
+      checkingDependencies: Abhängigkeiten prüfen
+      spawning: Dienstprozess starten
+      waitingListening: Auf lauschenden Port warten
+      healthCheck: Integritätsprüfung ausführen
+      running: Start abgeschlossen
     stepDescriptions:
-      checkingVersion: Confirm that the active version, entry point, and startup metadata are ready for this launch.
-      checkingDependencies: Validate that Desktop-managed required dependencies are ready before the service starts.
-      spawning: Create the managed service process and inject the runtime environment prepared by Desktop.
-      waitingListening: Wait for the service to bind the configured port and make the local access address reachable.
-      healthCheck: Probe the booted service and confirm the Web API is ready to serve requests.
-      running: Every startup check passed and the local Hagicode service is ready to open.
+      checkingVersion: Stellt sicher, dass aktive Version, Einstiegspunkt und Startmetadaten für diesen Start bereit sind.
+      checkingDependencies: Prüft vor dem Start des Dienstes, ob die von Desktop verwalteten erforderlichen Abhängigkeiten bereit sind.
+      spawning: Erstellt den verwalteten Dienstprozess und übergibt ihm die von Desktop vorbereitete Laufzeitumgebung.
+      waitingListening: Wartet, bis der Dienst den konfigurierten Port bindet und die lokale Zugriffsadresse erreichbar ist.
+      healthCheck: Prüft den gestarteten Dienst und bestätigt, dass die Web API bereit ist, Anfragen zu bearbeiten.
+      running: Alle Startprüfungen wurden bestanden und der lokale Hagicode-Dienst kann geöffnet werden.
   toast:
     noActiveVersion: Für Webprotokolle ist keine aktive Version ausgewählt
     openLogsSuccess: Der Webprotokollordner der aktiven Version wurde geöffnet
@@ -254,6 +254,19 @@ dependencyManagement:
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
     refreshHint: Aktualisieren Sie nach Abschluss des Befehls, um die vom Desktop verwalteten Abhängigkeiten erneut zu überprüfen.
   noDependencies: Keine Abhängigkeiten erkannt
+  installToast:
+    manualDisabledTitle: Automatische Installation ist deaktiviert
+    manualDisabledDescription: Schließen Sie die manuelle Installation wie beschrieben außerhalb von Desktop ab und aktualisieren Sie dann den Status.
+    completedTitle: Installation der Abhängigkeiten abgeschlossen
+    completedDescription: '{{success}} installiert, {{failed}} fehlgeschlagen'
+    failedTitle: Installation der Abhängigkeiten fehlgeschlagen
+    allFailedDescription: '{{count}} Abhängigkeiten konnten nicht installiert werden'
+    successTitle: Abhängigkeiten installiert
+    successDescription: Alle Abhängigkeiten wurden erfolgreich installiert
+    genericErrorDescription: Bei der Installation ist ein Fehler aufgetreten
+    unknownError: Unbekannter Fehler
+    singleFailedDescription: '{{name}} konnte nicht installiert werden'
+    singleSuccessDescription: '{{name}} wurde erfolgreich installiert'
 packageSource:
   cardTitle: Paketquellenkonfiguration
   cardDescription: Konfigurieren und verwalten Sie Paketquellen für die Installation
@@ -263,7 +276,7 @@ packageSource:
   sourceType:
     label: Paketquellentyp
     folder: Lokaler Ordner
-    httpIndex: HTTP Index
+    httpIndex: HTTP-Index
     http: HTTP URL
   folder:
     path:
@@ -273,13 +286,14 @@ packageSource:
     scanButton: Verfügbare Versionen scannen
     scanning: Scannen...
     notFound: Der Ordner existiert nicht oder ist nicht zugänglich
+    currentPath: 'Aktueller Pfad: {{path}}'
   http:
     url:
       label: Paket URL
       placeholder: https://example.com/hagicode-0.1.0-linux-x64.zip
   httpIndex:
     indexUrl:
-      label: Index URL
+      label: Index-URL
       placeholder: https://index.hagicode.com/server/index.json
       hint: Die Indexdatei muss ein Versionsarray und Assets für jede Version enthalten
   validateButton: Konfiguration validieren
@@ -312,6 +326,11 @@ packageSource:
     scanFailed: Der Ordner konnte nicht gescannt werden
     fetchFailed: Es konnten GitHub Veröffentlichungen nicht abgerufen werden
     validateFailed: Die Konfiguration konnte nicht validiert werden
+    fetchIndexFailed: Versionen konnten nicht vom HTTP-Index abgerufen werden
+    channelFailed: Die Kanalpräferenz konnte nicht festgelegt werden
+    invalidConfig: Ungültige Konfiguration
+  notSet: Nicht festgelegt
+  channelSetSuccess: 'Kanalpräferenz festgelegt auf: {{channel}}'
 tray:
   status:
     running: Laufen

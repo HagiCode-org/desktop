@@ -117,7 +117,7 @@ launch:
     title: Informations d'installation
     version: Version installée
     port: Port de service
-    url: Service URL
+    url: URL du service
   whatsNext:
     title: 'Vous pouvez désormais:'
     manage: Gérer les Hagicode Server depuis l'interface principale
@@ -207,51 +207,6 @@ dependencyCheck:
     collapse: Masquer les détails
     currentVersion: Version actuelle
     requiredVersion: Version requise
-dependencyPreparation:
-  title: Préparer les dépendances
-  description: Installez les dépendances de ligne de commande requises par HagiCode Desktop et sélectionnez au moins un agent CLI à utiliser avec les sessions de codage.
-  loading: Vérification des dépendances gérées par Desktop...
-  refreshHint: Refresh after the command finishes to re-check Desktop-managed dependencies.
-  skip:
-    title: This step can be skipped
-    description: You can continue to the download step without installing dependencies now. The install action adds the selected packages to Desktop's managed Node/npm environment, and you can install them later inside the app.
-  environment:
-    title: Environnement Node/npm géré par ordinateur
-    description: Desktop installe et vérifie les packages CLI gérés dans son propre environnement Node/npm. Lisez la FAQ pour connaître le chemin actuel, le package et les détails de dépannage.
-    faqLinkLabel: Afficher la FAQ sur l'environnement de nœud
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
-  required:
-    title: Dépendances requises
-    description: Ces dépendances doivent être installées avant que l'installation puisse continuer.
-  optional:
-    title: Dépendances facultatives
-    description: Les dépendances facultatives ne bloquent pas l'installation.
-  agentCli:
-    title: Sélection de l'agent CLI
-    description: Sélectionnez au moins un agent CLI. Le CLI sélectionné doit être installé dans l'environnement npm géré de Desktop.
-  blocking:
-    environment-unavailable:
-      title: Environnement nœud/npm indisponible
-      description: Desktop ne peut pas accéder à son environnement Node/npm géré. Actualisez une fois la chaîne d'outils disponible ou ouvrez la FAQ sur l'environnement Node pour plus de détails sur le dépannage.
-    required-packages-missing:
-      title: Les dépendances requises sont manquantes
-      description: Installez les dépendances requises manquantes avant de continuer.
-    agent-cli-not-selected:
-      title: Sélectionnez un agent CLI
-      description: Choisissez au moins une dépendance Agent CLI prise en charge.
-    agent-cli-not-installed:
-      title: L'agent sélectionné CLI n'est pas installé
-      description: Installez au moins un package Agent CLI sélectionné dans l'environnement npm géré de Desktop.
-  actions:
-    install: Confirmer et installer
-    refresh: Actualiser
-    retry: Réessayer
-    recheck: Revérifier
-  complete:
-    title: Les dépendances sont prêtes
-    description: Les dépendances requises sont installées et au moins un agent CLI sélectionné est prêt.
-  error:
-    title: La préparation des dépendances a échoué
 legal:
   title: Contrat de licence utilisateur final et politique de confidentialité
   descriptionFull: Avant de télécharger HagiCode Server, confirmez les révisions actuelles du CLUF et de la politique de confidentialité. Les documents officiels s'ouvrent dans votre navigateur par défaut.
@@ -273,13 +228,13 @@ legal:
   decline: Refuser et quitter
   declining: Sortir...
   refresh: Actualiser les métadonnées juridiques
-  lastUpdated: 'Last updated: {{date}}'
+  lastUpdated: 'Dernière mise à jour : {{date}}'
   source:
-    fresh: Latest
-    cache: Cached
-    unavailable: Unavailable
-  openEula: Open EULA
-  openPrivacy: Open Privacy Policy
+    fresh: À jour
+    cache: En cache
+    unavailable: Indisponible
+  openEula: Ouvrir le CLUF
+  openPrivacy: Ouvrir la politique de confidentialité
   metadata:
     remote: Dernières métadonnées juridiques chargées
     cache: Utiliser les dernières métadonnées légales mises en cache avec succès

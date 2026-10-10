@@ -94,8 +94,8 @@ webServiceStatus:
   startButton: サービスを開始する
   dependencyReadinessButton: オープンな依存関係管理
   managedStartup:
-    label: Managed service startup
-    description: Choose which managed services should start together when you launch Hagicode.
+    label: 管理対象サービスの連動起動
+    description: Hagicode の起動時に一緒に起動する管理対象サービスを選択します。
   dependencyReadinessAlert:
     title: 依存関係の準備ができていません
     message: Hagicode を開始する前に、必要なデスクトップ管理の依存関係をインストールしてください。オプションの依存関係によって基本サービスの起動がブロックされることはありません。
@@ -145,41 +145,41 @@ webServiceStatus:
     copyError: 起動ログのコピーに失敗しました
     copyEmpty: コピーするログ内容がありません
   startupProgress:
-    title: Starting service
-    description: Desktop is checking the active version, validating required dependencies, and waiting for the local Hagicode service to finish booting.
-    successTitle: Service is ready
-    successDescription: The local service completed startup checks and is ready to open.
-    failureTitle: Startup did not finish
-    failureDescription: Desktop hit a problem while starting the service. Review the failure log or close this dialog and continue troubleshooting.
-    currentStepLabel: Current progress
-    waitingHint: Startup can take several seconds. Desktop keeps this dialog updated with the current step and execution status.
+    title: サービスを起動しています
+    description: Desktop はアクティブなバージョンの確認と必要な依存関係の検証を行い、ローカルの Hagicode サービスの起動が完了するのを待っています。
+    successTitle: サービスの準備ができました
+    successDescription: ローカルサービスは起動チェックを完了し、開く準備ができています。
+    failureTitle: 起動が完了しませんでした
+    failureDescription: サービスの起動中に Desktop で問題が発生しました。失敗ログを確認するか、このダイアログを閉じてトラブルシューティングを続けてください。
+    currentStepLabel: 現在の進行状況
+    waitingHint: 起動には数秒かかることがあります。Desktop は、このダイアログに現在のステップと実行状況を更新し続けます。
     states:
-      pending: Pending
-      active: In progress
-      completed: Completed
-      failed: Failed
+      pending: 待機中
+      active: 進行中
+      completed: 完了
+      failed: 失敗
     actions:
-      close: Close
+      close: 閉じる
       done: 完了
-      openFailureLog: View failure log
+      openFailureLog: 失敗ログを表示
     meta:
-      version: Active version
-      port: Port
-      accessUrl: Access URL
+      version: アクティブなバージョン
+      port: ポート
+      accessUrl: アクセス URL
     stepLabels:
-      checkingVersion: Check version
-      checkingDependencies: Check dependencies
-      spawning: Start service process
-      waitingListening: Wait for listening port
-      healthCheck: Run health check
-      running: Startup complete
+      checkingVersion: バージョンを確認
+      checkingDependencies: 依存関係を確認
+      spawning: サービスプロセスを起動
+      waitingListening: リッスンポートを待機
+      healthCheck: ヘルスチェックを実行
+      running: 起動完了
     stepDescriptions:
-      checkingVersion: Confirm that the active version, entry point, and startup metadata are ready for this launch.
-      checkingDependencies: Validate that Desktop-managed required dependencies are ready before the service starts.
-      spawning: Create the managed service process and inject the runtime environment prepared by Desktop.
-      waitingListening: Wait for the service to bind the configured port and make the local access address reachable.
-      healthCheck: Probe the booted service and confirm the Web API is ready to serve requests.
-      running: Every startup check passed and the local Hagicode service is ready to open.
+      checkingVersion: アクティブなバージョン、エントリポイント、起動メタデータが今回の起動に使える状態か確認します。
+      checkingDependencies: サービスの起動前に、Desktop が管理する必須の依存関係が揃っているか検証します。
+      spawning: 管理対象のサービスプロセスを作成し、Desktop が用意したランタイム環境を注入します。
+      waitingListening: サービスが設定されたポートにバインドし、ローカルのアクセスアドレスに到達できるようになるまで待ちます。
+      healthCheck: 起動したサービスを確認し、Web API がリクエストを処理できる状態であることを検証します。
+      running: すべての起動チェックに合格し、ローカルの Hagicode サービスを開く準備ができました。
   toast:
     noActiveVersion: Web ログに対してアクティブなバージョンが選択されていません
     openLogsSuccess: アクティブなバージョンの Web ログ フォルダーが開かれました
@@ -254,6 +254,19 @@ dependencyManagement:
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
     refreshHint: コマンドの終了後に更新して、デスクトップ管理の依存関係を再確認します。
   noDependencies: 依存関係が検出されませんでした
+  installToast:
+    manualDisabledTitle: 自動インストールは無効です
+    manualDisabledDescription: 案内に従って Desktop の外で手動インストールを完了し、その後で状態を更新してください。
+    completedTitle: 依存関係のインストールが完了しました
+    completedDescription: '{{success}} 件をインストールし、{{failed}} 件が失敗しました'
+    failedTitle: 依存関係のインストールに失敗しました
+    allFailedDescription: '{{count}} 件の依存関係をインストールできませんでした'
+    successTitle: 依存関係をインストールしました
+    successDescription: すべての依存関係を正常にインストールしました
+    genericErrorDescription: インストール中にエラーが発生しました
+    unknownError: 不明なエラー
+    singleFailedDescription: '{{name}} をインストールできませんでした'
+    singleSuccessDescription: '{{name}} を正常にインストールしました'
 packageSource:
   cardTitle: パッケージソース構成
   cardDescription: インストール用のパッケージ ソースを構成および管理する
@@ -273,6 +286,7 @@ packageSource:
     scanButton: 利用可能なバージョンをスキャンする
     scanning: スキャン中...
     notFound: フォルダーが存在しないか、アクセスできません
+    currentPath: '現在のパス: {{path}}'
   http:
     url:
       label: パッケージ URL
@@ -312,6 +326,11 @@ packageSource:
     scanFailed: フォルダーのスキャンに失敗しました
     fetchFailed: GitHub リリースのフェッチに失敗しました
     validateFailed: 構成の検証に失敗しました
+    fetchIndexFailed: HTTP インデックスからバージョンを取得できませんでした
+    channelFailed: チャネル設定を変更できませんでした
+    invalidConfig: 無効な構成
+  notSet: 未設定
+  channelSetSuccess: チャネル設定を {{channel}} に変更しました
 tray:
   status:
     running: ランニング

@@ -94,8 +94,8 @@ webServiceStatus:
   startButton: Démarrer le service
   dependencyReadinessButton: Gestion ouverte des dépendances
   managedStartup:
-    label: Managed service startup
-    description: Choose which managed services should start together when you launch Hagicode.
+    label: Démarrage des services gérés
+    description: Choisissez les services gérés à démarrer en même temps lorsque vous lancez Hagicode.
   dependencyReadinessAlert:
     title: Les dépendances ne sont pas prêtes
     message: Installez les dépendances requises gérées par Desktop avant de démarrer Hagicode; les dépendances facultatives ne bloquent pas le lancement du service de base.
@@ -112,7 +112,7 @@ webServiceStatus:
     detail: Le port de service n'est pas encore accessible
     detailWithPort: Le port {{port}} n'est pas encore accessible
   details:
-    serviceUrl: Service URL
+    serviceUrl: URL du service
     uptime: Temps de disponibilité
     restartCount: Compte de redémarrage
     port: Port
@@ -145,41 +145,41 @@ webServiceStatus:
     copyError: Échec de la copie du journal de démarrage
     copyEmpty: Aucun contenu de journal à copier
   startupProgress:
-    title: Starting service
-    description: Desktop is checking the active version, validating required dependencies, and waiting for the local Hagicode service to finish booting.
-    successTitle: Service is ready
-    successDescription: The local service completed startup checks and is ready to open.
-    failureTitle: Startup did not finish
-    failureDescription: Desktop hit a problem while starting the service. Review the failure log or close this dialog and continue troubleshooting.
-    currentStepLabel: Current progress
-    waitingHint: Startup can take several seconds. Desktop keeps this dialog updated with the current step and execution status.
+    title: Démarrage du service
+    description: Desktop vérifie la version active, valide les dépendances requises et attend la fin du démarrage du service Hagicode local.
+    successTitle: Le service est prêt
+    successDescription: Le service local a terminé les vérifications de démarrage et est prêt à être ouvert.
+    failureTitle: Le démarrage n’a pas abouti
+    failureDescription: Desktop a rencontré un problème au démarrage du service. Consultez le journal des échecs, ou fermez cette boîte de dialogue et poursuivez le dépannage.
+    currentStepLabel: Progression actuelle
+    waitingHint: Le démarrage peut prendre plusieurs secondes. Desktop met à jour cette boîte de dialogue avec l’étape en cours et l’état d’exécution.
     states:
-      pending: Pending
-      active: In progress
-      completed: Completed
-      failed: Failed
+      pending: En attente
+      active: En cours
+      completed: Terminé
+      failed: Échec
     actions:
-      close: Close
+      close: Fermer
       done: Terminé
-      openFailureLog: View failure log
+      openFailureLog: Afficher le journal des échecs
     meta:
-      version: Active version
+      version: Version active
       port: Port
-      accessUrl: Access URL
+      accessUrl: URL d’accès
     stepLabels:
-      checkingVersion: Check version
-      checkingDependencies: Check dependencies
-      spawning: Start service process
-      waitingListening: Wait for listening port
-      healthCheck: Run health check
-      running: Startup complete
+      checkingVersion: Vérifier la version
+      checkingDependencies: Vérifier les dépendances
+      spawning: Démarrer le processus du service
+      waitingListening: Attendre le port d’écoute
+      healthCheck: Exécuter le contrôle d’état
+      running: Démarrage terminé
     stepDescriptions:
-      checkingVersion: Confirm that the active version, entry point, and startup metadata are ready for this launch.
-      checkingDependencies: Validate that Desktop-managed required dependencies are ready before the service starts.
-      spawning: Create the managed service process and inject the runtime environment prepared by Desktop.
-      waitingListening: Wait for the service to bind the configured port and make the local access address reachable.
-      healthCheck: Probe the booted service and confirm the Web API is ready to serve requests.
-      running: Every startup check passed and the local Hagicode service is ready to open.
+      checkingVersion: Confirmer que la version active, le point d’entrée et les métadonnées de démarrage sont prêts pour ce lancement.
+      checkingDependencies: Valider que les dépendances requises gérées par Desktop sont prêtes avant le démarrage du service.
+      spawning: Créer le processus du service géré et injecter l’environnement d’exécution préparé par Desktop.
+      waitingListening: Attendre que le service se lie au port configuré et rende l’adresse d’accès locale joignable.
+      healthCheck: Sonder le service démarré et confirmer que l’API Web est prête à traiter les requêtes.
+      running: Toutes les vérifications de démarrage ont réussi et le service Hagicode local est prêt à être ouvert.
   toast:
     noActiveVersion: Aucune version active n'est sélectionnée pour les journaux Web
     openLogsSuccess: Dossier des journaux Web de la version active ouvert
@@ -254,6 +254,19 @@ dependencyManagement:
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
     refreshHint: Actualisez une fois la commande terminée pour revérifier les dépendances gérées par Desktop.
   noDependencies: Aucune dépendance détectée
+  installToast:
+    manualDisabledTitle: L’installation automatique est désactivée
+    manualDisabledDescription: Terminez l’installation manuelle en dehors de Desktop comme indiqué, puis actualisez l’état.
+    completedTitle: Installation des dépendances terminée
+    completedDescription: '{{success}} installée(s), {{failed}} en échec'
+    failedTitle: Échec de l’installation des dépendances
+    allFailedDescription: '{{count}} dépendances n’ont pas pu être installées'
+    successTitle: Dépendances installées
+    successDescription: Toutes les dépendances ont été installées avec succès
+    genericErrorDescription: Une erreur s’est produite pendant l’installation
+    unknownError: Erreur inconnue
+    singleFailedDescription: L’installation de {{name}} a échoué
+    singleSuccessDescription: '{{name}} a été installé avec succès'
 packageSource:
   cardTitle: Configuration de la source du package
   cardDescription: Configurer et gérer les sources de packages pour l'installation
@@ -263,7 +276,7 @@ packageSource:
   sourceType:
     label: Type de source du package
     folder: Dossier local
-    httpIndex: HTTP Index
+    httpIndex: Index HTTP
     http: HTTP URL
   folder:
     path:
@@ -273,6 +286,7 @@ packageSource:
     scanButton: Scanner les versions disponibles
     scanning: Numérisation...
     notFound: Le dossier n'existe pas ou n'est pas accessible
+    currentPath: 'Chemin actuel : {{path}}'
   http:
     url:
       label: Forfait URL
@@ -312,6 +326,11 @@ packageSource:
     scanFailed: Échec de l'analyse du dossier
     fetchFailed: Échec de la récupération de GitHub versions
     validateFailed: Échec de la validation de la configuration
+    fetchIndexFailed: Échec de la récupération des versions depuis l’index HTTP
+    channelFailed: Échec de la définition de la préférence de canal
+    invalidConfig: Configuration invalide
+  notSet: Non défini
+  channelSetSuccess: 'Préférence de canal définie sur : {{channel}}'
 tray:
   status:
     running: Courir
