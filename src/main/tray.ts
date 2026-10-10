@@ -44,8 +44,7 @@ let currentTrayLanguage: string | null = null;
 const getTrayLabel = (key: string): string => {
   const labels: Record<string, Record<string, string>> = {
     'quit': {
-      'en': 'Quit',
-      'zh': '退出',
+      'en-US': 'Quit',
       'zh-CN': '退出',
       'zh-Hant': '結束',
       'ja-JP': '終了',
@@ -61,7 +60,7 @@ const getTrayLabel = (key: string): string => {
   const locale = currentTrayLanguage ?? app.getLocale?.() ?? 'en';
   const lang = resolveDesktopLanguageCode(locale, 'en-US');
 
-  return labels[key]?.[lang] || labels[key]?.['en'] || key;
+  return labels[key]?.[lang] || labels[key]?.['en-US'] || key;
 };
 
 export function setTrayLanguage(language: string): void {
