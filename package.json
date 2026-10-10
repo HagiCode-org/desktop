@@ -31,7 +31,7 @@
     "i18n:prune:write": "hagi18n prune --config hagi18n.yaml --from en-US --write",
     "i18n:generate": "node scripts/generate-i18n-resources.mjs",
     "prepare:i18n": "npm run i18n:generate",
-    "i18n:check": "npm run i18n:audit && npm run i18n:doctor && npm run prepare:i18n && node scripts/generate-i18n-resources.mjs --check && node --test scripts/__tests__/generate-i18n-resources.test.mjs && npm run build:tsc && npm run test:source -- src/renderer/i18n/__tests__/locale-resources.test.ts && npm run build:renderer",
+    "i18n:check": "npm run i18n:audit && npm run i18n:doctor && npm run prepare:i18n && node scripts/generate-i18n-resources.mjs --check && node --test scripts/__tests__/generate-i18n-resources.test.mjs && npm run build:tsc && npm run test:source -- src/renderer/i18n/__tests__/locale-resources.test.ts src/renderer/i18n/__tests__/locale-hardcoded-content.test.ts && npm run build:renderer",
     "prebuild:renderer": "npm run prepare:i18n && npm run prepare:about-snapshot && npm run prepare:managed-npm-packages",
     "predev:renderer": "npm run prepare:i18n && npm run prepare:about-snapshot && npm run prepare:managed-npm-packages",
     "check:ts-import-extensions": "node scripts/check-ts-import-extensions.mjs",
