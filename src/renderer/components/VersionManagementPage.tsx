@@ -302,7 +302,7 @@ export default function VersionManagementPage({ distributionState }: VersionMana
       if (result.shouldShow) {
         toast.success(t('versionManagement.toast.onboardingStarted'));
       } else {
-        toast.error(t('versionManagement.toast.onboardingFailed') + `: ${result.reason || 'Unknown reason'}`);
+        toast.error(t('versionManagement.toast.onboardingFailed') + `: ${result.reason || t('common:common.unknownError')}`);
       }
     } catch (error) {
       console.error('Failed to start onboarding:', error);

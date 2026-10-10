@@ -218,7 +218,7 @@ export function DebugOptionsSettings() {
             ) : null}
           </>
         ) : (
-          <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
+          <p className="text-sm text-muted-foreground">{t('common:status.loading')}</p>
         )}
       </CardContent>
     </Card>

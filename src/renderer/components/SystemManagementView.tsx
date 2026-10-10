@@ -348,13 +348,13 @@ export default function SystemManagementView({
       await dispatch(resetOnboarding()).unwrap();
       const result = await dispatch(checkOnboardingTrigger()).unwrap();
       if (result.shouldShow) {
-        toast.success(t('versionManagement.toast.onboardingStarted'));
+        toast.success(t('pages:versionManagement.toast.onboardingStarted'));
       } else {
-        toast.error(t('versionManagement.toast.onboardingFailed') + `: ${result.reason || 'Unknown reason'}`);
+        toast.error(t('pages:versionManagement.toast.onboardingFailed') + `: ${result.reason || t('common:common.unknownError')}`);
       }
     } catch (error) {
       console.error('Failed to start onboarding:', error);
-      toast.error(t('versionManagement.toast.onboardingFailed'));
+      toast.error(t('pages:versionManagement.toast.onboardingFailed'));
     }
   };
 

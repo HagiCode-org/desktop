@@ -39,7 +39,7 @@ export default function WebView({ src }: WebViewProps) {
     const handleDidFailLoad = (event: any) => {
       if (event.isTopLevel) {
         setIsLoading(false);
-        setError(t('webView.loadFailed', { reason: event.errorDescription || 'Unknown error' }));
+        setError(t('webView.loadFailed', { reason: event.errorDescription || t('common.unknownError') }));
       }
     };
 

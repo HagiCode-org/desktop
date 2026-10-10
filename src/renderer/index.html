@@ -66,8 +66,38 @@
     <div id="loading-container">
       <div class="brand-logo">Hagicode Desktop</div>
       <div class="loading-spinner"></div>
-      <div class="loading-text">正在加载...</div>
+      <div class="loading-text" id="loading-text">Loading...</div>
     </div>
+    <script>
+      // Pre-React splash text. The saved Desktop language is not known yet, so follow the
+      // system locale and cover every supported Desktop language. Keep in sync with
+      // src/shared/desktop-languages.ts.
+      (function () {
+        var labels = {
+          'zh-CN': '正在加载...',
+          'zh-Hant': '正在載入...',
+          'en-US': 'Loading...',
+          'ja-JP': '読み込み中...',
+          'ko-KR': '로드 중...',
+          'de-DE': 'Wird geladen...',
+          'fr-FR': 'Chargement...',
+          'es-ES': 'Cargando...',
+          'pt-BR': 'Carregando...',
+          'ru-RU': 'Загрузка...'
+        };
+        var locale = (navigator.language || 'en-US').replace(/_/g, '-').toLowerCase();
+        var code = 'en-US';
+        if (locale.indexOf('zh') === 0) {
+          code = /hant|-tw|-hk|-mo/.test(locale) ? 'zh-Hant' : 'zh-CN';
+        } else {
+          var byLanguage = { ja: 'ja-JP', ko: 'ko-KR', de: 'de-DE', fr: 'fr-FR', es: 'es-ES', pt: 'pt-BR', ru: 'ru-RU' };
+          code = byLanguage[locale.split('-')[0]] || 'en-US';
+        }
+        var node = document.getElementById('loading-text');
+        if (node) node.textContent = labels[code];
+        document.documentElement.lang = code;
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/main.tsx"></script>
   </body>

@@ -13,8 +13,12 @@ import {
   setScanResult,
   setSelectedChannel,
 } from '../slices/packageSourceSlice.js';
+import i18n from 'i18next';
 import type { Version } from '../../../main/version-manager';
 import type { StoredPackageSourceConfig } from '../../../main/package-source-config-manager';
+
+const tPackageSource = (key: string, options?: Record<string, unknown>): string =>
+  i18n.t(`components:packageSource.${key}`, options) as string;
 
 // Types for window electronAPI
 declare global {
@@ -42,7 +46,7 @@ export const loadSourceConfig = createAsyncThunk(
       dispatch(setCurrentConfig(config));
       return config;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to load package source configuration';
+      const errorMessage = error instanceof Error ? error.message : tPackageSource('error.loadFailed');
       dispatch(setError(errorMessage));
       throw error;
     } finally {
@@ -66,7 +70,7 @@ export const loadAllSourceConfigs = createAsyncThunk(
       dispatch(setAllConfigs(configs));
       return configs;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to load package source configurations';
+      const errorMessage = error instanceof Error ? error.message : tPackageSource('error.loadFailed');
       dispatch(setError(errorMessage));
       throw error;
     } finally {
@@ -99,28 +103,26 @@ export const setSourceConfig = createAsyncThunk(
         dispatch(setValidationError(null));
 
         // Show success message
-        toast.success('包源配置已保存', {
-          description: 'Package source configuration saved successfully',
-        });
+        toast.success(tPackageSource('saveSuccess'));
 
         return true;
       } else {
-        const errorMessage = result.error || 'Failed to set package source configuration';
+        const errorMessage = result.error || tPackageSource('error.saveFailed');
         dispatch(setError(errorMessage));
         dispatch(setValidationError(errorMessage));
 
-        toast.error('配置保存失败', {
+        toast.error(tPackageSource('error.saveFailed'), {
           description: errorMessage,
         });
 
         return false;
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to set package source configuration';
+      const errorMessage = error instanceof Error ? error.message : tPackageSource('error.saveFailed');
       dispatch(setError(errorMessage));
       dispatch(setValidationError(errorMessage));
 
-      toast.error('配置保存失败', {
+      toast.error(tPackageSource('error.saveFailed'), {
         description: errorMessage,
       });
 
@@ -154,25 +156,23 @@ export const switchSource = createAsyncThunk(
         dispatch(setAvailableVersions([]));
 
         // Show success message
-        toast.success('已切换包源', {
-          description: 'Package source switched successfully',
-        });
+        toast.success(tPackageSource('switchSuccess'));
 
         return true;
       } else {
-        dispatch(setError(result.error || 'Failed to switch package source'));
+        dispatch(setError(result.error || tPackageSource('error.switchFailed')));
 
-        toast.error('切换失败', {
-          description: result.error || 'Failed to switch package source',
+        toast.error(tPackageSource('error.switchFailed'), {
+          description: result.error,
         });
 
         return false;
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to switch package source';
+      const errorMessage = error instanceof Error ? error.message : tPackageSource('error.switchFailed');
       dispatch(setError(errorMessage));
 
-      toast.error('切换失败', {
+      toast.error(tPackageSource('error.switchFailed'), {
         description: errorMessage,
       });
 
@@ -199,12 +199,12 @@ export const validateConfig = createAsyncThunk(
       if (result.valid) {
         dispatch(setValidationError(null));
       } else {
-        dispatch(setValidationError(result.error || 'Invalid configuration'));
+        dispatch(setValidationError(result.error || tPackageSource('error.invalidConfig')));
       }
 
       return result;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to validate configuration';
+      const errorMessage = error instanceof Error ? error.message : tPackageSource('error.validateFailed');
       dispatch(setValidationError(errorMessage));
 
       return { valid: false, error: errorMessage };
@@ -235,25 +235,23 @@ export const scanFolder = createAsyncThunk(
         }));
 
         // Show success message
-        toast.success('文件夹扫描完成', {
-          description: `Found ${result.count || result.versions.length} versions`,
-        });
+        toast.success(tPackageSource('scanSuccess', { count: result.count || result.versions.length }));
 
         return result.versions;
       } else {
-        dispatch(setError(result.error || 'Failed to scan folder'));
+        dispatch(setError(result.error || tPackageSource('error.scanFailed')));
 
-        toast.error('扫描失败', {
-          description: result.error || 'Failed to scan folder for versions',
+        toast.error(tPackageSource('error.scanFailed'), {
+          description: result.error,
         });
 
         return [];
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to scan folder';
+      const errorMessage = error instanceof Error ? error.message : tPackageSource('error.scanFailed');
       dispatch(setError(errorMessage));
 
-      toast.error('扫描失败', {
+      toast.error(tPackageSource('error.scanFailed'), {
         description: errorMessage,
       });
 
@@ -285,25 +283,23 @@ export const fetchHttpIndex = createAsyncThunk(
         }));
 
         // Show success message
-        toast.success('HTTP 索引版本获取完成', {
-          description: `Found ${result.count || result.versions.length} versions`,
-        });
+        toast.success(tPackageSource('fetchSuccess', { count: result.count || result.versions.length }));
 
         return result.versions;
       } else {
-        dispatch(setError(result.error || 'Failed to fetch HTTP index'));
+        dispatch(setError(result.error || tPackageSource('error.fetchIndexFailed')));
 
-        toast.error('获取失败', {
-          description: result.error || 'Failed to fetch versions from HTTP index',
+        toast.error(tPackageSource('error.fetchIndexFailed'), {
+          description: result.error,
         });
 
         return [];
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch HTTP index';
+      const errorMessage = error instanceof Error ? error.message : tPackageSource('error.fetchIndexFailed');
       dispatch(setError(errorMessage));
 
-      toast.error('获取失败', {
+      toast.error(tPackageSource('error.fetchIndexFailed'), {
         description: errorMessage,
       });
 
@@ -340,19 +336,17 @@ export const setChannelPreference = createAsyncThunk(
 
       if (result.success) {
         dispatch(setSelectedChannel(channel));
-        toast.success('渠道已设置', {
-          description: `Channel preference set to: ${channel}`,
-        });
+        toast.success(tPackageSource('channelSetSuccess', { channel }));
         return true;
       } else {
-        toast.error('设置失败', {
-          description: result.error || 'Failed to set channel preference',
+        toast.error(tPackageSource('error.channelFailed'), {
+          description: result.error,
         });
         return false;
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to set channel';
-      toast.error('设置失败', {
+      const errorMessage = error instanceof Error ? error.message : tPackageSource('error.channelFailed');
+      toast.error(tPackageSource('error.channelFailed'), {
         description: errorMessage,
       });
       return false;

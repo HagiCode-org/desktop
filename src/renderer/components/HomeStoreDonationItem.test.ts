@@ -41,11 +41,11 @@ describe('HomeStoreDonationItem', () => {
     assert.doesNotMatch(source, /给作者来杯卡布奇诺|给作者晚餐加上小青龙|给作者刷一个嘉年华/);
   });
 
-  it('shows no-privilege notice and keeps required fixed Chinese campaign copy', async () => {
+  it('shows no-privilege notice and localizes the campaign headline through i18n keys', async () => {
     const source = await fs.readFile(componentPath, 'utf8');
 
-    assert.match(source, /作者快穷死了，救救作者/);
-    assert.match(source, /作者的 token 要耗尽了，快为作者续命/);
+    assert.match(source, /donationItem\.headline/);
+    assert.match(source, /donationItem\.subheadline/);
     assert.match(source, /donationItem\.noPrivilegeNotice/);
   });
 

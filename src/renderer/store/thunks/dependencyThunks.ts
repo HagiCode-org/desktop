@@ -14,6 +14,10 @@ import {
   type DependencyItem,
 } from '../slices/dependencySlice';
 import { setDependencyCheckResults } from '../slices/onboardingSlice';
+import i18n from 'i18next';
+
+const tToast = (key: string, options?: Record<string, unknown>): string =>
+  i18n.t(`components:dependencyManagement.installToast.${key}`, options) as string;
 
 interface DependencyManualActionPlan {
   message: string;
@@ -210,8 +214,8 @@ export const installFromManifest = createAsyncThunk(
           })),
         }));
 
-        toast.error('自动安装已禁用', {
-          description: result.error || '请按提示在 Desktop 外部完成手动安装后再刷新状态。',
+        toast.error(tToast('manualDisabledTitle'), {
+          description: result.error || tToast('manualDisabledDescription'),
         });
 
         return false;
@@ -232,17 +236,17 @@ export const installFromManifest = createAsyncThunk(
           const success = result.result.success.length;
 
           if (success > 0) {
-            toast.success('依赖安装完成', {
-              description: `${success} 个依赖安装成功，${failed} 个失败`,
+            toast.success(tToast('completedTitle'), {
+              description: tToast('completedDescription', { success, failed }),
             });
           } else {
-            toast.error('依赖安装失败', {
-              description: `${failed} 个依赖安装失败`,
+            toast.error(tToast('failedTitle'), {
+              description: tToast('allFailedDescription', { count: failed }),
             });
           }
         } else {
-          toast.success('依赖安装成功', {
-            description: '所有依赖已成功安装',
+          toast.success(tToast('successTitle'), {
+            description: tToast('successDescription'),
           });
         }
 
@@ -256,8 +260,8 @@ export const installFromManifest = createAsyncThunk(
           errors: [{ dependency: 'unknown', error: 'Installation failed' }],
         }));
 
-        toast.error('依赖安装失败', {
-          description: '安装过程中出现错误',
+        toast.error(tToast('failedTitle'), {
+          description: tToast('genericErrorDescription'),
         });
       }
 
@@ -268,8 +272,8 @@ export const installFromManifest = createAsyncThunk(
         errors: [{ dependency: 'unknown', error: error instanceof Error ? error.message : String(error) }],
       }));
 
-      toast.error('依赖安装失败', {
-        description: error instanceof Error ? error.message : '未知错误',
+      toast.error(tToast('failedTitle'), {
+        description: error instanceof Error ? error.message : tToast('unknownError'),
       });
 
       console.error('Failed to install from manifest:', error);
@@ -293,14 +297,14 @@ export const installSingleDependency = createAsyncThunk(
       );
 
       if (!result.success) {
-        toast.error(result.status === 'manual-action-required' ? '自动安装已禁用' : '依赖安装失败', {
-          description: result.error || `${params.dependencyKey} 安装失败`,
+        toast.error(result.status === 'manual-action-required' ? tToast('manualDisabledTitle') : tToast('failedTitle'), {
+          description: result.error || tToast('singleFailedDescription', { name: params.dependencyKey }),
         });
         return { success: false, status: result.status };
       }
 
-      toast.success('依赖安装成功', {
-        description: `${params.dependencyKey} 已成功安装`,
+      toast.success(tToast('successTitle'), {
+        description: tToast('singleSuccessDescription', { name: params.dependencyKey }),
       });
 
       return { success: true };
@@ -308,8 +312,8 @@ export const installSingleDependency = createAsyncThunk(
     } catch (error) {
       console.error('Failed to install single dependency:', error);
 
-      toast.error('依赖安装失败', {
-        description: error instanceof Error ? error.message : '未知错误',
+      toast.error(tToast('failedTitle'), {
+        description: error instanceof Error ? error.message : tToast('unknownError'),
       });
 
       throw error;

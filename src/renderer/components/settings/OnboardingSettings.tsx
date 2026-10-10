@@ -33,7 +33,7 @@ export function OnboardingSettings() {
       if (result.success) {
         toast.success(t('settings.onboarding.homepageTour.resetSuccess'));
       } else {
-        toast.error(t('settings.onboarding.homepageTour.resetError', { error: result.error ?? 'Unknown error' }));
+        toast.error(t('settings.onboarding.homepageTour.resetError', { error: result.error ?? t('common:common.unknownError') }));
       }
     } catch (error) {
       toast.error(t('settings.onboarding.homepageTour.resetError', { error: String(error) }));

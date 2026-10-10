@@ -497,9 +497,9 @@ const WebServiceStatusCard: React.FC = () => {
           <Package className="h-4 w-4" />
           <AlertDescription>
             <div className="space-y-2">
-              <p className="font-medium">{t('webServiceStatus.noVersionAlert.title') || 'No Active Version'}</p>
+              <p className="font-medium">{t('webServiceStatus.noVersionAlert.title')}</p>
               <p className="text-sm">
-                {t('webServiceStatus.noVersionAlert.message') || 'Please install and activate a version first.'}
+                {t('webServiceStatus.noVersionAlert.message')}
               </p>
             </div>
           </AlertDescription>
@@ -513,9 +513,9 @@ const WebServiceStatusCard: React.FC = () => {
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             <div className="space-y-2">
-              <p className="font-medium">{t('webServiceStatus.versionNotReadyAlert.title') || 'Version Not Ready'}</p>
+              <p className="font-medium">{t('webServiceStatus.versionNotReadyAlert.title')}</p>
               <p className="text-sm">
-                {t('webServiceStatus.versionNotReadyAlert.message') || 'Active version has missing dependencies.'}
+                {t('webServiceStatus.versionNotReadyAlert.message')}
               </p>
             </div>
           </AlertDescription>
@@ -534,12 +534,12 @@ const WebServiceStatusCard: React.FC = () => {
   );
 
   const serviceDetailItems = [
-    { label: t('webServiceStatus.details.serviceUrl'), value: webServiceInfo.url || 'N/A', primary: true },
-    { label: t('webServiceStatus.details.listenAddress'), value: webServiceInfo.host || 'N/A' },
+    { label: t('webServiceStatus.details.serviceUrl'), value: webServiceInfo.url || t('common:common.notAvailable'), primary: true },
+    { label: t('webServiceStatus.details.listenAddress'), value: webServiceInfo.host || t('common:common.notAvailable') },
     { label: t('webServiceStatus.details.uptime'), value: formatUptime(webServiceInfo.uptime) },
     { label: t('webServiceStatus.details.restartCount'), value: webServiceInfo.restartCount.toString() },
-    { label: t('webServiceStatus.details.port'), value: (webServiceInfo.port || 'N/A').toString() },
-    { label: t('webServiceStatus.details.version') || 'Version', value: activeVersion?.version || 'N/A' },
+    { label: t('webServiceStatus.details.port'), value: (webServiceInfo.port || t('common:common.notAvailable')).toString() },
+    { label: t('webServiceStatus.details.version'), value: activeVersion?.version || t('common:common.notAvailable') },
   ];
 
   return (
@@ -591,7 +591,7 @@ const WebServiceStatusCard: React.FC = () => {
                     {startupSummary}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {isRunning ? (webServiceInfo.url || 'N/A') : accessUrlPreview}
+                    {isRunning ? (webServiceInfo.url || t('common:common.notAvailable')) : accessUrlPreview}
                   </p>
                 </div>
 

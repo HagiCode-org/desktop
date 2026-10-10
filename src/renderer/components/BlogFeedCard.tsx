@@ -63,7 +63,7 @@ const BlogFeedCard: React.FC = () => {
   const handleOpenRss = async () => {
     const result = await window.electronAPI.openExternal(resolveRSSFeedUrl(activeLanguage));
     if (!result.success) {
-      toast.error(result.error || t('blogFeed.openRssFailed', '无法打开 RSS 链接'));
+      toast.error(result.error || t('blogFeed.openRssFailed'));
     }
   };
 
@@ -71,7 +71,7 @@ const BlogFeedCard: React.FC = () => {
   const handleArticleClick = async (link: string) => {
     const result = await window.electronAPI.openExternal(link);
     if (!result.success) {
-      toast.error(result.error || t('blogFeed.openRssFailed', '无法打开 RSS 链接'));
+      toast.error(result.error || t('blogFeed.openRssFailed'));
     }
   };
 
@@ -126,14 +126,14 @@ const BlogFeedCard: React.FC = () => {
 
   const getItemLabel = (index: number) => {
     if (index === 0) {
-      return t('blogFeed.labels.recommended', 'Recommended');
+      return t('blogFeed.labels.recommended');
     }
 
     if (index === 1) {
-      return t('blogFeed.labels.updates', 'Updates');
+      return t('blogFeed.labels.updates');
     }
 
-    return t('blogFeed.labels.news', 'News');
+    return t('blogFeed.labels.news');
   };
 
   return (
@@ -147,12 +147,12 @@ const BlogFeedCard: React.FC = () => {
               </div>
               <div className="min-w-0">
                 <CardTitle className="text-base leading-6">
-                  {t('blogFeed.title', 'Hagicode Recommendations & Updates')}
+                  {t('blogFeed.title')}
                 </CardTitle>
                 {lastUpdate && (
                   <CardDescription className="mt-2 flex items-center gap-1.5 text-xs">
                     <Clock className="h-3 w-3" />
-                    {t('blogFeed.lastUpdate', '最后更新：{{date}}', {
+                    {t('blogFeed.lastUpdate', {
                       date: formatLastUpdate(lastUpdate),
                     })}
                   </CardDescription>
@@ -169,7 +169,7 @@ const BlogFeedCard: React.FC = () => {
                 className="h-8 gap-1.5"
               >
                 <Rss className="h-3.5 w-3.5" />
-                <span>{t('blogFeed.openRss', 'RSS')}</span>
+                <span>{t('blogFeed.openRss')}</span>
               </Button>
               <Button
                 type="button"
@@ -185,7 +185,7 @@ const BlogFeedCard: React.FC = () => {
                   <RefreshCw className="h-3.5 w-3.5" />
                 )}
                 <span className="hidden sm:inline">
-                  {t('blogFeed.refresh', '刷新')}
+                  {t('blogFeed.refresh')}
                 </span>
               </Button>
             </div>
@@ -196,7 +196,7 @@ const BlogFeedCard: React.FC = () => {
           {error && (
             <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-3">
               <p className="text-sm text-destructive">
-                {t('blogFeed.error', '加载失败，请稍后重试')}
+                {t('blogFeed.error')}
               </p>
               <p className="mt-1 text-xs text-destructive/70">{error}</p>
             </div>
@@ -206,7 +206,7 @@ const BlogFeedCard: React.FC = () => {
             <div className="py-8 text-center text-muted-foreground">
               <Newspaper className="mx-auto mb-2 h-12 w-12 opacity-50" />
               <p className="text-sm">
-                {t('blogFeed.noArticles', '暂无文章')}
+                {t('blogFeed.noArticles')}
               </p>
             </div>
           )}
@@ -215,7 +215,7 @@ const BlogFeedCard: React.FC = () => {
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <span className="ml-2 text-muted-foreground">
-                {t('blogFeed.loading', '加载中...')}
+                {t('blogFeed.loading')}
               </span>
             </div>
           )}
@@ -235,9 +235,9 @@ const BlogFeedCard: React.FC = () => {
                 {getTruncatedDescription(featuredItem.description, 180)}
               </p>
               <div className="mt-4 flex items-center justify-between gap-3 border-t border-border/60 pt-3">
-                <span className="text-xs text-muted-foreground">{t('blogFeed.actions.openFeed', 'Open feed')}</span>
+                <span className="text-xs text-muted-foreground">{t('blogFeed.actions.openFeed')}</span>
                 <Button type="button" variant="outline" size="sm" onClick={() => void handleArticleClick(featuredItem.link)} className="gap-1.5">
-                  {t('blogFeed.actions.readArticle', 'Read article')}
+                  {t('blogFeed.actions.readArticle')}
                   <ExternalLink className="h-3.5 w-3.5" />
                 </Button>
               </div>

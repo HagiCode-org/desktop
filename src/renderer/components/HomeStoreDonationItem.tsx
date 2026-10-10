@@ -260,8 +260,8 @@ export default function HomeStoreDonationItem({ isWindowsStoreRuntime }: HomeSto
     >
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-primary">作者快穷死了，救救作者</h2>
-          <p className="mt-2 text-sm text-foreground/80">作者的 token 要耗尽了，快为作者续命</p>
+          <h2 className="text-xl font-semibold text-primary">{t('donationItem.headline', { ns: 'pages' })}</h2>
+          <p className="mt-2 text-sm text-foreground/80">{t('donationItem.subheadline', { ns: 'pages' })}</p>
           <p
             className="mt-3 text-sm text-muted-foreground"
             data-testid="msstore-donation-no-privilege"

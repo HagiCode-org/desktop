@@ -2,6 +2,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { selectCurrentLanguage, selectAvailableLanguages } from '@/store/slices/i18nSlice';
 import { changeLanguage } from '@/store/thunks/i18nThunks';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +13,7 @@ import { getDesktopLanguageShortLabel } from '../../../shared/desktop-languages'
 
 export function LanguageToggle() {
   const dispatch = useDispatch();
+  const { t } = useTranslation('components');
   const currentLanguage = useSelector(selectCurrentLanguage);
   const availableLanguages = useSelector(selectAvailableLanguages);
   const [mounted, setMounted] = useState(false);
@@ -36,7 +38,8 @@ export function LanguageToggle() {
       <DropdownMenuTrigger asChild>
         <button
           className="w-9 h-9 flex items-center justify-center rounded-lg border border-border bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
-          title="切换语言"
+          title={t('languageSelector.selectLanguage')}
+          aria-label={t('languageSelector.selectLanguage')}
         >
           <span className="text-sm font-medium">{currentLabel}</span>
         </button>

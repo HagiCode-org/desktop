@@ -50,9 +50,9 @@ function getStatusKey(snapshot: TurboEngineLicenseSnapshot | null): string {
   return snapshot.status;
 }
 
-function formatTimestamp(value: string | null): string {
+function formatTimestamp(value: string | null, emptyLabel: string): string {
   if (!value) {
-    return 'N/A';
+    return emptyLabel;
   }
 
   const date = new Date(value);
@@ -340,7 +340,7 @@ export default function TurboEnginePage() {
                 <div key={`${diagnostic.code}-${diagnostic.recordedAt}`} className="commerce-premium-panel rounded-3xl p-5">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <p className="commerce-premium-heading text-sm font-medium">{diagnostic.code}</p>
-                    <p className="commerce-premium-copy text-xs">{formatTimestamp(diagnostic.recordedAt)}</p>
+                    <p className="commerce-premium-copy text-xs">{formatTimestamp(diagnostic.recordedAt, t('common:common.notAvailable'))}</p>
                   </div>
                   <p className="commerce-premium-copy mt-3 text-sm leading-6">{diagnostic.message}</p>
                   {diagnostic.detail ? (

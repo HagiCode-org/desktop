@@ -6,11 +6,12 @@ import { describe, it } from 'node:test';
 const componentPath = path.resolve(process.cwd(), 'src/renderer/components/HomeStoreDonationItem.tsx');
 
 describe('HomeStoreDonationItem render contract', () => {
-  it('uses i18n keys for dynamic strings and keeps only required fixed Chinese copy hardcoded', async () => {
+  it('routes every user-facing string through i18n keys without hardcoded language copy', async () => {
     const source = await fs.readFile(componentPath, 'utf8');
 
-    assert.match(source, /作者快穷死了，救救作者/);
-    assert.match(source, /作者的 token 要耗尽了，快为作者续命/);
+    assert.match(source, /t\('donationItem\.headline'/);
+    assert.match(source, /t\('donationItem\.subheadline'/);
+    assert.doesNotMatch(source, /[\u3040-\u30ff\u4e00-\u9fff\uac00-\ud7af\u0400-\u04ff]/);
     assert.match(source, /t\('donationItem\.purchaseCount'/);
     assert.match(source, /t\('donationItem\.actions\.purchasing'/);
     assert.match(source, /t\('donationItem\.actions\.close'/);

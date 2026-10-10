@@ -21,11 +21,13 @@ describe('blog feed card localized refresh contract', () => {
 
     assert.match(source, /const handleRefresh = \(\) => \{\s*dispatch\(refreshFeed\(\)\);\s*\};/s);
     assert.match(source, /const handleOpenRss = async \(\) => \{\s*const result = await window\.electronAPI\.openExternal\(resolveRSSFeedUrl\(activeLanguage\)\);/s);
-    assert.match(source, /t\('blogFeed\.openRss', 'RSS'\)/);
+    assert.match(source, /t\('blogFeed\.openRss'\)/);
     assert.match(source, /date\.toLocaleDateString\(activeLanguage,/);
     assert.match(source, /date\.toLocaleString\(activeLanguage,/);
-    assert.match(source, /t\('blogFeed\.error', '加载失败，请稍后重试'\)/);
-    assert.match(source, /t\('blogFeed\.noArticles', '暂无文章'\)/);
-    assert.match(source, /t\('blogFeed\.loading', '加载中\.\.\.'\)/);
+    assert.match(source, /t\('blogFeed\.error'\)/);
+    assert.match(source, /t\('blogFeed\.noArticles'\)/);
+    assert.match(source, /t\('blogFeed\.loading'\)/);
+    // User-facing copy lives in the locale resources, never as inline fallback literals.
+    assert.doesNotMatch(source, /[\u3040-\u30ff\u4e00-\u9fff\uac00-\ud7af\u0400-\u04ff]/);
   });
 });
