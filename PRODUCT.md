@@ -1,32 +1,53 @@
 # Product
 
-## Register
+<!-- impeccable:product-schema 1 -->
 
-product
+## Platform
+
+web
 
 ## Users
 
-Hagicode Desktop is for developers and operators who run Hagicode Server on a local machine and need a dependable control surface for daily use. They move between setup, service start and stop, version switching, dependency repair, diagnostics, and maintenance tasks, often while also watching for official recommendations or update notices.
+Individual developers who install and run Hagicode Server on their own machine. They move between first-run setup, daily service start and stop, version switching, dependency repair, diagnostics, and maintenance, and they choose which AI agent executor (Claude Code, Codex, GitHub Copilot CLI) the server uses. They also watch for official recommendations and update notices without wanting them to interrupt primary workflows.
 
 ## Product Purpose
 
-The desktop app packages the Hagicode runtime into a local-first control console that keeps essential operational work in one place. Success means users can understand current service health at a glance, take the next maintenance action without hunting across screens, and stay aware of recommended updates or messages without losing focus on primary workflows.
+Hagicode Desktop packages the Hagicode runtime into a local-first control console that keeps essential operational work in one place. Success means users can understand current service health at a glance, take the next maintenance action without hunting across screens, and stay aware of recommended updates or messages without losing focus on primary workflows.
 
-## Brand Personality
+## Positioning
 
-Professional, agile, and clear. The interface should feel competent and focused rather than theatrical, giving users the sense that Desktop is a reliable operations companion that stays out of the way until action is needed.
+Desktop does two things at once that running the server by hand does not: it manages the runtime for the user (bundled .NET runtime, install, version switching, dependency checks, tray access, so no terminal is needed for upkeep), and it is the single control surface for service health, packages, and agent executor selection. Zero-setup runtime management and the unified control and agent hub are equally core.
 
-## Anti-references
+## Operating Context
 
-Do not make the app feel like a marketing website. Do not lean on large-area glassmorphism, neon glow, or decorative "tech" effects. Do not trade readability, status clarity, or operational efficiency for visual novelty.
+Electron app on Windows (portable, MSIX, Store, Steam mode), macOS (x64 and arm64), and Linux (AppImage, zip). It runs alongside a local Hagicode Server and is used in short, frequent sessions: check status, start or stop, switch version, repair a dependency, glance at recommendations. Node/npm for CLI package management and auxiliary services is external to Desktop; only the managed .NET runtime ships with it.
 
-## Design Principles
+## Capabilities and Constraints
 
-1. Put operational state first: service health, active version, logs, and next actions should be visible before secondary content.
-2. Keep primary actions close to the status they affect, so users can start, stop, repair, or inspect without context switching.
-3. Treat recommendations as supportive context, not as the center of attention, so updates and messages inform without interrupting.
-4. Prefer calm density over dramatic decoration: structured panels, clear labels, and consistent controls should carry the experience.
-5. Respect expert flow with strong keyboard focus, restrained motion, and language coverage that keeps the interface usable across the configured locales.
+- First-run onboarding and daily startup; start, stop, restart, and switch Hagicode Server versions.
+- Dashboard for local resources, server status, and service health.
+- Package sources, dependency management (required packages are marked; selected packages combine into a copyable batch install command), license information, and runtime updates.
+- Agent executor selection (Claude Code, Codex, GitHub Copilot CLI).
+- RSS-based recommendations and messages; system tray integration for quick background access.
+- Downloads are direct only; the torrent-based path has been removed.
+- Privileged OS access goes through the preload bridge; all user-facing strings go through the hagi18n flow.
+- Locale set is ten languages: en-US, zh-CN, zh-Hant, de-DE, es-ES, fr-FR, ja-JP, ko-KR, pt-BR, ru-RU. READMEs describe English and Simplified Chinese only; that is a documentation gap, not a scope limit.
+
+## Brand Commitments
+
+Professional, agile, and clear. The interface should feel competent and focused rather than theatrical, a reliable operations companion that stays out of the way until action is needed. It must not feel like a marketing website, and it must not trade readability, status clarity, or operational efficiency for visual novelty.
+
+## Evidence on Hand
+
+Real product surface and copy live in `src/renderer/` with locale files under `src/renderer/i18n/`. Documentation is in `README.md`, `README_cn.md`, and `docs/`. No testimonials, usage metrics, or customer case studies are on hand; do not fabricate them.
+
+## Product Principles
+
+1. Put operational state first: service health, active version, logs, and next actions are visible before secondary content.
+2. Keep primary actions next to the status they affect, so users can start, stop, repair, or inspect without context switching.
+3. Make setup disappear: Desktop should manage the runtime so users spend their time on the server, not on its prerequisites.
+4. Treat recommendations and messages as supportive context, never the center of attention.
+5. Serve expert flow in every configured locale, with strong keyboard focus and restrained motion.
 
 ## Accessibility & Inclusion
 
