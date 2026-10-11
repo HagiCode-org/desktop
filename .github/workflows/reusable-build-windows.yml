@@ -519,12 +519,16 @@ jobs:
             echo '- CI build report: `${{ steps.windows_artifacts.outputs.report_path }}`'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # The unpacked ZIP rides along so non-interactive-integration.yml can run the
+      # app directly; the portable .exe is a self-extractor that drops stdout.
+      # publish-windows-release only uploads *.exe/*.msix, so the ZIP is not released.
       - name: Upload Windows release bundle
         uses: actions/upload-artifact@v4
         if: success() && inputs.publish_release_assets && steps.upload_policy.outputs.enabled == 'true' && (steps.signing_policy.outputs.required != 'true' || matrix.target.id != 'msix' || steps.windows_signing.outcome == 'success')
         with:
           name: release-windows-${{ matrix.target.id }}-assets
           path: |
+            ${{ steps.windows_zip.outputs.zip_files }}
             unsigned-artifacts/*
             ${{ steps.windows_artifacts.outputs.report_path }}
           retention-days: 30
