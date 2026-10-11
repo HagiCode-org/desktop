@@ -43,3 +43,9 @@ test('only the canonical packaged integration command remains available', () => 
   assert.equal(packageJson.scripts['package:non-interactive-integration'], 'node scripts/non-interactive-integration-test.mjs');
   assert.equal(Object.hasOwn(packageJson.scripts, 'package:runtime-pm2-integration'), false);
 });
+
+test('Windows release bundle ships the unpacked ZIP the integration workflow needs', () => {
+  const workflow = readFileSync(new URL('../.github/workflows/reusable-build-windows.yml', import.meta.url), 'utf8');
+  const releaseBundle = workflow.split('- name: Upload Windows release bundle')[1]?.split('- name:')[0] ?? '';
+  assert.match(releaseBundle, /steps\.windows_zip\.outputs\.zip_files/);
+});

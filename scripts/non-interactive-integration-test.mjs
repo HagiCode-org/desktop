@@ -506,6 +506,11 @@ async function copyArtifactToPathWithSpaces() {
     }
 
     if (artifact?.type === "portable-exe") {
+      log(
+        "warning: no unpacked ZIP found, falling back to the portable .exe; " +
+          "its self-extracting launcher does not forward stdout and runs from a temp directory, " +
+          "so verification is expected to fail. Download an artifact bundle that includes the unpacked ZIP.",
+      );
       const targetArtifact = path.join(
         stagedRoot,
         path.basename(artifact.path),
@@ -831,7 +836,7 @@ async function readIntegrationDiagnostics(userDataDir) {
 
 function assertRuntimeVerificationOutput(
   output,
-  { artifactRoot, userDataDir, helpers },
+  { artifactRoot, userDataDir, helpers, result, diagnosticContent },
 ) {
   const programHome = parseOutputValue(output, "runtime program home");
   const dataHome = parseOutputValue(output, "runtime data home");
@@ -839,7 +844,10 @@ function assertRuntimeVerificationOutput(
 
   if (!programHome || !dataHome || !dotnetRoot) {
     fail(
-      "Runtime verification output did not include all required runtime structure diagnostics.",
+      "Runtime verification output did not include all required runtime structure diagnostics.\n" +
+        `stdout:\n${output.trim() || "<empty>"}\n` +
+        `stderr:\n${result?.stderr?.trim() || "<empty>"}\n` +
+        `diagnostic:\n${diagnosticContent || "<missing>"}`,
     );
   }
 
@@ -915,7 +923,7 @@ async function runScenario({
     );
   }
 
-  await onSuccess(result);
+  await onSuccess(result, diagnosticContent);
 }
 
 async function main() {
@@ -975,11 +983,13 @@ async function main() {
       executablePath,
       userDataDir,
       commandArgs: runtimeVerifyArgs,
-      onSuccess: async (result) => {
+      onSuccess: async (result, diagnosticContent) => {
         programHome = assertRuntimeVerificationOutput(result.stdout, {
           artifactRoot,
           userDataDir,
           helpers,
+          result,
+          diagnosticContent,
         });
       },
     });
