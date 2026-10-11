@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { after, describe, it } from 'node:test';
-import { desktopHttpClient, HttpStatusError, HttpTimeoutError } from '../http-client.js';
+import { desktopHttpClient, HttpBodyTooLargeError, HttpStatusError, HttpTimeoutError } from '../http-client.js';
 
 type TestServerHandler = (request: IncomingMessage, response: ServerResponse) => void;
 
@@ -100,6 +100,85 @@ describe('desktopHttpClient', () => {
           return true;
         }
       );
+    });
+  });
+
+  it('follows redirects by default', async () => {
+    await withServer((request, response) => {
+      if (request.url === '/start') {
+        response.statusCode = 302;
+        response.setHeader('location', '/final');
+        response.end();
+        return;
+      }
+      response.end('landed');
+    }, async (baseUrl) => {
+      const response = await desktopHttpClient.requestText(`${baseUrl}/start`);
+
+      assert.equal(response.data, 'landed');
+    });
+  });
+
+  it('rejects redirects when redirect is set to error', async () => {
+    await withServer((request, response) => {
+      if (request.url === '/start') {
+        response.statusCode = 302;
+        response.setHeader('location', '/final');
+        response.end();
+        return;
+      }
+      response.end('landed');
+    }, async (baseUrl) => {
+      await assert.rejects(
+        desktopHttpClient.requestBinary(`${baseUrl}/start`, { redirect: 'error' }),
+        (error) => error instanceof TypeError
+      );
+    });
+  });
+
+  it('returns binary bodies within maxBytes', async () => {
+    await withServer((_request, response) => {
+      response.end(Buffer.alloc(8, 7));
+    }, async (baseUrl) => {
+      const response = await desktopHttpClient.requestBinary(`${baseUrl}/small`, { maxBytes: 8 });
+
+      assert.equal(response.data.length, 8);
+    });
+  });
+
+  it('aborts binary bodies that exceed maxBytes when the length is declared', async () => {
+    await withServer((_request, response) => {
+      response.setHeader('content-length', '16');
+      response.end(Buffer.alloc(16, 7));
+    }, async (baseUrl) => {
+      await assert.rejects(
+        desktopHttpClient.requestBinary(`${baseUrl}/declared`, { maxBytes: 8 }),
+        (error) => error instanceof HttpBodyTooLargeError && error.maxBytes === 8
+      );
+    });
+  });
+
+  it('aborts streamed binary bodies that exceed maxBytes without a declared length', async () => {
+    await withServer((_request, response) => {
+      response.setHeader('transfer-encoding', 'chunked');
+      response.write(Buffer.alloc(6, 1));
+      response.write(Buffer.alloc(6, 2));
+      response.end(Buffer.alloc(6, 3));
+    }, async (baseUrl) => {
+      await assert.rejects(
+        desktopHttpClient.requestBinary(`${baseUrl}/streamed`, { maxBytes: 8 }),
+        (error) => error instanceof HttpBodyTooLargeError
+      );
+    });
+  });
+
+  it('does not limit binary bodies when maxBytes is absent', async () => {
+    await withServer((_request, response) => {
+      response.end(Buffer.alloc(64 * 1024, 5));
+    }, async (baseUrl) => {
+      const response = await desktopHttpClient.requestBinary(`${baseUrl}/unbounded`);
+
+      assert.equal(response.data.length, 64 * 1024);
     });
   });
 });

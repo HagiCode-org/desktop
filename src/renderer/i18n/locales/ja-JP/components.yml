@@ -357,6 +357,16 @@ blogFeed:
   actions:
     readArticle: 記事を開く
     openFeed: フィードを開く
+homePromote:
+  title: Hagicode のおすすめ
+  regionLabel: Hagicode のおすすめ情報
+  previous: 前へ
+  next: 次へ
+  pause: 切り替えを一時停止
+  resume: 切り替えを再開
+  position: '{{current}} / {{total}}'
+  defaultCta: 詳しく見る
+  openFailed: リンクを開けませんでした
 serviceRegion:
   title: サービス地域
   resetTitle: 地域選択の案内を再テスト

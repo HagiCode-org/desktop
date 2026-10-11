@@ -7,10 +7,12 @@ export interface HttpRequestOptions {
   timeoutMs?: number;
   signal?: AbortSignal;
   validateStatus?: (status: number) => boolean;
+  redirect?: RequestRedirect;
 }
 
 export interface BinaryRequestOptions extends HttpRequestOptions {
   onDownloadProgress?: (progress: { loaded: number; total?: number }) => void;
+  maxBytes?: number;
 }
 
 export interface HttpResponse<T> {
@@ -28,6 +30,16 @@ export class HttpTimeoutError extends Error {
     super(`Request timed out after ${timeoutMs}ms: ${url}`);
     this.name = 'HttpTimeoutError';
     this.timeoutMs = timeoutMs;
+  }
+}
+
+export class HttpBodyTooLargeError extends Error {
+  readonly maxBytes: number;
+
+  constructor(maxBytes: number, url: string) {
+    super(`Response body exceeds ${maxBytes} bytes: ${url}`);
+    this.name = 'HttpBodyTooLargeError';
+    this.maxBytes = maxBytes;
   }
 }
 
@@ -117,6 +129,7 @@ async function executeFetch(url: string, options: HttpRequestOptions): Promise<R
       headers: prepareHeaders(options),
       body: prepareBody(options),
       signal: controller.signal,
+      redirect: options.redirect ?? 'follow',
     });
   } catch (error) {
     if (timedOut) {
@@ -194,6 +207,12 @@ export async function requestBinary(url: string, options: BinaryRequestOptions =
     return createResponse(url, response, buffer, options.validateStatus);
   }
 
+  const maxBytes = options.maxBytes;
+  if (maxBytes !== undefined && total !== undefined && total > maxBytes) {
+    await response.body.cancel();
+    throw new HttpBodyTooLargeError(maxBytes, url);
+  }
+
   const chunks: Buffer[] = [];
   const reader = response.body.getReader();
   let loaded = 0;
@@ -204,8 +223,12 @@ export async function requestBinary(url: string, options: BinaryRequestOptions =
       break;
     }
     const chunk = Buffer.from(value);
-    chunks.push(chunk);
     loaded += chunk.length;
+    if (maxBytes !== undefined && loaded > maxBytes) {
+      await reader.cancel();
+      throw new HttpBodyTooLargeError(maxBytes, url);
+    }
+    chunks.push(chunk);
     options.onDownloadProgress?.({ loaded, total });
   }
 

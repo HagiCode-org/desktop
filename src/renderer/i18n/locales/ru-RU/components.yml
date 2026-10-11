@@ -357,6 +357,16 @@ blogFeed:
   actions:
     readArticle: Открыть статью
     openFeed: Открыть ленту
+homePromote:
+  title: Рекомендации Hagicode
+  regionLabel: Рекомендации Hagicode
+  previous: Предыдущая
+  next: Следующая
+  pause: Приостановить смену
+  resume: Продолжить смену
+  position: '{{current}} / {{total}}'
+  defaultCta: Подробнее
+  openFailed: Не удалось открыть ссылку
 serviceRegion:
   title: Регион службы
   resetTitle: Повторно проверить выбор региона

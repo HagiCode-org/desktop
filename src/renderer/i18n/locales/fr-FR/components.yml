@@ -357,6 +357,16 @@ blogFeed:
   actions:
     readArticle: Lire l’article
     openFeed: Ouvrir le flux
+homePromote:
+  title: Recommandations Hagicode
+  regionLabel: Recommandations Hagicode
+  previous: Précédent
+  next: Suivant
+  pause: Mettre en pause le défilement
+  resume: Reprendre le défilement
+  position: '{{current}} / {{total}}'
+  defaultCta: En savoir plus
+  openFailed: Impossible d’ouvrir le lien
 serviceRegion:
   title: Région de service
   resetTitle: Tester à nouveau le choix de région

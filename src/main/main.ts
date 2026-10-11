@@ -35,6 +35,8 @@ import {
   relaunchSteamLinuxOnHostIfNeeded,
 } from './steam-linux-startup-compatibility.js';
 import { RSSFeedManager, DEFAULT_RSS_FEED_URL } from './rss-feed-manager.js';
+import { PromoteImageCache } from './promote-image-cache.js';
+import { PROMOTE_DOCUMENT_TIMEOUT_MS, PROMOTE_INDEX_ORIGIN, PromoteManager } from './promote-manager.js';
 import {
   openAboutWindow,
   openHagicodeInAppWindow,
@@ -61,6 +63,7 @@ import {
   registerDebugOptionsHandlers,
   registerRuntimeDataPathHandlers,
   registerRssHandlers,
+  registerPromoteHandlers,
   registerSubscriptionHandlers,
   disposeSubscriptionHandlers,
   registerTurboEngineLicenseHandlers,
@@ -2850,6 +2853,17 @@ app.whenReady().then(async () => {
 
   // Start auto-refresh for RSS feed
   rssFeedManager.startAutoRefresh();
+
+  const promoteManager = new PromoteManager({
+    store: configManager.getStore() as unknown as Store,
+    imageCache: new PromoteImageCache({
+      imageDir: path.join(app.getPath('userData'), 'promote-cache', 'images'),
+      indexOrigin: PROMOTE_INDEX_ORIGIN,
+      budgetMs: PROMOTE_DOCUMENT_TIMEOUT_MS,
+    }),
+  });
+  registerPromoteHandlers(promoteManager);
+  log.info('[App] Promote manager initialized');
 
   // Set active version before initial status hydration so recovery can use it.
   try {

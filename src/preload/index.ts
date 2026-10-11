@@ -41,6 +41,8 @@ import type { TurboEngineLicenseBridge } from '../types/turboengine-license.js';
 import { turboEngineChannels } from '../types/turboengine-license.js';
 import type { MsstoreDonationItemBridge } from '../types/msstore-donation-item.js';
 import { msstoreDonationItemChannels } from '../types/msstore-donation-item.js';
+import type { PromoteBridge } from '../types/promote.js';
+import { promoteChannels } from '../types/promote.js';
 import type {
   DesktopBootstrapSnapshot,
 } from '../types/bootstrap.js';
@@ -238,6 +240,7 @@ interface ElectronAPI {
   getDistributionModeState: () => Promise<DistributionModeState>;
   getMsstoreRatingPromptState: () => Promise<{ installDate?: string }>;
   msstoreDonationItem: MsstoreDonationItemBridge;
+  promote: PromoteBridge;
   showWindow: () => Promise<void>;
   hideWindow: () => Promise<void>;
   openHagicodeInApp: (url: string) => Promise<InterfaceOpenResult>;
@@ -648,6 +651,10 @@ const electronAPI: ElectronAPI = {
   logDirectory: logDirectoryBridge,
   runtimeDataPath: runtimeDataPathBridge,
   debugOptions: debugOptionsBridge,
+  promote: {
+    getItems: (request) => ipcRenderer.invoke(promoteChannels.getItems, request),
+    getImage: (request) => ipcRenderer.invoke(promoteChannels.getImage, request),
+  },
   ...(subscriptionFeatureEnabled ? { subscription: subscriptionBridge } : {}),
   ...(turboEngineLicenseFeatureEnabled ? { turboEngineLicense: turboEngineLicenseBridge } : {}),
   ...(turboEngineLicenseFeatureEnabled ? { msstoreDonationItem: msstoreDonationItemBridge } : {}),

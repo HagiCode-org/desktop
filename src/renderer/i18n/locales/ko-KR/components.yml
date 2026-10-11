@@ -357,6 +357,16 @@ blogFeed:
   actions:
     readArticle: 자세히 보기
     openFeed: 피드 열기
+homePromote:
+  title: Hagicode 추천
+  regionLabel: Hagicode 추천 정보
+  previous: 이전
+  next: 다음
+  pause: 자동 넘김 일시정지
+  resume: 자동 넘김 재개
+  position: '{{current}} / {{total}}'
+  defaultCta: 자세히 보기
+  openFailed: 링크를 열지 못했습니다
 serviceRegion:
   title: 서비스 지역
   resetTitle: 지역 선택 안내 다시 테스트

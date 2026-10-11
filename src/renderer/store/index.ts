@@ -27,6 +27,7 @@ import msstoreDonationItemReducer, {
   loadMsstoreDonationItemState,
   setMsstoreDonationItemState,
 } from './slices/msstoreDonationItemSlice';
+import homePromoteReducer from './slices/homePromoteSlice';
 import versionUpdateReducer, {
   fetchVersionAutoUpdateSettings,
   fetchVersionUpdateSnapshot,
@@ -83,6 +84,7 @@ export const store = configureStore({
     subscription: subscriptionReducer,
     turboEngineLicense: turboEngineLicenseReducer,
     msstoreDonationItem: msstoreDonationItemReducer,
+    homePromote: homePromoteReducer,
     versionUpdate: versionUpdateReducer,
   },
   middleware: (getDefaultMiddleware) =>

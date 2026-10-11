@@ -49,6 +49,9 @@ export { registerRuntimeDataPathHandlers } from './runtimeDataPathHandlers.js';
 // RSS handlers
 export { registerRssHandlers, initRssHandlers } from './rssHandlers.js';
 
+// Promote handlers
+export { registerPromoteHandlers } from './promoteHandlers.js';
+
 // View handlers
 export { registerViewHandlers, initViewHandlers } from './viewHandlers.js';
 

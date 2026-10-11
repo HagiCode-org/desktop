@@ -10,6 +10,8 @@ import BlogFeedCard from './BlogFeedCard';
 import HomeStoreOfferPanel from './HomeStoreOfferPanel';
 import HomeStoreRatingPrompt from './HomeStoreRatingPrompt';
 import HomeStoreDonationItem from './HomeStoreDonationItem';
+import HomePromotePanel from './HomePromotePanel';
+import { PageShell } from './ui/page-shell';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -498,8 +500,14 @@ export default function SystemManagementView({
     return Math.max(0, Math.min(100, installProgress?.percentage ?? 0));
   })();
 
+  const installStateLabel = isHomepageInstallBusy
+    ? getHomepageInstallStageLabel()
+    : versionUpdateReminder
+      ? t(`system.updateReminder.states.${versionUpdateReminder.status}`)
+      : '';
+
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <PageShell>
       {shouldShowVersionUpdateReminder ? (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
@@ -507,81 +515,67 @@ export default function SystemManagementView({
           transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
           {...{ [HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE]: 'update-reminder' }}
         >
-          <section className="rounded-3xl border border-border/80 bg-card p-6 shadow-sm">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="rounded-xl bg-primary/10 p-3">
-                    <BellRing className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-xl font-semibold text-foreground">{t('system.updateReminder.title')}</h2>
-                      <span className="inline-flex rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-                        {isHomepageInstallBusy ? getHomepageInstallStageLabel() : t(`system.updateReminder.states.${versionUpdateReminder.status}`)}
-                      </span>
-                    </div>
-                    <p className="mt-2 max-w-[62ch] text-sm text-muted-foreground">
-                      {isHomepageInstallBusy ? getHomepageInstallSummary() : t(`system.updateReminder.descriptions.${versionUpdateReminder.disabledReason ?? versionUpdateReminder.status}`, {
-                        error: versionUpdateReminder.failure?.message ?? '',
-                      })}
-                    </p>
-                  </div>
+          <section className="rounded-2xl border border-primary/25 bg-primary/5 px-4 py-3">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+              <div className="flex min-w-0 flex-1 basis-72 items-start gap-3">
+                <BellRing className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                <div className="min-w-0">
+                  <h2 className="text-base font-semibold text-foreground">{t('system.updateReminder.title')}</h2>
+                  <p className="mt-1 max-w-[62ch] text-sm text-muted-foreground">
+                    {isHomepageInstallBusy ? getHomepageInstallSummary() : t(`system.updateReminder.descriptions.${versionUpdateReminder.disabledReason ?? versionUpdateReminder.status}`, {
+                      error: versionUpdateReminder.failure?.message ?? '',
+                    })}
+                  </p>
                 </div>
-
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  <div className="rounded-xl border border-border bg-muted/30 p-3">
-                    <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('system.updateReminder.labels.current')}</div>
-                    <div className="mt-1 font-medium text-foreground">
-                      {versionUpdateReminder.currentVersion?.version ?? t('status.loading')}
-                    </div>
-                  </div>
-                  <div className="rounded-xl border border-border bg-muted/30 p-3">
-                    <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('system.updateReminder.labels.latest')}</div>
-                    <div className="mt-1 font-medium text-foreground">
-                      {versionUpdateReminder.latestVersion?.version ?? t('status.loading')}
-                    </div>
-                  </div>
-                  <div className="rounded-xl border border-border bg-muted/30 p-3">
-                    <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('system.updateReminder.labels.state')}</div>
-                    <div className="mt-1 font-medium text-foreground">{isHomepageInstallBusy ? getHomepageInstallStageLabel() : t(`system.updateReminder.states.${versionUpdateReminder.status}`)}</div>
-                  </div>
-                </div>
-
-                {isHomepageInstallBusy ? (
-                  <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <div className="text-sm font-medium text-foreground">{getHomepageInstallStageLabel()}</div>
-                        <div className="mt-1 text-sm text-muted-foreground">{getHomepageInstallSummary()}</div>
-                      </div>
-                      <div className="text-sm font-medium text-foreground">
-                        {homepageInstallProgressValue}%
-                      </div>
-                    </div>
-                    <Progress value={homepageInstallProgressValue} className="mt-3 h-2.5" />
-                  </div>
-                ) : null}
               </div>
 
-              <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
+              <dl className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+                <div>
+                  <dt className="text-xs text-muted-foreground">{t('system.updateReminder.labels.current')}</dt>
+                  <dd className="mt-0.5 font-medium tabular-nums text-foreground">
+                    {versionUpdateReminder.currentVersion?.version ?? t('status.loading')}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">{t('system.updateReminder.labels.latest')}</dt>
+                  <dd className="mt-0.5 font-medium tabular-nums text-foreground">
+                    {versionUpdateReminder.latestVersion?.version ?? t('status.loading')}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">{t('system.updateReminder.labels.state')}</dt>
+                  <dd className="mt-0.5 font-medium text-foreground">{installStateLabel}</dd>
+                </div>
+              </dl>
+
+              <div className="flex flex-wrap items-center gap-2">
                 {versionUpdateReminder.status === 'ready' ? (
-                  <Button type="button" onClick={() => void handleInstallLatest()} className="justify-between" disabled={isHomepageInstallBusy}>
+                  <Button type="button" size="sm" onClick={() => void handleInstallLatest()} disabled={isHomepageInstallBusy}>
                     <span>{isHomepageInstallBusy ? getHomepageInstallStageLabel() : t('system.updateReminder.actions.installLatest')}</span>
                     {isHomepageInstallBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
                   </Button>
                 ) : null}
-                <Button type="button" variant={versionUpdateReminder.status === 'ready' ? 'outline' : 'default'} onClick={handleOpenVersionManagement} className="justify-between">
+                <Button type="button" size="sm" variant={versionUpdateReminder.status === 'ready' ? 'outline' : 'default'} onClick={handleOpenVersionManagement}>
                   <span>{t('system.updateReminder.actions.openVersionPage')}</span>
                   <ArrowRight className="h-4 w-4" />
                 </Button>
                 {versionUpdateReminder.status === 'disabled' ? (
-                  <Button type="button" variant="outline" onClick={handleOpenUpdateSettings}>
+                  <Button type="button" size="sm" variant="outline" onClick={handleOpenUpdateSettings}>
                     {t('system.updateReminder.actions.openSettings')}
                   </Button>
                 ) : null}
               </div>
             </div>
+
+            {isHomepageInstallBusy ? (
+              <div className="mt-3 border-t border-primary/15 pt-3">
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="font-medium text-foreground">{getHomepageInstallStageLabel()}</span>
+                  <span className="font-medium tabular-nums text-foreground">{homepageInstallProgressValue}%</span>
+                </div>
+                <Progress value={homepageInstallProgressValue} className="mt-2 h-2" />
+              </div>
+            ) : null}
           </section>
         </motion.div>
       ) : null}
@@ -590,123 +584,36 @@ export default function SystemManagementView({
         disabled={distributionState.steamMode || onboardingActive || !homepageTourStartupResolved || homepageTourActive}
       />
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.95fr)]">
-        <div className="space-y-6">
+      {/* Operational panels lead; store offers and the feed sit in a supporting rail that drops below when the window is narrow. */}
+      <div className="grid gap-6 @4xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="min-w-0 space-y-4">
           <div {...{ [HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE]: 'service-card' }}>
             <WebServiceStatusCard />
           </div>
 
-          <section
-            className="rounded-3xl border border-border/80 bg-card p-6 shadow-sm"
-            {...{ [HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE]: 'log-access' }}
-          >
-            <div>
-              <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                <div>
-                  <h2 className="flex items-center gap-2 text-xl font-semibold">
-                    <FolderOpen className="w-5 h-5 text-primary" />
-                    {t('system.logQuickAccess.title')}
-                  </h2>
-                </div>
-                <span className="inline-flex self-start rounded-full border border-border/70 bg-muted/25 px-2.5 py-1 text-xs text-muted-foreground">
-                  {isLogTargetsLoading ? t('system.logQuickAccess.loading') : t('system.logQuickAccess.hint')}
-                </span>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                {logQuickAccessItems.map(({ target, icon: Icon, label, status }) => {
-                  const isOpening = openingTarget === target;
-                  const isDisabled = isLogTargetsLoading || isOpening || !status.available;
-
-                  return (
-                    <div
-                      key={target}
-                      className="flex flex-col gap-4 rounded-2xl border border-border/70 bg-muted/20 p-4"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-start gap-3">
-                          <div className="mt-0.5 rounded-xl border border-border/70 bg-background p-2.5 shadow-sm">
-                            <Icon className="w-4 h-4 text-primary" />
-                          </div>
-                          <div>
-                            <h3 className="font-medium text-foreground">{label}</h3>
-                            <p className="mt-1 text-sm text-muted-foreground">
-                              {getLogTargetDescription(target, status)}
-                            </p>
-                          </div>
-                        </div>
-                        <span
-                          className={cn(
-                            'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium',
-                            status.available
-                              ? 'bg-primary/10 text-primary'
-                              : 'bg-muted text-muted-foreground',
-                          )}
-                        >
-                          {status.available
-                            ? t('system.logQuickAccess.status.available')
-                            : t('system.logQuickAccess.status.unavailable')}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center justify-between gap-3 border-t border-border/60 pt-3">
-                        <span className="text-xs text-muted-foreground">
-                          {status.available
-                            ? t('system.logQuickAccess.status.available')
-                            : t('system.logQuickAccess.status.unavailable')}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => void handleOpenLogDirectory(target)}
-                          disabled={isDisabled}
-                          className="justify-between gap-2"
-                        >
-                          <span>{label}</span>
-                          {isOpening ? (
-                            <LoaderCircle className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <FolderOpen className="w-4 h-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </section>
-        </div>
-
-        <div className="space-y-6">
-          <HomeStoreDonationItem isWindowsStoreRuntime={distributionState.winStoreMode} />
-          <HomeStoreOfferPanel isWindowsStoreRuntime={distributionState.winStoreMode} />
-          <HomeStoreRatingPrompt />
-
           {activeVersion ? (
             <section
-              className="rounded-3xl border border-border/80 bg-card p-6 shadow-sm"
+              className="@container rounded-2xl border border-border/80 bg-card p-6"
               {...{
                 [HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE]: 'version-section',
                 [HOMEPAGE_TOUR_VARIANT_ATTRIBUTE]: HOMEPAGE_TOUR_VARIANTS.activeVersion,
               }}
             >
               <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <Package className="w-5 h-5 text-primary" />
-                    <h2 className="text-xl font-semibold">{t('common.version')}</h2>
-                  </div>
-                  <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">{activeVersion.version}</p>
+                <div className="min-w-0">
+                  <h2 className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                    <Package className="h-4 w-4 text-primary" />
+                    {t('common.version')}
+                  </h2>
+                  <p className="mt-1 text-xl font-semibold tracking-tight tabular-nums text-foreground">{activeVersion.version}</p>
                 </div>
-                <Button type="button" variant="ghost" onClick={handleOpenVersionManagement} className="px-0 text-primary">
+                <Button type="button" variant="ghost" size="sm" onClick={handleOpenVersionManagement} className="text-primary">
                   {t('system.activeVersion.actions.manage')}
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
 
-              <div className="mt-5 space-y-3">
+              <dl className="mt-4 grid gap-x-8 gap-y-3 border-t border-border/60 pt-4 @md:grid-cols-2">
                 {[
                   { label: t('system.activeVersion.labels.version'), value: activeVersion.packageFilename },
                   { label: t('common.platform'), value: activeVersion.platform },
@@ -716,29 +623,28 @@ export default function SystemManagementView({
                   },
                   { label: t('system.activeVersion.labels.status'), value: t('system.activeVersion.states.ready') },
                 ].map((item) => (
-                  <div
-                    key={item.label}
-                    className="flex items-center justify-between gap-4 rounded-2xl border border-border/60 bg-muted/30 px-4 py-3"
-                  >
-                    <span className="text-sm text-muted-foreground">{item.label}</span>
-                    <span className="text-sm font-medium text-foreground">{item.value}</span>
+                  <div key={item.label} className="min-w-0">
+                    <dt className="text-xs text-muted-foreground">{item.label}</dt>
+                    <dd className="mt-0.5 break-all text-sm font-medium text-foreground">{item.value}</dd>
                   </div>
                 ))}
-              </div>
+              </dl>
             </section>
           ) : hasInstalledVersions ? (
             <section
-              className="rounded-3xl border border-border/80 bg-card p-6 shadow-sm"
+              className="rounded-2xl border border-border/80 bg-card p-6"
               {...{
                 [HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE]: 'version-section',
               }}
             >
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
-                <Package className="h-6 w-6" />
-              </div>
-              <h2 className="mt-4 text-xl font-semibold text-foreground">{t('system.noActiveVersion.title')}</h2>
-              <p className="mt-2 text-sm text-muted-foreground">{t('system.noActiveVersion.description')}</p>
-              <div className="mt-5">
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                  <Package className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1 basis-56">
+                  <h2 className="text-base font-semibold text-foreground">{t('system.noActiveVersion.title')}</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">{t('system.noActiveVersion.description')}</p>
+                </div>
                 <Button type="button" onClick={handleOpenVersionManagement}>
                   {t('system.noActiveVersion.manageVersions')}
                 </Button>
@@ -746,17 +652,17 @@ export default function SystemManagementView({
             </section>
           ) : (
             <section
-              className="rounded-3xl border border-border/80 bg-card p-6 shadow-sm"
+              className="rounded-2xl border border-border/80 bg-card p-6"
               {...{
                 [HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE]: 'version-section',
                 [HOMEPAGE_TOUR_VARIANT_ATTRIBUTE]: HOMEPAGE_TOUR_VARIANTS.noVersionInstalled,
               }}
             >
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
-                <Package className="h-6 w-6" />
-              </div>
-              <h2 className="mt-4 text-xl font-semibold text-foreground">{t('system.noVersionInstalled.title')}</h2>
-              <div className="mt-5">
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                  <Package className="h-5 w-5" />
+                </div>
+                <h2 className="min-w-0 flex-1 basis-56 text-base font-semibold text-foreground">{t('system.noVersionInstalled.title')}</h2>
                 <Button type="button" onClick={() => void handleStartWizard()}>
                   {t('system.noVersionInstalled.startWizard')}
                 </Button>
@@ -764,13 +670,91 @@ export default function SystemManagementView({
             </section>
           )}
 
+          <section
+            className="rounded-2xl border border-border/80 bg-card p-6"
+            {...{ [HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE]: 'log-access' }}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+              <h2 className="flex items-center gap-2 text-base font-semibold">
+                <FolderOpen className="h-5 w-5 text-primary" />
+                {t('system.logQuickAccess.title')}
+              </h2>
+              <span className="text-xs text-muted-foreground">
+                {isLogTargetsLoading ? t('system.logQuickAccess.loading') : t('system.logQuickAccess.hint')}
+              </span>
+            </div>
+
+            <ul className="mt-4 divide-y divide-border/60">
+              {logQuickAccessItems.map(({ target, icon: Icon, label, status }) => {
+                const isOpening = openingTarget === target;
+                const isDisabled = isLogTargetsLoading || isOpening || !status.available;
+                const titleId = `log-quick-access-${target}-title`;
+                const buttonId = `log-quick-access-${target}-button`;
+
+                return (
+                  <li key={target} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3 first:pt-0 last:pb-0">
+                    <Icon className="h-5 w-5 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0 flex-1 basis-56">
+                      <div className="flex flex-wrap items-center gap-x-2">
+                        <h3 id={titleId} className="text-sm font-medium text-foreground">{label}</h3>
+                        <span
+                          className={cn(
+                            'inline-flex items-center gap-1.5 text-xs',
+                            status.available ? 'text-primary' : 'text-muted-foreground',
+                          )}
+                        >
+                          <span
+                            aria-hidden
+                            className={cn(
+                              'h-1.5 w-1.5 rounded-full',
+                              status.available ? 'bg-primary' : 'bg-muted-foreground/50',
+                            )}
+                          />
+                          {status.available
+                            ? t('system.logQuickAccess.status.available')
+                            : t('system.logQuickAccess.status.unavailable')}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-sm text-muted-foreground">
+                        {getLogTargetDescription(target, status)}
+                      </p>
+                    </div>
+                    <Button
+                      id={buttonId}
+                      aria-labelledby={`${buttonId} ${titleId}`}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void handleOpenLogDirectory(target)}
+                      disabled={isDisabled}
+                      className="gap-2"
+                    >
+                      {isOpening ? (
+                        <LoaderCircle className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <FolderOpen className="h-4 w-4" />
+                      )}
+                      {t('button.open')}
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        </div>
+
+        <div className="min-w-0 space-y-4">
+          <HomeStoreDonationItem isWindowsStoreRuntime={distributionState.winStoreMode} />
+          <HomeStoreOfferPanel isWindowsStoreRuntime={distributionState.winStoreMode} />
+          <HomePromotePanel />
+          <HomeStoreRatingPrompt />
           <BlogFeedCard />
         </div>
       </div>
 
-      <section className="rounded-3xl border border-transparent px-1 py-2 text-center">
+      <footer className="px-1 py-2 text-center">
         <p className="text-sm text-muted-foreground">{t('footer.copyright')}</p>
-      </section>
-    </div>
+      </footer>
+    </PageShell>
   );
 }

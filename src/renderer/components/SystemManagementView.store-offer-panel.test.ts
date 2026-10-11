@@ -8,7 +8,7 @@ const homeStoreOfferPanelPath = path.resolve(process.cwd(), 'src/renderer/compon
 const homeStoreDonationItemPath = path.resolve(process.cwd(), 'src/renderer/components/HomeStoreDonationItem.tsx');
 
 describe('homepage store offer panel wiring', () => {
-  it('renders the homepage store offer panel above the active version panel', async () => {
+  it('renders the homepage store offer panel in the supporting rail beside the operational panels, with the promotion panel after it', async () => {
     const source = await fs.readFile(systemManagementViewPath, 'utf8');
 
     assert.match(source, /import HomeStoreDonationItem from '\.\/HomeStoreDonationItem';/);
@@ -16,7 +16,7 @@ describe('homepage store offer panel wiring', () => {
     assert.match(source, /import HomeStoreRatingPrompt from '\.\/HomeStoreRatingPrompt';/);
     assert.match(
       source,
-      /<div className="space-y-6">\s*<HomeStoreDonationItem isWindowsStoreRuntime=\{distributionState\.winStoreMode\} \/>\s*<HomeStoreOfferPanel isWindowsStoreRuntime=\{distributionState\.winStoreMode\} \/>\s*<HomeStoreRatingPrompt \/>\s*\{activeVersion \?/s,
+      /<div className="min-w-0 space-y-4">\s*<HomeStoreDonationItem isWindowsStoreRuntime=\{distributionState\.winStoreMode\} \/>\s*<HomeStoreOfferPanel isWindowsStoreRuntime=\{distributionState\.winStoreMode\} \/>\s*<HomePromotePanel \/>\s*<HomeStoreRatingPrompt \/>\s*<BlogFeedCard \/>/s,
     );
   });
 

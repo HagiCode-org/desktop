@@ -357,6 +357,16 @@ blogFeed:
   actions:
     readArticle: Ler artigo
     openFeed: Abrir feed
+homePromote:
+  title: Destaques do Hagicode
+  regionLabel: Destaques do Hagicode
+  previous: Anterior
+  next: Próximo
+  pause: Pausar rotação
+  resume: Retomar rotação
+  position: '{{current}} / {{total}}'
+  defaultCta: Saiba mais
+  openFailed: Não foi possível abrir o link
 serviceRegion:
   title: Região do serviço
   resetTitle: Testar novamente a seleção de região

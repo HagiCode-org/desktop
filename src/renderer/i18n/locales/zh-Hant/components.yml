@@ -357,6 +357,16 @@ blogFeed:
   actions:
     readArticle: 查看詳情
     openFeed: 開啟訂閱源
+homePromote:
+  title: Hagicode 精選
+  regionLabel: Hagicode 精選推薦
+  previous: 上一則
+  next: 下一則
+  pause: 暫停輪播
+  resume: 繼續輪播
+  position: '{{current}} / {{total}}'
+  defaultCta: 了解更多
+  openFailed: 開啟連結失敗
 serviceRegion:
   title: 服務區域
   resetTitle: 重新測試區域選擇提示

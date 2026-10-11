@@ -38,7 +38,9 @@ import type {
 import type { LogDirectoryOpenResult } from '../types/log-directory';
 import type { SubscriptionBridge } from '../types/subscription';
 import type { TurboEngineLicenseBridge } from '../types/turboengine-license';
+import type { PromoteBridge } from '../types/promote';
 import { telemetry } from './telemetry';
+import { useSidebarLayout } from './hooks/useSidebarLayout';
 
 type BootstrapPhase = 'loading' | 'ready' | 'error';
 
@@ -96,6 +98,7 @@ declare global {
       getDistributionModeState: () => Promise<DistributionModeState>;
       getMsstoreRatingPromptState: () => Promise<{ installDate?: string }>;
       msstoreDonationItem?: MsstoreDonationItemBridge;
+      promote?: PromoteBridge;
       showWindow: () => Promise<void>;
       hideWindow: () => Promise<void>;
       onServerStatusChange: (callback: (status: 'running' | 'stopped' | 'error') => void) => void;
@@ -162,6 +165,7 @@ function buildRendererBootstrapErrorSnapshot(
 
 function DesktopAppContent({ distributionState }: { distributionState: DistributionModeState }) {
   const dispatch = useDispatch<AppDispatch>();
+  const { collapsed: sidebarCollapsed } = useSidebarLayout();
   const currentView = useSelector((state: RootState) => state.view.currentView);
   const webServiceUrl = useSelector((state: RootState) => state.view.webServiceUrl);
   const webServiceInfo = useSelector((state: RootState) => selectWebServiceInfo(state));
@@ -214,7 +218,9 @@ function DesktopAppContent({ distributionState }: { distributionState: Distribut
     <div className="desktop-shell-background min-h-screen bg-background text-foreground">
       <SidebarNavigation distributionState={distributionState} />
 
-      <div className="ml-64 min-h-screen transition-all duration-200 ease-out">
+      <div
+        className={`min-h-screen transition-[margin-left] duration-300 ease-in-out ${sidebarCollapsed ? 'ml-16' : 'ml-64'}`}
+      >
         <div className="min-h-screen px-6 py-6 lg:px-8">
           {currentView === 'system' && <SystemManagementView distributionState={distributionState} />}
           {currentView === 'web' && <WebView src={webServiceUrl || fallbackWebServiceUrl} />}
