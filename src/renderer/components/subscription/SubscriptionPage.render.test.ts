@@ -19,8 +19,9 @@ describe('subscription workspace renderer', () => {
     assert.match(pageSource, /dispatch\(refreshSubscriptionSnapshot\(\)\)/);
     assert.match(pageSource, /dispatch\(purchaseSubscription\(\)\)/);
     assert.match(pageSource, /subscription\.purchaseOutcome\./);
-    assert.match(pageSource, /mx-auto max-w-5xl space-y-8 pb-12/);
-    assert.match(pageSource, /mx-auto max-w-3xl text-center/);
+    assert.match(pageSource, /<PageShell className="space-y-6 pb-8">/);
+    assert.doesNotMatch(pageSource, /mx-auto max-w-[35]xl/);
+    assert.match(pageSource, /@4xl:grid-cols-\[minmax\(0,1fr\)_22rem\]/);
     assert.match(pageSource, /commerce-premium-shell rounded-3xl px-5 py-8 sm:px-8 sm:py-10/);
     assert.match(pageSource, /useCommercePreviewDebug/);
     assert.match(pageSource, /createDefaultSubscriptionSnapshot/);

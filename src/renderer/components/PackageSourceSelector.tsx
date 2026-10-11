@@ -103,7 +103,7 @@ export function PackageSourceSelector() {
             aria-labelledby="package-source-choice-label"
             value={selectedChoice ?? ''}
             onValueChange={handleSourceChoiceChange}
-            className="grid gap-3 sm:grid-cols-3"
+            className="grid grid-cols-[repeat(auto-fit,minmax(12rem,1fr))] gap-3"
           >
             {(['mainland', 'international', 'local-folder'] as const).map((choice) => (
               <Label
@@ -128,7 +128,7 @@ export function PackageSourceSelector() {
               aria-labelledby="saved-custom-package-source-label"
               value={selectedCustomSourceId ? `saved:${selectedCustomSourceId}` : ''}
               onValueChange={handleSourceChoiceChange}
-              className="grid gap-3 sm:grid-cols-2"
+              className="grid grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-3"
             >
               {savedCustomSources.map((source) => (
                 <Label

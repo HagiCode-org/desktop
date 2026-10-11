@@ -140,8 +140,8 @@ const BlogFeedCard: React.FC = () => {
     <div>
       <Card className="overflow-hidden border-border/80 shadow-sm">
         <CardHeader className="pb-4">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex min-w-0 items-start gap-3">
+          <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-3">
+            <div className="flex min-w-0 flex-1 basis-44 items-start gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-muted/35 text-primary">
                 <Newspaper className="h-4.5 w-4.5" />
               </div>

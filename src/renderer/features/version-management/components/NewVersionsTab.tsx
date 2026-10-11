@@ -38,9 +38,9 @@ export default function NewVersionsTab({
   const showExpandButton = availableVersions.length > 3;
 
   return (
-    <section className="rounded-3xl border border-border/80 bg-card p-6 shadow-sm">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-xl font-semibold text-foreground">
+    <section className="rounded-2xl border border-border/80 bg-card p-5">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
           <Download className="h-5 w-5 text-primary" />
           {t('versionManagement.availableVersions')}
         </h2>
@@ -55,15 +55,15 @@ export default function NewVersionsTab({
           const isInstallingCurrentVersion = isInstallingFromState && installingVersionId === version.id;
 
           return (
-            <div key={version.id} className="rounded-2xl border border-border/70 bg-background/60 p-4 transition-colors hover:border-border">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+            <div key={version.id} className="rounded-xl border border-border/70 bg-background/60 p-4 transition-colors hover:border-border">
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+                <div className="flex min-w-0 flex-1 basis-64 items-center gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                     <Package className="h-5 w-5 text-primary" />
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground">{version.packageFilename}</h3>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <div className="min-w-0">
+                    <h3 className="break-all font-semibold text-foreground">{version.packageFilename}</h3>
+                    <div className="flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
                       <span>{getPlatformLabel(version.platform)}</span>
                       {installed && <span className="text-primary">• {t('versionManagement.installed')}</span>}
                     </div>
@@ -117,7 +117,7 @@ export default function NewVersionsTab({
           </button>
         )}
         {availableVersions.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-border/70 bg-background/50 p-8 text-center text-muted-foreground">
+          <div className="rounded-xl border border-dashed border-border/70 bg-background/50 p-8 text-center text-muted-foreground">
             <Package className="mx-auto mb-3 h-12 w-12 opacity-50" />
             <p>{t('versionManagement.noVersionsAvailable')}</p>
           </div>

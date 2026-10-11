@@ -1,7 +1,14 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { buildBatchInstallCommand } from './dependencyManagementPageModel.js';
-import type { ManagedNpmPackageDefinition } from '../../../types/dependency-management.js';
+import {
+  buildBatchInstallCommand,
+  getManagedPackageDisplayStatus,
+  isManagedPackageOutdated,
+} from './dependencyManagementPageModel.js';
+import type {
+  ManagedNpmPackageDefinition,
+  ManagedNpmPackageStatusSnapshot,
+} from '../../../types/dependency-management.js';
 
 const definitions: ManagedNpmPackageDefinition[] = [
   {
@@ -64,5 +71,38 @@ describe('buildBatchInstallCommand', () => {
         'npm install -g --ignore-scripts @earendil-works/pi-coding-agent@0.78.1',
       ].join(' && \\\n'),
     );
+  });
+});
+
+describe('managed package outdated status against a pinned minimum', () => {
+  const pinnedOpenspec: ManagedNpmPackageDefinition = {
+    ...definitions[0],
+    installSpec: '@fission-ai/openspec@1.3.1',
+    requiredVersionRange: '1.3.1',
+  };
+
+  function createInstalledOpenspecStatus(version: string): ManagedNpmPackageStatusSnapshot {
+    return {
+      id: 'openspec',
+      definition: pinnedOpenspec,
+      status: 'installed',
+      version,
+      packageRoot: '/managed/openspec',
+      executablePath: '/managed/bin/openspec',
+    };
+  }
+
+  it('does not mark a version above the pinned minimum as outdated', () => {
+    const item = createInstalledOpenspecStatus('1.13.2');
+
+    assert.equal(isManagedPackageOutdated(item), false);
+    assert.equal(getManagedPackageDisplayStatus(item), 'installed');
+  });
+
+  it('marks a version below the pinned minimum as outdated', () => {
+    const item = createInstalledOpenspecStatus('1.3.0');
+
+    assert.equal(isManagedPackageOutdated(item), true);
+    assert.equal(getManagedPackageDisplayStatus(item), 'outdated');
   });
 });

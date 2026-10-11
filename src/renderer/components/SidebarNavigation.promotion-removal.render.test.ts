@@ -23,8 +23,8 @@ async function collectSourceFiles(directory: string): Promise<string[]> {
   return files.flat();
 }
 
-describe('desktop promotion surface removal', () => {
-  it('does not load or render remote promotion cards in Desktop', async () => {
+describe('desktop sidebar promotion removal', () => {
+  it('keeps sidebar promotion removed and the renderer never reads Index promotion documents directly', async () => {
     const files = (await Promise.all(sourceRoots.map((root) => collectSourceFiles(root)))).flat();
     const sources = await Promise.all(files
       .filter((file) => !file.endsWith('SidebarNavigation.promotion-removal.render.test.ts'))

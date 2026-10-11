@@ -18,11 +18,11 @@ export function SettingsTabContent({ activeTab, distributionState }: SettingsTab
     <TabsContent
       key={activeTab.id}
       value={activeTab.id}
-      className="mt-0 rounded-2xl border border-border/70 bg-background/40 p-1"
+      className="mt-0"
     >
       <Suspense
         fallback={(
-          <div className="flex min-h-[320px] items-center justify-center rounded-[20px] border border-dashed border-border/70 bg-muted/20 px-6 py-10 text-sm text-muted-foreground">
+          <div className="flex min-h-[320px] items-center justify-center rounded-xl border border-dashed border-border/70 bg-muted/20 px-6 py-10 text-sm text-muted-foreground">
             <div className="flex items-center gap-3">
               <LoaderCircle className="h-5 w-5 animate-spin" />
               <span>{t('settings.loading')}</span>

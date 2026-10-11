@@ -44,7 +44,7 @@ export function NotificationTab() {
   };
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
+    <div className="grid gap-4 @3xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
       <Card className="max-w-3xl">
         <CardHeader>
           <div className="flex items-center gap-2">

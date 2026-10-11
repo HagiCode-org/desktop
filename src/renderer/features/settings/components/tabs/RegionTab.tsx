@@ -24,8 +24,8 @@ export function RegionTab({ distributionState }: SettingsTabComponentProps) {
   };
 
   return (
-    <div className="max-w-3xl space-y-4">
-      <div className="rounded-2xl border border-border/70 bg-background/70 p-5">
+    <div className="max-w-3xl space-y-4 rounded-xl border border-border/80 bg-card p-5">
+      <div className="rounded-xl border border-border/70 bg-background/70 p-5">
         <ServiceRegionSelector disabled={distributionState.steamMode} />
       </div>
       <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border/70 pt-4">

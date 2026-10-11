@@ -20,8 +20,8 @@ describe('notification settings renderer wiring', () => {
     ]);
 
     assert.match(settingsPageSource, /useSettingsTab\(\{/);
-    assert.match(settingsPageSource, /overflow-x-auto/);
-    assert.match(settingsPageSource, /md:flex-col/);
+    assert.match(settingsPageSource, /flex-wrap/);
+    assert.match(settingsPageSource, /@4xl:flex-col/);
 
     const notificationIndex = settingsHookSource.indexOf("id: 'notification'");
     const onboardingIndex = settingsHookSource.indexOf("id: 'onboarding'");

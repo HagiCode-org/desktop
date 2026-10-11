@@ -39,6 +39,7 @@ import { useVersionManagementTab } from '../features/version-management/useVersi
 import type { InstalledVersion, Version } from '../features/version-management/types';
 import { areVersionManagementDataEquivalent } from '../features/version-management/versionManagementData';
 import { PageHeader } from './ui/page-header';
+import { PageShell } from './ui/page-shell';
 
 
 interface VersionSwitchResult {
@@ -91,17 +92,17 @@ function SummaryTile({
   description: string;
 }) {
   return (
-    <section className="rounded-2xl border border-border/70 bg-background/75 p-4">
+    <section className="min-w-0 rounded-xl border border-border/70 bg-background/75 p-3.5">
       <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1">
+        <div className="min-w-0 space-y-0.5">
           <p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">{label}</p>
-          <p className="text-lg font-semibold text-foreground">{value}</p>
+          <p className="truncate text-lg font-semibold text-foreground">{value}</p>
         </div>
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-primary">
-          <Icon className="h-5 w-5" />
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-primary">
+          <Icon className="h-4 w-4" />
         </div>
       </div>
-      <p className="mt-3 text-sm text-muted-foreground">{description}</p>
+      <p className="mt-2 break-words text-sm text-muted-foreground">{description}</p>
     </section>
   );
 }
@@ -475,21 +476,19 @@ export default function VersionManagementPage({ distributionState }: VersionMana
 
   if (loading) {
     return (
-      <div className="mx-auto flex max-w-6xl items-center justify-center px-4 py-10">
-        <div className="rounded-3xl border border-border/80 bg-card px-8 py-10 shadow-sm">
-          <div className="flex items-center gap-3 text-muted-foreground">
-            <Loader2 className="h-5 w-5 animate-spin text-primary" />
-            <span>{t('status.loading', { ns: 'common', defaultValue: 'Loading...' })}</span>
-          </div>
+      <PageShell>
+        <div className="flex items-center gap-3 rounded-2xl border border-border/80 bg-card p-6 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          <span>{t('status.loading', { ns: 'common', defaultValue: 'Loading...' })}</span>
         </div>
-      </div>
+      </PageShell>
     );
   }
 
   if (distributionState.fusionMode) {
     return (
-      <div className="mx-auto max-w-5xl px-4 py-6">
-        <div className="rounded-3xl border border-border/80 bg-card p-8 shadow-sm">
+      <PageShell>
+        <div className="rounded-2xl border border-border/80 bg-card p-6">
           <div className="flex items-start gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-primary">
               <Package className="w-6 h-6" />
@@ -513,13 +512,13 @@ export default function VersionManagementPage({ distributionState }: VersionMana
             </div>
           </div>
         </div>
-      </div>
+      </PageShell>
     );
   }
 
   return (
     <>
-      <div className="mx-auto max-w-6xl space-y-6 px-4 py-6">
+      <PageShell>
         <PageHeader
           icon={Package}
           titleKey="versionManagement.title"
@@ -556,11 +555,11 @@ export default function VersionManagementPage({ distributionState }: VersionMana
         />
 
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)} className="w-full">
-          <TabsList className="flex h-auto w-full flex-wrap justify-start gap-2 rounded-2xl border border-border/70 bg-muted/25 p-2">
+          <TabsList className="mb-4 flex h-auto w-full flex-wrap justify-start gap-1 rounded-xl border border-border/70 bg-muted/25 p-1.5">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
-                <TabsTrigger key={tab.id} value={tab.id} className="gap-2 rounded-xl px-4 py-3">
+                <TabsTrigger key={tab.id} value={tab.id} className="gap-2 rounded-lg px-3 py-2">
                   <Icon className="h-4 w-4" />
                   <span>{t(tab.labelKey)}</span>
                 </TabsTrigger>
@@ -591,8 +590,7 @@ export default function VersionManagementPage({ distributionState }: VersionMana
             getDesktopCompatibility={getDesktopCompatibility}
           />
         </Tabs>
-
-      </div>
+      </PageShell>
 
       {/* Reinstall Confirmation Dialog */}
       <Dialog open={reinstallDialogOpen} onOpenChange={setReinstallDialogOpen}>

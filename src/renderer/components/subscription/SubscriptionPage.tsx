@@ -33,6 +33,7 @@ import {
   refreshSubscriptionSnapshot,
   selectSubscriptionState,
 } from '@/store/slices/subscriptionSlice';
+import { PageShell } from '../ui/page-shell';
 
 function getStatusKey(snapshot: SubscriptionSnapshot | null): string {
   if (!snapshot) {
@@ -187,17 +188,17 @@ export default function SubscriptionPage() {
       : t('subscription.unsupported.title'));
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8 pb-12">
-      <header className="mx-auto max-w-3xl text-center">
+    <PageShell className="space-y-6 pb-8">
+      <header>
         <button
           type="button"
-          className="max-w-3xl cursor-default bg-transparent p-0 text-3xl font-semibold tracking-[-0.02em] text-foreground [text-wrap:balance] sm:text-4xl lg:text-5xl"
+          className="cursor-default bg-transparent p-0 text-left text-2xl font-semibold tracking-tight text-foreground [text-wrap:balance]"
           onClick={previewDebug.handleDebugTitleClick}
         >
           {t('subscription.summary.planName')}
         </button>
         {isPreviewing ? (
-          <p className="mt-4 text-xs uppercase tracking-[0.16em] text-muted-foreground">
+          <p className="mt-2 text-xs uppercase tracking-[0.16em] text-muted-foreground">
             {t('common:system.commercePanel.debug.previewBadge', {
               mode: getCommercePreviewScenarioLabel(t, previewDebug.scenario),
             })}
@@ -207,7 +208,7 @@ export default function SubscriptionPage() {
 
       <section className="commerce-premium-shell rounded-3xl px-5 py-8 sm:px-8 sm:py-10">
         <div className="relative z-10">
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,1.18fr)_minmax(320px,0.82fr)]">
+          <div className="grid gap-5 @4xl:grid-cols-[minmax(0,1fr)_22rem]">
             <article className="commerce-premium-panel rounded-3xl p-6 sm:p-8">
               <div className="max-w-3xl">
                 <h2 className="commerce-premium-heading text-3xl font-semibold tracking-[-0.02em] [text-wrap:balance] sm:text-4xl">
@@ -234,7 +235,7 @@ export default function SubscriptionPage() {
                         </span>
                         <span>{t(`subscription.mission.points.${pointKey}.title`)}</span>
                       </p>
-                      <p className="commerce-premium-copy mt-3 pl-10 text-sm leading-7 sm:text-base">
+                      <p className="commerce-premium-copy mt-3 max-w-[72ch] pl-10 text-sm leading-7 sm:text-base">
                         {t(`subscription.mission.points.${pointKey}.description`)}
                       </p>
                     </li>
@@ -310,7 +311,7 @@ export default function SubscriptionPage() {
         </div>
       </section>
 
-      <div className="mx-auto max-w-3xl space-y-3">
+      <div className="space-y-3">
         {!effectiveSnapshot && effectiveError ? (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
@@ -342,6 +343,6 @@ export default function SubscriptionPage() {
         scenario={previewDebug.scenario}
         onScenarioChange={previewDebug.setScenario}
       />
-    </div>
+    </PageShell>
   );
 }

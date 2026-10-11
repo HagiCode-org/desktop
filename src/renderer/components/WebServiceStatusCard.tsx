@@ -34,6 +34,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import {
@@ -56,6 +57,7 @@ import {
   RotateCw,
   Loader2,
   AlertCircle,
+  ChevronDown,
   Settings,
   Package,
   FolderOpen,
@@ -114,6 +116,7 @@ const WebServiceStatusCard: React.FC = () => {
   const debounceSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startupDrawerCloseTimeoutRef = useRef<number | null>(null);
   const lastStartupPhaseRef = useRef<StartupPhase>(StartupPhase.CheckingVersion);
+  const [networkConfigOpen, setNetworkConfigOpen] = useState(false);
   const [showStartupProgressDrawer, setShowStartupProgressDrawer] = useState(false);
 
   const isRunning = webServiceInfo.status === 'running';
@@ -152,6 +155,8 @@ const WebServiceStatusCard: React.FC = () => {
     (!Number.isNaN(pendingPort) && pendingPort !== webServiceInfo.port)
   );
   const accessUrlPreview = buildAccessUrl(normalizedPendingHost || normalizedCurrentHost, Number.isNaN(pendingPort) ? webServiceInfo.port : pendingPort);
+  // A pending edit or a validation error must stay visible, so those states force the form open.
+  const networkConfigExpanded = networkConfigOpen || isNetworkConfigDirty || Boolean(effectiveNetworkConfigError);
   const startupSummary = getStartupPhaseSummary(
     t,
     webServiceInfo.status,
@@ -548,7 +553,7 @@ const WebServiceStatusCard: React.FC = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
     >
-      <Card className="relative overflow-hidden rounded-[24px] border-border/80 shadow-sm">
+      <Card className="relative overflow-hidden rounded-2xl border-border/80 shadow-sm">
         <CardHeader className="pb-4">
           <motion.div
             initial={{ x: -20, opacity: 0 }}
@@ -577,14 +582,14 @@ const WebServiceStatusCard: React.FC = () => {
             </motion.div>
           </motion.div>
         </CardHeader>
-        <CardContent className="space-y-5">
+        <CardContent className="@container space-y-5">
           <motion.div
             initial={{ x: -20, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             transition={{ delay: 0.15 }}
-            className="rounded-2xl border border-border/70 bg-muted/20 p-4"
+            className="rounded-xl border border-border/70 bg-muted/20 p-4"
           >
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex flex-col gap-4 @[43rem]:flex-row @[43rem]:items-start @[43rem]:justify-between">
               <div className="min-w-0 flex-1 space-y-3">
                 <div>
                   <p className="text-sm font-medium text-foreground">
@@ -610,7 +615,7 @@ const WebServiceStatusCard: React.FC = () => {
               </div>
 
               {!(isStopped && !canLaunchService) ? (
-                <div className="w-full shrink-0 lg:w-[280px]">
+                <div className="w-full shrink-0 @[43rem]:w-[420px]">
                   <HagicodeActionButton
                     isRunning={isRunning}
                     isDisabled={isDisabled}
@@ -732,128 +737,146 @@ const WebServiceStatusCard: React.FC = () => {
 
           {/* Local bind host + port configuration - only editable while stopped */}
           {!isRunning && (
-            <div className="space-y-4 rounded-2xl border border-border/60 bg-muted/25 p-4">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Settings className="h-4 w-4" />
-                  <span>{t('webServiceStatus.listenAddress.label')}</span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {t('webServiceStatus.listenAddress.description')}
-                </p>
-              </div>
+            <Collapsible
+              open={networkConfigExpanded}
+              onOpenChange={setNetworkConfigOpen}
+              className="rounded-xl border border-border/60 bg-muted/25"
+            >
+              <CollapsibleTrigger asChild>
+                <button
+                  type="button"
+                  className="group flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+                >
+                  <Settings className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span className="text-sm font-medium text-foreground">
+                    {t('webServiceStatus.listenAddress.label')}
+                  </span>
+                  <span className="ml-auto min-w-0 truncate font-mono text-xs text-primary">{accessUrlPreview}</span>
+                  <ChevronDown
+                    aria-hidden
+                    className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180"
+                  />
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="space-y-4 border-t border-border/60 p-4">
+                  <p className="text-xs text-muted-foreground">
+                    {t('webServiceStatus.listenAddress.description')}
+                  </p>
 
-              <RadioGroup
-                value={selectedListenPreset}
-                onValueChange={(value) => {
-                  setSelectedListenPreset(value as ListenHostPreset);
-                  setNetworkConfigError(null);
-                }}
-                className="grid grid-cols-4 gap-2"
-              >
-                {[
-                  {
-                    value: 'localhost',
-                    label: t('webServiceStatus.listenAddress.presets.localhost.label'),
-                  },
-                  {
-                    value: '127.0.0.1',
-                    label: t('webServiceStatus.listenAddress.presets.loopback.label'),
-                  },
-                  {
-                    value: '0.0.0.0',
-                    label: t('webServiceStatus.listenAddress.presets.wildcard.label'),
-                  },
-                  {
-                    value: 'custom',
-                    label: t('webServiceStatus.listenAddress.presets.custom.label'),
-                  },
-                ].map((option) => (
-                  <label
-                    key={option.value}
-                    className="flex cursor-pointer items-center gap-2 rounded-xl border border-border/60 bg-background/80 px-3 py-2 transition-colors hover:border-primary/35"
-                  >
-                    <RadioGroupItem value={option.value} />
-                    <div className="min-w-0 text-sm font-medium">{option.label}</div>
-                  </label>
-                ))}
-              </RadioGroup>
-
-              {selectedListenPreset === 'custom' && (
-                <div className="space-y-2">
-                  <Label htmlFor="custom-listen-host">{t('webServiceStatus.listenAddress.customInputLabel')}</Label>
-                  <Input
-                    id="custom-listen-host"
-                    type="text"
-                    inputMode="numeric"
-                    value={customListenHost}
-                    onChange={(e) => {
-                      setCustomListenHost(e.target.value);
+                  <RadioGroup
+                    value={selectedListenPreset}
+                    onValueChange={(value) => {
+                      setSelectedListenPreset(value as ListenHostPreset);
                       setNetworkConfigError(null);
                     }}
-                    placeholder={t('webServiceStatus.listenAddress.customPlaceholder') as string}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        void flushPendingNetworkConfig();
-                      } else if (e.key === 'Escape') {
-                        handleResetNetworkConfig();
-                      }
-                    }}
-                  />
+                    className="grid grid-cols-[repeat(auto-fit,minmax(8.5rem,1fr))] gap-2"
+                  >
+                    {[
+                      {
+                        value: 'localhost',
+                        label: t('webServiceStatus.listenAddress.presets.localhost.label'),
+                      },
+                      {
+                        value: '127.0.0.1',
+                        label: t('webServiceStatus.listenAddress.presets.loopback.label'),
+                      },
+                      {
+                        value: '0.0.0.0',
+                        label: t('webServiceStatus.listenAddress.presets.wildcard.label'),
+                      },
+                      {
+                        value: 'custom',
+                        label: t('webServiceStatus.listenAddress.presets.custom.label'),
+                      },
+                    ].map((option) => (
+                      <label
+                        key={option.value}
+                        className="flex cursor-pointer items-center gap-2 rounded-xl border border-border/60 bg-background/80 px-3 py-2 transition-colors hover:border-primary/35"
+                      >
+                        <RadioGroupItem value={option.value} />
+                        <div className="min-w-0 text-sm font-medium">{option.label}</div>
+                      </label>
+                    ))}
+                  </RadioGroup>
+
+                  {selectedListenPreset === 'custom' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="custom-listen-host">{t('webServiceStatus.listenAddress.customInputLabel')}</Label>
+                      <Input
+                        id="custom-listen-host"
+                        type="text"
+                        inputMode="numeric"
+                        value={customListenHost}
+                        onChange={(e) => {
+                          setCustomListenHost(e.target.value);
+                          setNetworkConfigError(null);
+                        }}
+                        placeholder={t('webServiceStatus.listenAddress.customPlaceholder') as string}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            void flushPendingNetworkConfig();
+                          } else if (e.key === 'Escape') {
+                            handleResetNetworkConfig();
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="web-service-port">{t('webServiceStatus.details.port')}</Label>
+                    <Input
+                      id="web-service-port"
+                      type="number"
+                      value={portInputValue}
+                      onChange={(e) => {
+                        setPortInputValue(e.target.value);
+                        setNetworkConfigError(null);
+                      }}
+                      min={1024}
+                      max={65535}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          void flushPendingNetworkConfig();
+                        } else if (e.key === 'Escape') {
+                          handleResetNetworkConfig();
+                        }
+                      }}
+                    />
+                  </div>
+
+                  <div className="space-y-2 rounded-xl border border-dashed border-border/60 bg-background/80 p-3">
+                    <div className="text-xs text-muted-foreground">
+                      {t('webServiceStatus.listenAddress.accessUrlPreviewLabel')}
+                    </div>
+                    <div className="break-all font-mono text-sm text-primary">{accessUrlPreview}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {normalizedPendingHost === '0.0.0.0'
+                        ? t('webServiceStatus.listenAddress.wildcardHint')
+                        : t('webServiceStatus.listenAddress.localOnlyHint')}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={handleResetNetworkConfig}
+                      disabled={!isNetworkConfigDirty}
+                    >
+                      {t('common:button.cancel')}
+                    </Button>
+                  </div>
+
+                  {effectiveNetworkConfigError && (
+                    <Alert variant="destructive" className="py-2">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription className="text-sm">{effectiveNetworkConfigError}</AlertDescription>
+                    </Alert>
+                  )}
                 </div>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="web-service-port">{t('webServiceStatus.details.port')}</Label>
-                <Input
-                  id="web-service-port"
-                  type="number"
-                  value={portInputValue}
-                  onChange={(e) => {
-                    setPortInputValue(e.target.value);
-                    setNetworkConfigError(null);
-                  }}
-                  min={1024}
-                  max={65535}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      void flushPendingNetworkConfig();
-                    } else if (e.key === 'Escape') {
-                      handleResetNetworkConfig();
-                    }
-                  }}
-                />
-              </div>
-
-              <div className="space-y-2 rounded-xl border border-dashed border-border/60 bg-background/80 p-3">
-                <div className="text-xs text-muted-foreground">
-                  {t('webServiceStatus.listenAddress.accessUrlPreviewLabel')}
-                </div>
-                <div className="break-all font-mono text-sm text-primary">{accessUrlPreview}</div>
-                <div className="text-xs text-muted-foreground">
-                  {normalizedPendingHost === '0.0.0.0'
-                    ? t('webServiceStatus.listenAddress.wildcardHint')
-                    : t('webServiceStatus.listenAddress.localOnlyHint')}
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  onClick={handleResetNetworkConfig}
-                  disabled={!isNetworkConfigDirty}
-                >
-                  {t('common:button.cancel')}
-                </Button>
-              </div>
-
-              {effectiveNetworkConfigError && (
-                <Alert variant="destructive" className="py-2">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription className="text-sm">{effectiveNetworkConfigError}</AlertDescription>
-                </Alert>
-              )}
-            </div>
+              </CollapsibleContent>
+            </Collapsible>
           )}
 
           {/* Service Details */}
@@ -865,7 +888,7 @@ const WebServiceStatusCard: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
-                className="grid grid-cols-2 gap-3 rounded-2xl border border-border/60 bg-muted/25 p-4 md:grid-cols-3 xl:grid-cols-3"
+                className="grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-3 rounded-xl border border-border/60 bg-muted/25 p-4"
               >
                 {serviceDetailItems.map((item, index) => (
                   <motion.div

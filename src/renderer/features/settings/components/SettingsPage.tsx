@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { PageShell } from '@/components/ui/page-shell';
 
 interface SettingsPageLayoutProps {
   title: string;
@@ -8,17 +9,13 @@ interface SettingsPageLayoutProps {
 
 export default function SettingsPageLayout({ title, navigation, content }: SettingsPageLayoutProps) {
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-4 py-6">
-      <section className="rounded-[28px] border border-border/80 bg-card p-6 shadow-sm">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">{title}</h1>
-      </section>
+    <PageShell>
+      <h1 className="text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
 
-      <section className="rounded-3xl border border-border/80 bg-card p-4 shadow-sm md:p-5">
-        <div className="flex flex-col gap-4 md:flex-row md:gap-6">
-          {navigation}
-          <div className="min-w-0 flex-1">{content}</div>
-        </div>
-      </section>
-    </div>
+      <div className="flex flex-col gap-4 @4xl:flex-row @4xl:gap-6">
+        {navigation}
+        <div className="@container min-w-0 flex-1">{content}</div>
+      </div>
+    </PageShell>
   );
 }

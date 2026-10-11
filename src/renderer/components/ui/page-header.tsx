@@ -14,20 +14,20 @@ export function PageHeader({ icon: Icon, titleKey, descriptionKey, actions, summ
   const { t } = useTranslation(['pages', 'common']);
 
   return (
-    <section className="rounded-[28px] border border-border/80 bg-card p-6 shadow-sm">
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted text-primary">
-            <Icon className="h-6 w-6" />
+    <section className="@container rounded-2xl border border-border/80 bg-card p-5">
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+        <div className="flex min-w-0 flex-1 basis-72 items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-primary">
+            <Icon className="h-5 w-5" />
           </div>
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-foreground">{t(titleKey)}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{t(descriptionKey)}</p>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">{t(titleKey)}</h1>
+            <p className="mt-0.5 text-sm text-muted-foreground">{t(descriptionKey)}</p>
           </div>
         </div>
-        {actions ? <div>{actions}</div> : null}
+        {actions ? <div className="shrink-0">{actions}</div> : null}
       </div>
-      {summaryTiles ? <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">{summaryTiles}</div> : null}
+      {summaryTiles ? <div className="mt-4 grid grid-cols-1 gap-3 @lg:grid-cols-2 @4xl:grid-cols-4">{summaryTiles}</div> : null}
     </section>
   );
 }

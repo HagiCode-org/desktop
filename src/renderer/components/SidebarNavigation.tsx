@@ -1,21 +1,22 @@
-import { useEffect, useMemo, useState, type ComponentType } from 'react';
+import { useEffect, useMemo, useState, type ComponentType, type ReactElement } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { useTheme } from '@/components/providers/theme-provider';
 import {
   AlertCircle,
   BadgeCheck,
   Calculator,
-  ChevronLeft,
-  ChevronRight,
   Cpu,
   ExternalLink,
-  FileText,
   Globe as GlobeIcon,
   Info,
+  Layers,
+  LayoutDashboard,
   LoaderCircle,
   PackageOpen,
+  PanelLeftClose,
+  PanelLeftOpen,
   Settings,
   Stethoscope,
 } from 'lucide-react';
@@ -26,8 +27,10 @@ import { ThemeToggle } from './ui/theme-toggle';
 import { LanguageToggle } from './ui/language-toggle';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { ScrollArea } from './ui/scroll-area';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import type { DistributionModeState } from '../../types/distribution-mode';
 import type { DesktopVersionInfoPayload } from '../../types/version-info';
+import { useSidebarLayout } from '../hooks/useSidebarLayout';
 import { isDesktopTheme } from '../lib/desktop-theme';
 import {
   createLoadingSidebarAboutFetchState,
@@ -54,8 +57,8 @@ interface NavigationItem {
 }
 
 const primaryNavigationItems: NavigationItem[] = [
-  { id: 'system', labelKey: 'sidebar.dashboard', icon: Settings, emphasis: 'default' },
-  { id: 'version', labelKey: 'sidebar.versionManagement', icon: FileText, emphasis: 'default' },
+  { id: 'system', labelKey: 'sidebar.dashboard', icon: LayoutDashboard, emphasis: 'default' },
+  { id: 'version', labelKey: 'sidebar.versionManagement', icon: Layers, emphasis: 'default' },
   { id: 'diagnostic', labelKey: 'sidebar.diagnostic', icon: Stethoscope, emphasis: 'default' },
   { id: 'dependency-management', labelKey: 'sidebar.dependencyManagement', icon: PackageOpen, emphasis: 'default' },
 ];
@@ -204,9 +207,7 @@ function getFeaturedNavigationPalette(
 ) {
   if (emphasis === 'sponsor') {
     return {
-      button: 'border-transparent bg-transparent text-foreground shadow-none hover:bg-transparent',
-      activeButton: 'border-transparent bg-transparent shadow-none',
-      iconWrap: 'border-transparent bg-transparent',
+      button: 'text-foreground hover:bg-transparent',
       iconClass: isDarkTheme
         ? 'text-[#f1cb71] drop-shadow-[0_0_14px_rgba(241,203,113,0.38)] transition-all duration-300 group-hover:scale-110 group-hover:text-[#ffe09a]'
         : 'text-[#6e4304] transition-all duration-300 group-hover:scale-110 group-hover:text-[#4d2d00]',
@@ -222,9 +223,7 @@ function getFeaturedNavigationPalette(
   }
 
   return {
-    button: 'border-transparent bg-transparent text-foreground shadow-none hover:bg-transparent',
-    activeButton: 'border-transparent bg-transparent shadow-none',
-    iconWrap: 'border-transparent bg-transparent',
+    button: 'text-foreground hover:bg-transparent',
     iconClass: isDarkTheme
       ? 'text-[#ffbe57] drop-shadow-[0_0_14px_rgba(255,190,87,0.38)] transition-all duration-300 group-hover:scale-110 group-hover:text-[#ffd48c]'
       : 'text-[#8a4300] transition-all duration-300 group-hover:scale-110 group-hover:text-[#682700]',
@@ -237,6 +236,36 @@ function getFeaturedNavigationPalette(
       : 'bg-[linear-gradient(90deg,#8b4308_0%,#050505_48%,#050505_52%,#8b4308_100%)] bg-clip-text text-transparent',
     focus: 'focus-visible:ring-[#ffc86b]/45',
   };
+}
+
+// The left inset centres the 18px icon in the 64px rail. The right inset is only kept
+// symmetrical there; when expanded it shrinks to give long labels more room. Rows are a minimum
+// height, not a fixed one, so a label that still does not fit (ru-RU, ja-JP) wraps instead of being cut.
+const NAV_ROW_CLASS =
+  'group relative flex min-h-10 w-full items-center gap-3 overflow-hidden rounded-lg py-1.5 pl-[15px] text-left text-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2';
+
+/** Collapsed rows only show an icon, so the label moves into a tooltip. */
+function CollapsedTooltip({
+  label,
+  enabled,
+  children,
+}: {
+  label: string;
+  enabled: boolean;
+  children: ReactElement;
+}) {
+  if (!enabled) {
+    return children;
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent side="right" sideOffset={10}>
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  );
 }
 
 export default function SidebarNavigation({ distributionState }: SidebarNavigationProps) {
@@ -254,13 +283,18 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
 
     return [...baseItems, ...featuredNavigationItems, settingsNavigationItem];
   }, [isFusionMode]);
+  // Settings is pinned to the footer, so the scrolling list only holds the other two groups.
+  const workspaceItems = visibleNavigationItems.filter(
+    (item) => item.emphasis === 'default' && item.id !== settingsNavigationItem.id,
+  );
+  const featuredItems = visibleNavigationItems.filter((item) => item.emphasis !== 'default');
   const aboutLocale = useMemo(
     () => normalizeSidebarAboutLocale(i18n.resolvedLanguage ?? i18n.language),
     [i18n.language, i18n.resolvedLanguage],
   );
   const bundledAboutModel = useMemo(() => loadBundledSidebarAbout(aboutLocale), [aboutLocale]);
 
-  const [collapsed, setCollapsed] = useState(false);
+  const { collapsed, toggleCollapsed } = useSidebarLayout();
   const [versionInfo, setVersionInfo] = useState<DesktopVersionInfoPayload | null>(null);
   const [webVersion, setWebVersion] = useState<string | null>(null);
   const [aboutModel, setAboutModel] = useState<SidebarAboutModel | null>(bundledAboutModel);
@@ -329,13 +363,13 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
     const handleKeyPress = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
         e.preventDefault();
-        setCollapsed((prev) => !prev);
+        toggleCollapsed();
       }
     };
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, []);
+  }, [toggleCollapsed]);
 
   const resolvedWebVersion = webVersion && webVersion !== 'unknown'
     ? webVersion
@@ -471,250 +505,157 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
   };
 
   const OfficialWebsiteIcon = officialWebsiteItem.icon;
+  const collapseLabel = collapsed ? t('sidebar.expand') : t('sidebar.collapse');
+  const navRowClass = cn(NAV_ROW_CLASS, collapsed ? 'pr-[15px]' : 'pr-2');
+
+  const renderNavItem = (item: NavigationItem) => {
+    const Icon = item.icon;
+    const isActive = isNavActive(item);
+    const featuredPalette = item.emphasis === 'default'
+      ? null
+      : getFeaturedNavigationPalette(item.emphasis, isDarkTheme);
+    const isFeatured = featuredPalette !== null;
+    const label = t(item.labelKey);
+
+    return (
+      <CollapsedTooltip key={item.id} label={label} enabled={collapsed}>
+        <motion.button
+          type="button"
+          onClick={() => void handleNavClick(item)}
+          aria-label={collapsed ? label : undefined}
+          aria-current={isActive ? 'page' : undefined}
+          whileHover={isFeatured ? { x: 0, y: -2 } : { x: 0 }}
+          whileTap={{ scale: 0.98 }}
+          className={cn(
+            navRowClass,
+            isActive
+              ? 'bg-accent text-foreground'
+              : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+            isFeatured
+              ? cn(featuredPalette?.button, featuredPalette?.focus)
+              : 'focus-visible:ring-primary/35',
+          )}
+        >
+          <Icon
+            className={cn(
+              'h-[18px] w-[18px] shrink-0',
+              isFeatured
+                ? cn(
+                  featuredPalette?.iconClass,
+                  isActive && featuredPalette?.activeIconClass,
+                )
+                : isActive && 'text-primary',
+            )}
+          />
+
+          {!collapsed ? (
+            <span
+              className={cn(
+                'min-w-0 flex-1 break-words leading-5',
+                isFeatured
+                  ? cn(
+                    'font-semibold tracking-[0.01em]',
+                    featuredPalette?.labelClass,
+                    isActive && featuredPalette?.activeLabelClass,
+                  )
+                  : 'font-medium',
+              )}
+            >
+              {label}
+            </span>
+          ) : null}
+        </motion.button>
+      </CollapsedTooltip>
+    );
+  };
 
   return (
-    <aside
-      className={`
-        fixed left-0 top-0 z-40 flex h-screen min-h-0 flex-col border-r border-border/80 bg-sidebar/92 shadow-sm backdrop-blur-sm
-        transition-all duration-300 ease-in-out
-        ${collapsed ? 'w-16' : 'w-64'}
-      `}
-    >
-      <motion.div
-        initial={false}
-        animate={{ width: collapsed ? 64 : 256 }}
-        transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
-        className="flex h-16 items-center justify-between border-b border-border/80 px-4"
+    <TooltipProvider delayDuration={200}>
+      <aside
+        className={cn(
+          'fixed left-0 top-0 z-40 flex h-screen min-h-0 flex-col border-r border-border/80 bg-sidebar/92 backdrop-blur-sm',
+          'transition-[width] duration-300 ease-in-out',
+          collapsed ? 'w-16' : 'w-64',
+        )}
       >
-        <AnimatePresence mode="wait">
-          {!collapsed ? (
-            <motion.div
-              key="expanded"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="flex items-center gap-3"
-            >
-              <motion.div
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-border/80 bg-muted text-foreground"
-              >
-                <span className="text-xl font-semibold">H</span>
-              </motion.div>
-              <div>
-                <motion.h1
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.1 }}
-                  className="text-base font-semibold text-foreground"
-                >
-                  Hagicode
-                </motion.h1>
-                <motion.p
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.15 }}
-                  className="text-xs text-muted-foreground"
-                >
-                  Desktop
-                </motion.p>
-              </div>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="collapsed"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-               className="flex h-10 w-10 items-center justify-center rounded-xl border border-border/80 bg-muted text-foreground"
-             >
-               <span className="text-xl font-semibold">H</span>
-             </motion.div>
+        <div
+          className={cn(
+            'flex h-14 shrink-0 items-center border-b border-border/80',
+            collapsed ? 'justify-center px-2' : 'gap-3 px-4',
           )}
-        </AnimatePresence>
-
-        <AnimatePresence mode="wait">
-          {!collapsed && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ delay: 0.1 }}
-              className="flex items-center gap-2"
-            >
-              <LanguageToggle />
-              <ThemeToggle />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
-
-      <nav className="min-h-0 flex-1 overflow-hidden">
-        <div className="flex h-full min-h-0 flex-col px-2 py-4">
-          <div className="space-y-1">
-            {visibleNavigationItems.map((item, index) => {
-              const Icon = item.icon;
-              const isActive = isNavActive(item);
-              const featuredPalette = item.emphasis === 'default'
-                ? null
-                : getFeaturedNavigationPalette(item.emphasis, isDarkTheme);
-              const isFeatured = featuredPalette !== null;
-
-              return (
-                <motion.button
-                  key={item.id}
-                  onClick={() => void handleNavClick(item)}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05, duration: 0.3 }}
-                   whileHover={isFeatured ? { x: 0, y: -2 } : { x: 0 }}
-                   whileTap={{ scale: 0.98 }}
-                   className={cn(
-                     'group relative flex w-full items-center gap-3 overflow-hidden rounded-xl border px-3 py-2.5 text-left transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
-                     isFeatured
-                       ? cn(
-                         featuredPalette?.button,
-                         featuredPalette?.focus,
-                         isActive && featuredPalette?.activeButton,
-                       )
-                       : isActive
-                         ? 'border-border/80 bg-accent text-foreground shadow-sm focus-visible:ring-primary/35'
-                         : 'border-transparent text-muted-foreground hover:border-border/70 hover:bg-muted/55 hover:text-foreground focus-visible:ring-primary/25',
-                   )}
-                 >
-                   {!isFeatured && !isActive && (
-                     <motion.div
-                       initial={{ opacity: 0 }}
-                       whileHover={{ opacity: 1 }}
-                       exit={{ opacity: 0 }}
-                       className="absolute inset-0 bg-muted/35"
-                     />
-                   )}
-
-                   <div
-                     className={cn(
-                       'relative z-10 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border transition-all duration-300',
-                       isFeatured
-                         ? featuredPalette?.iconWrap
-                         : isActive
-                           ? 'border-primary/25 bg-primary/10 text-primary'
-                           : 'border-border/60 bg-background/75 text-muted-foreground group-hover:border-border/80 group-hover:bg-background',
-                     )}
-                   >
-                     <Icon
-                       className={cn(
-                         'h-4 w-4',
-                         isFeatured
-                           ? cn(
-                             featuredPalette?.iconClass,
-                             isActive && featuredPalette?.activeIconClass,
-                           )
-                           : '',
-                       )}
-                     />
-                   </div>
-
-                  <AnimatePresence mode="wait">
-                    {!collapsed && (
-                      <motion.div
-                        initial={{ opacity: 0, width: 0 }}
-                        animate={{ opacity: 1, width: 'auto' }}
-                        exit={{ opacity: 0, width: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className={cn(
-                          'relative z-10 flex min-w-0 items-center gap-2',
-                          !isFeatured && 'pr-5',
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            'truncate whitespace-nowrap text-sm',
-                            isFeatured
-                              ? cn(
-                                'font-semibold tracking-[0.01em]',
-                                featuredPalette?.labelClass,
-                                isActive && featuredPalette?.activeLabelClass,
-                              )
-                              : 'font-medium',
-                          )}
-                        >
-                          {t(item.labelKey)}
-                        </span>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </motion.button>
-              );
-            })}
+        >
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/80 bg-muted text-foreground">
+            <span className="text-base font-semibold">H</span>
           </div>
+          {!collapsed ? (
+            <div className="min-w-0 leading-tight">
+              <h1 className="truncate text-sm font-semibold text-foreground">Hagicode</h1>
+              <p className="text-xs text-muted-foreground">Desktop</p>
+            </div>
+          ) : null}
+        </div>
 
-          {!collapsed && (
-            <motion.div
-              initial={{ opacity: 0, scaleX: 0 }}
-              animate={{ opacity: 1, scaleX: 1 }}
-              transition={{ delay: 0.15, duration: 0.3 }}
-              className="my-2 border-t border-border"
-            />
-          )}
-
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2, duration: 0.3 }}
-            className="min-h-0 flex-1 overflow-hidden"
+        {/*
+          The whole list scrolls as one region between the pinned header and footer, so no row can end up
+          hidden behind the footer on a short window. The inset lives inside the viewport so focus rings
+          are not clipped, and the viewport's inner table wrapper is made a block so wide content
+          (official card, about icons) is laid out against the sidebar width instead of widening past it.
+        */}
+        <nav className="min-h-0 flex-1">
+          <ScrollArea
+            className="h-full"
+            type="auto"
+            scrollBarClassName="w-1.5 p-0.5"
+            scrollThumbClassName="bg-border/65"
+            viewportClassName="[&>div]:block!"
           >
-            <ScrollArea
-              className="h-full"
-              type="scroll"
-              scrollBarClassName="w-1.5 p-0.5"
-              scrollThumbClassName="bg-border/65"
-            >
-              <div className="space-y-2 pb-6">
-                <motion.button
-                  type="button"
-                  onClick={() => void handleNavClick(officialWebsiteItem)}
-                  title={t(officialWebsiteItem.descriptionKey ?? '')}
-                   whileHover={{ x: 0 }}
-                   whileTap={{ scale: 0.98 }}
-                   className={collapsed
-                     ? 'relative w-full flex items-center gap-3 overflow-hidden rounded-lg px-3 py-2.5 text-muted-foreground hover:bg-muted/55 hover:text-foreground group'
-                     : 'group relative w-full overflow-hidden rounded-2xl border border-border/70 bg-card px-3 py-3 text-left shadow-sm'}
-                 >
-                   <motion.div
-                     initial={{ opacity: 0 }}
-                     whileHover={{ opacity: 1 }}
-                     exit={{ opacity: 0 }}
-                     className="absolute inset-0 bg-muted/35"
-                   />
+            <div className="px-2 py-3">
+              <div className="space-y-0.5">{workspaceItems.map(renderNavItem)}</div>
 
-                  <div className={collapsed ? 'relative z-10 flex items-center gap-3' : 'relative z-10 flex items-start gap-3'}>
-                    <div className={collapsed
-                      ? 'flex shrink-0 items-center justify-center'
-                      : 'mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-background/80'}>
-                      <OfficialWebsiteIcon className={collapsed ? 'h-5 w-5' : 'h-5 w-5 text-foreground'} />
-                    </div>
+              {featuredItems.length > 0 ? (
+                <>
+                  <div role="separator" className="mx-2 my-2 border-t border-border/70" />
+                  <div className="space-y-0.5">{featuredItems.map(renderNavItem)}</div>
+                </>
+              ) : null}
 
-                    {!collapsed ? (
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="truncate text-sm font-semibold text-foreground">
-                            {t(officialWebsiteItem.labelKey)}
-                          </p>
-                          <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-70 group-hover:opacity-100" />
-                        </div>
-                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                          {t(officialWebsiteItem.descriptionKey ?? '')}
-                        </p>
+              <div role="separator" className="mx-2 my-2 border-t border-border/70" />
+
+              <div className="space-y-2">
+                <CollapsedTooltip label={t(officialWebsiteItem.labelKey)} enabled={collapsed}>
+                  <motion.button
+                    type="button"
+                    onClick={() => void handleNavClick(officialWebsiteItem)}
+                    title={collapsed ? undefined : t(officialWebsiteItem.descriptionKey ?? '')}
+                    aria-label={collapsed ? t(officialWebsiteItem.labelKey) : undefined}
+                    whileTap={{ scale: 0.98 }}
+                    className={collapsed
+                      ? cn(navRowClass, 'text-muted-foreground hover:bg-muted/60 hover:text-foreground focus-visible:ring-primary/35')
+                      : 'group relative w-full overflow-hidden rounded-xl border border-border/70 bg-card px-3 py-3 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35'}
+                  >
+                    <div className={collapsed ? 'flex items-center' : 'flex items-start gap-3'}>
+                      <div className={collapsed
+                        ? 'flex shrink-0 items-center justify-center'
+                        : 'mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-background/80'}>
+                        <OfficialWebsiteIcon className={collapsed ? 'h-[18px] w-[18px]' : 'h-5 w-5 text-foreground'} />
                       </div>
-                    ) : null}
-                  </div>
 
-                  {collapsed && (
-                    <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-popover text-popover-foreground text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
-                      {t(officialWebsiteItem.labelKey)}
+                      {!collapsed ? (
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start gap-2">
+                            <p className="min-w-0 break-words text-sm font-semibold leading-5 text-foreground">
+                              {t(officialWebsiteItem.labelKey)}
+                            </p>
+                            <ExternalLink className="mt-[3px] h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-70 group-hover:opacity-100" />
+                          </div>
+                          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                            {t(officialWebsiteItem.descriptionKey ?? '')}
+                          </p>
+                        </div>
+                      ) : null}
                     </div>
-                  )}
-                </motion.button>
+                  </motion.button>
+                </CollapsedTooltip>
 
                 {!collapsed ? (
                   <div className="space-y-3 pl-3 pr-2" data-about-source={aboutModel?.source ?? 'none'}>
@@ -759,88 +700,52 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
                   </div>
                 ) : null}
 
-                {remainingExternalLinkItems.map((item, index) => {
+                {remainingExternalLinkItems.map((item) => {
                   const Icon = item.icon;
+                  const label = t(item.labelKey);
 
                   return (
-                    <motion.button
-                      key={item.id}
-                      onClick={() => void handleNavClick(item)}
-                      title={item.descriptionKey ? t(item.descriptionKey) : ''}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.25 + index * 0.05, duration: 0.3 }}
-                      whileHover={{ x: 4 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg overflow-hidden group text-muted-foreground hover:text-accent-foreground"
-                    >
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        whileHover={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="absolute inset-0 bg-accent/50"
-                      />
-
-                      <Icon className="w-5 h-5 flex-shrink-0 relative z-10 group-hover:scale-110 transition-transform duration-200" />
-
-                      <AnimatePresence mode="wait">
-                        {!collapsed && (
-                          <motion.span
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="font-medium text-sm whitespace-nowrap relative z-10"
-                          >
-                            {t(item.labelKey)}
-                          </motion.span>
+                    <CollapsedTooltip key={item.id} label={label} enabled={collapsed}>
+                      <motion.button
+                        type="button"
+                        onClick={() => void handleNavClick(item)}
+                        title={item.descriptionKey ? t(item.descriptionKey) : undefined}
+                        aria-label={collapsed ? label : undefined}
+                        whileTap={{ scale: 0.98 }}
+                        className={cn(
+                          navRowClass,
+                          'text-muted-foreground hover:bg-muted/60 hover:text-foreground focus-visible:ring-primary/35',
                         )}
-                      </AnimatePresence>
-
-                      <AnimatePresence mode="wait">
-                        {!collapsed && (
-                          <motion.span
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -10 }}
-                            className="ml-auto text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity relative z-10"
-                          >
-                            <ExternalLink className="w-3 h-3" />
-                          </motion.span>
-                        )}
-                      </AnimatePresence>
-
-                      {collapsed && (
-                        <div className="absolute left-full ml-2 px-2 py-1 bg-popover text-popover-foreground text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
-                          {t(item.labelKey)}
-                        </div>
-                      )}
-                    </motion.button>
+                      >
+                        <Icon className="h-[18px] w-[18px] shrink-0" />
+                        {!collapsed ? (
+                          <>
+                            <span className="min-w-0 flex-1 break-words font-medium leading-5">{label}</span>
+                            <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-70 group-focus-visible:opacity-70" />
+                          </>
+                        ) : null}
+                      </motion.button>
+                    </CollapsedTooltip>
                   );
                 })}
               </div>
-            </ScrollArea>
-          </motion.div>
-        </div>
-      </nav>
+            </div>
+          </ScrollArea>
+        </nav>
 
-      <div className="border-t border-border bg-background">
-        <AnimatePresence mode="wait">
-          {!collapsed && appVersion && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
-              className={isFusionMode ? 'flex items-start gap-2 px-3 py-2' : 'flex items-center gap-2 px-3 py-2'}
-            >
-              <Info className={`w-4 h-4 text-muted-foreground shrink-0 ${isFusionMode ? 'mt-0.5' : ''}`} />
+        <div className="shrink-0 border-t border-border bg-background">
+          <div className="px-2 pt-2">{renderNavItem(settingsNavigationItem)}</div>
+
+          {!collapsed && appVersion ? (
+            <div className={isFusionMode ? 'flex items-start gap-2 px-4 py-2' : 'flex items-center gap-2 px-4 py-1.5'}>
+              <Info className={`h-4 w-4 shrink-0 text-muted-foreground ${isFusionMode ? 'mt-0.5' : ''}`} />
               {isFusionMode ? (
                 <div className="min-w-0 space-y-2">
                   <div>
                     <p className="text-[11px] text-muted-foreground">
                       {t('sidebar.desktopVersion')}
                     </p>
-                    <p className="text-xs text-foreground break-all">
+                    <p className="break-all text-xs text-foreground">
                       {appVersion}
                     </p>
                   </div>
@@ -848,7 +753,7 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
                     <p className="text-[11px] text-muted-foreground">
                       {t('sidebar.webVersion')}
                     </p>
-                    <p className="text-xs text-foreground break-all">
+                    <p className="break-all text-xs text-foreground">
                       {resolvedWebVersion}
                     </p>
                   </div>
@@ -857,7 +762,7 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
                       <p className="text-[11px] text-muted-foreground">
                         {t('sidebar.windowsStoreVersion')}
                       </p>
-                      <p className="text-xs text-foreground break-all">
+                      <p className="break-all text-xs text-foreground">
                         {windowsStoreVersion}
                       </p>
                     </div>
@@ -868,56 +773,39 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
                   v{appVersion}
                 </span>
               )}
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>
+          ) : null}
 
-        <div className="p-3">
-          <motion.button
-            onClick={() => setCollapsed(!collapsed)}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className={`
-              w-full flex items-center justify-center gap-2 px-3 py-2
-              rounded-lg text-muted-foreground hover:text-foreground
-              transition-all duration-200 relative overflow-hidden group
-            `}
-            title={collapsed ? t('sidebar.expand') : t('sidebar.collapse')}
+          <div
+            className={cn(
+              'flex gap-2 p-2',
+              collapsed ? 'flex-col items-center' : 'items-center px-3',
+            )}
           >
-            <motion.div
-              className="absolute inset-0 bg-accent/50"
-              initial={{ opacity: 0 }}
-              whileHover={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            />
-            <AnimatePresence mode="wait">
-              {collapsed ? (
-                <motion.div
-                  key="collapsed"
-                  initial={{ rotate: -180, opacity: 0 }}
-                  animate={{ rotate: 0, opacity: 1 }}
-                  exit={{ rotate: 180, opacity: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="relative z-10"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="expanded"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="flex items-center gap-2 relative z-10"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                  <span className="text-sm font-medium">{t('sidebar.collapse')}</span>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.button>
+            <LanguageToggle />
+            <ThemeToggle />
+            <CollapsedTooltip label={collapseLabel} enabled={collapsed}>
+              <button
+                type="button"
+                onClick={toggleCollapsed}
+                aria-label={collapseLabel}
+                aria-expanded={!collapsed}
+                title={collapsed ? undefined : collapseLabel}
+                className={cn(
+                  'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35',
+                  !collapsed && 'ml-auto',
+                )}
+              >
+                {collapsed ? (
+                  <PanelLeftOpen className="h-[18px] w-[18px]" />
+                ) : (
+                  <PanelLeftClose className="h-[18px] w-[18px]" />
+                )}
+              </button>
+            </CollapsedTooltip>
+          </div>
         </div>
-      </div>
-    </aside>
+      </aside>
+    </TooltipProvider>
   );
 }

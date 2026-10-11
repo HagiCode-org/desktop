@@ -31,14 +31,14 @@ export default function SettingsPage({ distributionState }: SettingsPageProps) {
       <SettingsFeaturePageLayout
         title={t('settings.title')}
         navigation={(
-          <TabsList className="flex h-auto w-full justify-start gap-2 overflow-x-auto rounded-2xl border border-border/70 bg-muted/25 p-2 md:w-72 md:flex-col md:items-stretch md:overflow-visible">
+          <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 rounded-xl border border-border/70 bg-muted/25 p-1.5 @4xl:w-60 @4xl:shrink-0 @4xl:flex-col @4xl:flex-nowrap @4xl:items-stretch @4xl:self-start">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
                 <TabsTrigger
                   key={tab.id}
                   value={tab.id}
-                  className="justify-start gap-2 rounded-xl px-4 py-3 text-left data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                  className="justify-start gap-2 rounded-lg px-3 py-2 text-left data-[state=active]:bg-background data-[state=active]:shadow-sm"
                 >
                   <Icon className="h-4 w-4" />
                   <span>{t(tab.labelKey)}</span>

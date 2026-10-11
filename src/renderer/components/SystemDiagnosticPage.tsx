@@ -15,6 +15,7 @@ import { writeTextToClipboard } from '../lib/clipboard.js';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { PageShell } from '@/components/ui/page-shell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -128,8 +129,8 @@ export default function SystemDiagnosticPage() {
   const showPartialFailure = result?.summary.status === 'partial-failure';
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <Card className="border-border/80 shadow-md">
+    <PageShell>
+      <Card className="border-border/80 shadow-sm">
         <CardHeader className="gap-4 pb-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="space-y-2">
@@ -243,7 +244,7 @@ export default function SystemDiagnosticPage() {
                 <p className="text-sm font-medium text-foreground">{t('systemDiagnostic.runtimeMatrix.title')}</p>
               </div>
 
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <div className="grid gap-3 @xl:grid-cols-2 @4xl:grid-cols-4">
                 {result.data.builtinRuntimes.rows.map((row) => (
                   <div key={row.id} className="rounded-lg border border-border/70 bg-background/70 p-3">
                     <div className="flex items-start justify-between gap-2">
@@ -266,7 +267,7 @@ export default function SystemDiagnosticPage() {
                 ))}
               </div>
 
-              <div className="grid gap-3 lg:grid-cols-2">
+              <div className="grid gap-3 @3xl:grid-cols-2">
                 <div className="rounded-lg border border-border/70 bg-background/70 p-3 text-xs text-muted-foreground">
                   <p className="mb-2 text-sm font-medium text-foreground">{t('systemDiagnostic.runtimeMatrix.npmConfig.title')}</p>
                   <p>{t('systemDiagnostic.runtimeMatrix.npmConfig.registry', { value: result.data.builtinRuntimes.npmConfig.registry ?? t('systemDiagnostic.runtimeMatrix.unknown') })}</p>
@@ -305,7 +306,7 @@ export default function SystemDiagnosticPage() {
                 <p className="text-sm font-medium text-foreground">{t('systemDiagnostic.reportTitle')}</p>
                 <p className="text-xs text-muted-foreground">{t('systemDiagnostic.reportDescription')}</p>
               </div>
-              <ScrollArea className="h-[28rem] rounded-xl border border-border bg-black/[0.03] p-4">
+              <ScrollArea className="h-[clamp(14rem,45vh,28rem)] rounded-xl border border-border bg-black/[0.03] p-4">
                 <pre className="font-mono text-sm leading-6 text-foreground whitespace-pre-wrap break-words">
                   {result.report}
                 </pre>
@@ -314,6 +315,6 @@ export default function SystemDiagnosticPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageShell>
   );
 }

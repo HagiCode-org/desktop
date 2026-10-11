@@ -7,6 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PageHeader } from '@/components/ui/page-header';
+import { PageShell } from '@/components/ui/page-shell';
 import { evaluateDependencyRepairIntent, prioritizePackagesForRepair } from './dependency-management/dependencyManagementPageModel';
 import { BatchCommandDialog } from './dependency-management/BatchCommandDialog';
 import { DependencyManagementTabContent } from '../features/dependency-management/DependencyManagementTabContent';
@@ -114,7 +115,7 @@ export default function DependencyManagementPage() {
     <PageHeader icon={PackageOpen} titleKey="dependencyManagement.title" descriptionKey="dependencyManagement.description" />
     {pageStatus === 'error' ? <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertTitle>{t('dependencyManagement.errors.loadFailed')}</AlertTitle><AlertDescription>{errorMessage}</AlertDescription></Alert> : null}
     {pageStatus === 'ready' && snapshot ? <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)} className="w-full">
-      <TabsList className="flex h-auto w-full flex-wrap justify-start gap-2 rounded-2xl border border-border/70 bg-muted/25 p-2">{tabs.map((tab) => { const Icon = tab.icon; return <TabsTrigger key={tab.id} value={tab.id} className="gap-2 rounded-xl px-4 py-3"><Icon className="h-4 w-4" />{t(tab.labelKey, { ns: 'pages' })}</TabsTrigger>; })}</TabsList>
+      <TabsList className="mb-4 flex h-auto w-full flex-wrap justify-start gap-1 rounded-xl border border-border/70 bg-muted/25 p-1.5">{tabs.map((tab) => { const Icon = tab.icon; return <TabsTrigger key={tab.id} value={tab.id} className="gap-2 rounded-lg px-3 py-2"><Icon className="h-4 w-4" />{t(tab.labelKey, { ns: 'pages' })}</TabsTrigger>; })}</TabsList>
       <DependencyManagementTabContent activeTab={activeConfig} snapshot={snapshot} basePackages={basePackages} agentCliPackages={agentCliPackages} baseHighlightedPackageIds={highlightedPackageIds.filter((id) => baseIds.has(id))} agentCliHighlightedPackageIds={highlightedPackageIds.filter((id) => agentIds.has(id))} selectedPackageIds={selectedPackageIds} onSelectionChange={updateSelectedIds} onGenerateBatchCommand={generateBatchCommand} onRefresh={() => void refreshSnapshot()} isRefreshing={isRefreshingSnapshot} onOpenNodeEnvironmentFaq={() => void window.electronAPI.openExternal(t('dependencyManagement.environment.faqUrl'))} onUpdateMirrorSettings={updateMirrorSettings} isSavingMirrorSettings={isSavingMirrorSettings} mirrorRegistryUrl={mirrorRegistryUrl} mirrorSaveError={mirrorSaveError} />
     </Tabs> : null}
     <BatchCommandDialog
@@ -128,5 +129,4 @@ export default function DependencyManagementPage() {
   </PageShell>;
 }
 
-function PageShell({ children }: { children: React.ReactNode }) { return <div className="mx-auto max-w-6xl space-y-6">{children}</div>; }
 function StatusCard({ children }: { children: React.ReactNode }) { return <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-card p-6 text-muted-foreground">{children}</div>; }
