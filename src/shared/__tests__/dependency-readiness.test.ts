@@ -120,7 +120,18 @@ describe('dependency readiness evaluation', () => {
     assert.equal(summary.requiredReady, true);
   });
 
-  it('still allows exact-version checks when a snapshot definition explicitly requires one', () => {
+  it('keeps openspec ready when a newer version than the pinned minimum is installed', () => {
+    const summary = evaluateDependencyReadiness(createSnapshot({}, { openspec: '1.13.2' }), ['codex']);
+    const openspec = summary.requiredPackages.find((item) => item.id === 'openspec');
+
+    assert.equal(openspec?.requiredVersionRange, '1.3.1');
+    assert.equal(openspec?.versionSatisfied, true);
+    assert.deepEqual(summary.versionMismatchRequiredPackageIds, []);
+    assert.equal(summary.requiredReady, true);
+    assert.equal(summary.ready, true);
+  });
+
+  it('rejects installed versions below a pinned minimum when a snapshot definition explicitly requires one', () => {
     const openspecDefinition = managedNpmPackages.find((definition) => definition.id === 'openspec');
     if (!openspecDefinition) {
       throw new Error('openspec definition missing from managed catalog');
@@ -205,5 +216,58 @@ describe('dependency readiness evaluation', () => {
     assert.deepEqual(summary.missingSelectedAgentCliPackageIds, ['codex']);
     assert.deepEqual(summary.versionMismatchSelectedAgentCliPackageIds, []);
     assert.equal(summary.blockingReasons.some((reason) => reason.code === 'agent-cli-not-installed'), true);
+  });
+});
+
+describe('managed package minimum version satisfaction', () => {
+  function openspecWithRange(requiredVersionRange: string): ManagedNpmPackageDefinition {
+    const definition = managedNpmPackages.find((item) => item.id === 'openspec');
+    if (!definition) {
+      throw new Error('openspec definition missing from managed catalog');
+    }
+
+    return { ...definition, installSpec: `@fission-ai/openspec@${requiredVersionRange}`, requiredVersionRange };
+  }
+
+  it('treats a bare pinned version as a minimum', () => {
+    const definition = openspecWithRange('1.3.1');
+    const cases: Array<[string, boolean]> = [
+      ['1.13.2', true],
+      ['1.3.2', true],
+      ['1.4.0', true],
+      ['2.0.0', true],
+      ['1.3.1', true],
+      ['1.4.0-beta.1', true],
+      ['1.3.0', false],
+      ['1.2.9', false],
+      ['0.99.0', false],
+      ['1.3.1-beta.1', false],
+    ];
+
+    for (const [installedVersion, expected] of cases) {
+      assert.equal(
+        isManagedPackageVersionSatisfied(definition, installedVersion),
+        expected,
+        `installed ${installedVersion} against pin 1.3.1`,
+      );
+    }
+  });
+
+  it('keeps authored range expressions bounded as written', () => {
+    assert.equal(isManagedPackageVersionSatisfied(openspecWithRange('^1.2.0'), '1.13.2'), true);
+    assert.equal(isManagedPackageVersionSatisfied(openspecWithRange('^1.2.0'), '2.0.0'), false);
+    assert.equal(isManagedPackageVersionSatisfied(openspecWithRange('>=1.0.0 <2.0.0'), '2.0.0'), false);
+    assert.equal(isManagedPackageVersionSatisfied(openspecWithRange('=1.3.1'), '1.13.2'), false);
+    assert.equal(isManagedPackageVersionSatisfied(openspecWithRange('=1.3.1'), '1.3.1'), true);
+  });
+
+  it('rejects missing or unparseable installed versions and accepts coercible ones', () => {
+    const definition = openspecWithRange('1.3.1');
+
+    assert.equal(isManagedPackageVersionSatisfied(definition, null), false);
+    assert.equal(isManagedPackageVersionSatisfied(definition, undefined), false);
+    assert.equal(isManagedPackageVersionSatisfied(definition, ''), false);
+    assert.equal(isManagedPackageVersionSatisfied(definition, 'not-a-version'), false);
+    assert.equal(isManagedPackageVersionSatisfied(definition, '1.13'), true);
   });
 });

@@ -1,4 +1,4 @@
-import { coerce, satisfies, valid, validRange } from 'semver';
+import { coerce, gte, satisfies, valid, validRange } from 'semver';
 import type {
   ManagedNpmPackageDefinition,
   ManagedNpmPackageId,
@@ -269,11 +269,11 @@ export function getSupportedSelectedAgentCliPackageIds(selectedIds: readonly str
   return supportedIds;
 }
 
-export function getManagedPackageRequiredVersionRange(
+function getManagedPackageAuthoredVersionSelector(
   definition: ManagedNpmPackageDefinition,
 ): string | null {
   if (definition.requiredVersionRange) {
-    return validRange(definition.requiredVersionRange, { includePrerelease: true }) ?? null;
+    return definition.requiredVersionRange;
   }
 
   const installSpec = definition.installSpec.trim();
@@ -283,12 +283,18 @@ export function getManagedPackageRequiredVersionRange(
     return null;
   }
 
-  const selector = installSpec.slice(scopedTargetPrefix.length).trim();
-  if (!selector) {
+  return installSpec.slice(scopedTargetPrefix.length).trim() || null;
+}
+
+export function getManagedPackageRequiredVersionRange(
+  definition: ManagedNpmPackageDefinition,
+): string | null {
+  const authoredSelector = getManagedPackageAuthoredVersionSelector(definition);
+  if (!authoredSelector) {
     return null;
   }
 
-  return validRange(selector, { includePrerelease: true }) ?? null;
+  return validRange(authoredSelector, { includePrerelease: true }) ?? null;
 }
 
 export function getManagedPackageInstallArgs(
@@ -331,7 +337,12 @@ export function isManagedPackageVersionSatisfied(
     return false;
   }
 
-  return satisfies(normalizedVersion, requiredVersionRange, { includePrerelease: true });
+  // Test the authored selector: validRange turns `=1.3.1` into `1.3.1`, which would wrongly read as a minimum.
+  const authoredSelector = getManagedPackageAuthoredVersionSelector(definition);
+  const pinnedVersion = authoredSelector ? valid(authoredSelector) : null;
+  return pinnedVersion
+    ? gte(normalizedVersion, pinnedVersion)
+    : satisfies(normalizedVersion, requiredVersionRange, { includePrerelease: true });
 }
 
 function toReadinessPackageSummary(
