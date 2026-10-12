@@ -23,6 +23,7 @@ const CONTENT_URL = `${ORIGIN}/promote_content.json`;
 const IMAGE_URL = `${ORIGIN}/images/banner.png`;
 const IMAGE_KEY = imageKeyForUrl(new URL('/images/banner.png', ORIGIN));
 const PNG = Buffer.concat([Buffer.from('89504e470d0a1a0a', 'hex'), Buffer.alloc(32, 7)]);
+const AVIF = Buffer.concat([Buffer.from([0, 0, 0, 0x1c]), Buffer.from('ftypavif', 'latin1'), Buffer.alloc(16, 5)]);
 
 type MemoryStore = PromoteSnapshotStore & { values: Map<string, unknown> };
 
@@ -476,6 +477,99 @@ describe('PromoteManager one-hour cache', () => {
     harness.clock.now = T0 + PROMOTE_REFRESH_INTERVAL_MS;
     await manager.getItems('en-US');
     assert.equal(harness.jsonRequests.length, requests + 2);
+  });
+});
+
+describe('PromoteManager image tiers', () => {
+  const AVIF_URL = `${ORIGIN}/images/banner.avif`;
+  const WEBP_URL = `${ORIGIN}/images/banner.webp`;
+
+  function tieredContent(sources: unknown): Record<string, unknown> {
+    return content('banner', { image: { src: '/images/banner.png', width: 1200, height: 630, alt: 'Banner alt', sources } });
+  }
+
+  it('stores the first passing tier under the original key and keeps the snapshot shape', async () => {
+    const harness = await createHarness();
+    harness.imageRoutes.set(AVIF_URL, AVIF);
+    setDocuments(harness, [flag('banner')], [tieredContent([
+      { type: 'image/avif', src: '/images/banner.avif' },
+      { type: 'image/webp', src: '/images/banner.webp' },
+    ])]);
+
+    const [item] = await createManager(harness).getItems('en-US');
+
+    assert.deepEqual(item.image, { key: IMAGE_KEY, width: 1200, height: 630, alt: 'Banner alt' });
+    assert.deepEqual(harness.imageRequests, [AVIF_URL]);
+    assert.deepEqual(storedSnapshot(harness).candidates[0].image, {
+      key: IMAGE_KEY,
+      width: 1200,
+      height: 630,
+      alt: 'Banner alt',
+      fileName: `${IMAGE_KEY}.avif`,
+    });
+    assert.equal(await exists(path.join(harness.imageDir, `${IMAGE_KEY}.avif`)), true);
+  });
+
+  it('falls back to the original when every declared tier fails', async () => {
+    const harness = await createHarness();
+    setDocuments(harness, [flag('banner')], [tieredContent([
+      { type: 'image/avif', src: '/images/banner.avif' },
+      { type: 'image/webp', src: '/images/banner.webp' },
+    ])]);
+
+    const [item] = await createManager(harness).getItems('en-US');
+
+    assert.equal(item.image?.key, IMAGE_KEY);
+    assert.deepEqual(harness.imageRequests, [AVIF_URL, WEBP_URL, IMAGE_URL]);
+    assert.equal(storedSnapshot(harness).candidates[0].image?.fileName, `${IMAGE_KEY}.png`);
+  });
+
+  it('keeps only tiers with an image type, a source and a usable location', async () => {
+    const harness = await createHarness();
+    harness.imageRoutes.set(AVIF_URL, AVIF);
+    setDocuments(harness, [flag('banner')], [tieredContent([
+      { type: 'text/html', src: '/images/banner.html' },
+      { type: 'image/avif' },
+      'image/avif',
+      { type: 'image/webp', src: '   ' },
+      { type: 'image/avif', src: 'https://cdn.example.com/banner.avif' },
+      { type: ' IMAGE/AVIF ', src: ' /images/banner.avif ' },
+    ])]);
+
+    const [item] = await createManager(harness).getItems('en-US');
+
+    assert.equal(item.image?.key, IMAGE_KEY);
+    assert.deepEqual(harness.imageRequests, [AVIF_URL]);
+    assert.equal(storedSnapshot(harness).candidates[0].image?.fileName, `${IMAGE_KEY}.avif`);
+  });
+
+  it('ignores a sources value that is not a list', async () => {
+    const harness = await createHarness();
+    harness.imageRoutes.set(AVIF_URL, AVIF);
+    setDocuments(harness, [flag('banner')], [tieredContent({ type: 'image/avif', src: '/images/banner.avif' })]);
+
+    const [item] = await createManager(harness).getItems('en-US');
+
+    assert.equal(item.image?.key, IMAGE_KEY);
+    assert.deepEqual(harness.imageRequests, [IMAGE_URL]);
+    assert.equal(storedSnapshot(harness).candidates[0].image?.fileName, `${IMAGE_KEY}.png`);
+  });
+
+  it('requests only the original for an image without sources', async () => {
+    const harness = await createHarness();
+    setDocuments(harness, [flag('banner')], [bannerContent('banner')]);
+
+    const [item] = await createManager(harness).getItems('en-US');
+
+    assert.deepEqual(item.image, { key: IMAGE_KEY, width: 1200, height: 630, alt: 'Banner alt' });
+    assert.deepEqual(harness.imageRequests, [IMAGE_URL]);
+    assert.deepEqual(storedSnapshot(harness).candidates[0].image, {
+      key: IMAGE_KEY,
+      width: 1200,
+      height: 630,
+      alt: 'Banner alt',
+      fileName: `${IMAGE_KEY}.png`,
+    });
   });
 });
 

@@ -1,7 +1,7 @@
 import log from 'electron-log';
 import type { PromoteImage, PromoteItem } from '../types/promote.js';
 import { desktopHttpClient, type DesktopHttpClient } from './http-client.js';
-import { isPositiveInteger, type PromoteImageCache, type PromoteImageSource } from './promote-image-cache.js';
+import { isPositiveInteger, type PromoteImageCache, type PromoteImageSource, type PromoteImageTier } from './promote-image-cache.js';
 
 export const PROMOTE_INDEX_ORIGIN = 'https://index.hagicode.com';
 export const PROMOTE_PLATFORM = 'hagicode';
@@ -49,6 +49,7 @@ interface ImageDescriptor {
   width: unknown;
   height: unknown;
   alt: string;
+  sources: PromoteImageTier[];
 }
 
 interface PromoteFlag {
@@ -113,6 +114,15 @@ function isLocalized(value: unknown): value is LocalizedText {
   return parseLocalized(value) !== undefined;
 }
 
+function parseImageTiers(value: unknown): PromoteImageTier[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item): PromoteImageTier[] => {
+    if (!isRecord(item) || !nonEmptyString(item.type) || !nonEmptyString(item.src)) return [];
+    const type = item.type.trim().toLowerCase();
+    return type.startsWith('image/') ? [{ src: item.src.trim(), type }] : [];
+  });
+}
+
 function parseImageDescriptor(value: unknown): ImageDescriptor | undefined {
   if (!isRecord(value) || !nonEmptyString(value.src)) return undefined;
   return {
@@ -120,6 +130,7 @@ function parseImageDescriptor(value: unknown): ImageDescriptor | undefined {
     width: value.width,
     height: value.height,
     alt: nonEmptyString(value.alt) ? value.alt.trim() : '',
+    sources: parseImageTiers(value.sources),
   };
 }
 
@@ -401,7 +412,8 @@ export class PromoteManager {
       if (!imageSource || !isPositiveInteger(width) || !isPositiveInteger(height)) return candidate;
       const key = this.imageCache.keyForSource(imageSource.src);
       if (!key) return candidate;
-      sources.push({ src: imageSource.src, width, height });
+      const tiers = [...imageSource.sources.filter((tier) => tier.src !== imageSource.src), { src: imageSource.src }];
+      sources.push({ src: imageSource.src, width, height, tiers });
       return { ...candidate, image: { key, width, height, alt: imageSource.alt } };
     });
 

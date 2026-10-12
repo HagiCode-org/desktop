@@ -6,7 +6,8 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, it } from 'node:test';
-import { detectImageType, imageKeyForUrl, isPositiveInteger, PromoteImageCache, resolveImageSource } from '../promote-image-cache.js';
+import { requestBinary } from '../http-client.js';
+import { detectImageType, imageKeyForUrl, isPositiveInteger, PromoteImageCache, type PromoteImageTier, resolveImageSource } from '../promote-image-cache.js';
 
 const PNG = Buffer.concat([Buffer.from('89504e470d0a1a0a', 'hex'), Buffer.alloc(24, 1)]);
 const JPEG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(24, 2)]);
@@ -19,6 +20,7 @@ interface Route {
   status?: number;
   headers?: Record<string, string>;
   body?: Buffer | string;
+  hang?: boolean;
 }
 
 interface TestServer {
@@ -45,6 +47,7 @@ async function startServer(routes: Map<string, Route>): Promise<TestServer> {
     const url = request.url ?? '/';
     hits.push(url);
     const route = routes.get(url);
+    if (route?.hang) return;
     if (!route) {
       response.writeHead(404);
       response.end();
@@ -77,7 +80,11 @@ function imageRoute(body: Buffer, contentType = 'image/png'): Route {
   return { status: 200, headers: { 'content-type': contentType, 'content-length': String(body.length) }, body };
 }
 
-function createCache(imageDir: string, origin: string, overrides: { maxBytes?: number; now?: () => number } = {}): PromoteImageCache {
+function createCache(
+  imageDir: string,
+  origin: string,
+  overrides: { maxBytes?: number; now?: () => number; budgetMs?: number; tierTimeoutMs?: number } = {},
+): PromoteImageCache {
   return new PromoteImageCache({ imageDir, indexOrigin: origin, budgetMs: 15_000, ...overrides });
 }
 
@@ -297,6 +304,170 @@ describe('PromoteImageCache.ensureImages', () => {
     await cache.ensureImages([{ src: '/images/a.png', width: 1, height: 1 }]);
 
     assert.deepEqual(await listDirectory(imageDir), [`${cache.keyForSource('/images/a.png')}.png`]);
+    await server.close();
+  });
+});
+
+describe('PromoteImageCache tier chain', () => {
+  const chain: PromoteImageTier[] = [
+    { src: '/images/a.avif', type: 'image/avif' },
+    { src: '/images/a.webp', type: 'image/webp' },
+    { src: '/images/a.png' },
+  ];
+
+  it('stores the first tier that passes and requests nothing after it', async () => {
+    const server = await startServer(new Map([
+      ['/images/a.avif', imageRoute(AVIF, 'image/avif')],
+      ['/images/a.webp', imageRoute(WEBP, 'image/webp')],
+      ['/images/a.png', imageRoute(PNG)],
+    ]));
+    const imageDir = await createImageDir();
+    const cache = createCache(imageDir, server.origin);
+
+    const result = await cache.ensureImages([{ src: '/images/a.png', width: 1, height: 1, tiers: chain }]);
+
+    const key = cache.keyForSource('/images/a.png')!;
+    assert.deepEqual(result.get(key), { fileName: `${key}.avif`, contentType: 'image/avif' });
+    assert.deepEqual(server.hits, ['/images/a.avif']);
+    assert.deepEqual(await listDirectory(imageDir), [`${key}.avif`]);
+    await server.close();
+  });
+
+  it('falls through a 404 on the first tier to the next one', async () => {
+    const server = await startServer(new Map([
+      ['/images/a.webp', imageRoute(WEBP, 'image/webp')],
+      ['/images/a.png', imageRoute(PNG)],
+    ]));
+    const cache = createCache(await createImageDir(), server.origin);
+
+    const result = await cache.ensureImages([{ src: '/images/a.png', width: 1, height: 1, tiers: chain }]);
+
+    const key = cache.keyForSource('/images/a.png')!;
+    assert.deepEqual(result.get(key), { fileName: `${key}.webp`, contentType: 'image/webp' });
+    assert.deepEqual(server.hits, ['/images/a.avif', '/images/a.webp']);
+    await server.close();
+  });
+
+  it('treats a tier whose bytes do not match its declared type as failed', async () => {
+    const server = await startServer(new Map([
+      ['/images/a.avif', imageRoute(PNG, 'image/avif')],
+      ['/images/a.webp', imageRoute(PNG, 'image/webp')],
+      ['/images/a.png', imageRoute(PNG)],
+    ]));
+    const cache = createCache(await createImageDir(), server.origin);
+
+    const result = await cache.ensureImages([{ src: '/images/a.png', width: 1, height: 1, tiers: chain }]);
+
+    const key = cache.keyForSource('/images/a.png')!;
+    assert.deepEqual(result.get(key), { fileName: `${key}.png`, contentType: 'image/png' });
+    assert.deepEqual(server.hits, ['/images/a.avif', '/images/a.webp', '/images/a.png']);
+    await server.close();
+  });
+
+  it('treats a tier above the size cap as failed', async () => {
+    const server = await startServer(new Map([
+      ['/images/a.avif', imageRoute(Buffer.concat([AVIF, Buffer.alloc(4096)]), 'image/avif')],
+      ['/images/a.png', imageRoute(PNG)],
+    ]));
+    const imageDir = await createImageDir();
+    const cache = createCache(imageDir, server.origin, { maxBytes: 1024 });
+
+    const result = await cache.ensureImages([{ src: '/images/a.png', width: 1, height: 1, tiers: chain }]);
+
+    const key = cache.keyForSource('/images/a.png')!;
+    assert.deepEqual(result.get(key), { fileName: `${key}.png`, contentType: 'image/png' });
+    assert.deepEqual(await listDirectory(imageDir), [`${key}.png`]);
+    await server.close();
+  });
+
+  it('treats a redirected tier as failed and never follows the redirect', async () => {
+    const server = await startServer(new Map([
+      ['/images/a.avif', { status: 302, headers: { location: '/images/moved.avif' } }],
+      ['/images/moved.avif', imageRoute(AVIF, 'image/avif')],
+      ['/images/a.png', imageRoute(PNG)],
+    ]));
+    const cache = createCache(await createImageDir(), server.origin);
+
+    const result = await cache.ensureImages([{ src: '/images/a.png', width: 1, height: 1, tiers: chain }]);
+
+    const key = cache.keyForSource('/images/a.png')!;
+    assert.deepEqual(result.get(key), { fileName: `${key}.png`, contentType: 'image/png' });
+    assert.deepEqual(server.hits, ['/images/a.avif', '/images/a.webp', '/images/a.png']);
+    await server.close();
+  });
+
+  it('drops a tier outside the Index origin without sending a request for it', async () => {
+    const server = await startServer(new Map([['/images/a.png', imageRoute(PNG)]]));
+    const requested: string[] = [];
+    const cache = new PromoteImageCache({
+      imageDir: await createImageDir(),
+      indexOrigin: server.origin,
+      budgetMs: 15_000,
+      httpClient: {
+        requestBinary: (url, options) => {
+          requested.push(url);
+          return requestBinary(url, options);
+        },
+      },
+    });
+
+    const result = await cache.ensureImages([{
+      src: '/images/a.png',
+      width: 1,
+      height: 1,
+      tiers: [{ src: 'https://cdn.example.com/images/a.avif', type: 'image/avif' }, ...chain.slice(2)],
+    }]);
+
+    const key = cache.keyForSource('/images/a.png')!;
+    assert.deepEqual(result.get(key), { fileName: `${key}.png`, contentType: 'image/png' });
+    assert.deepEqual(requested, [`${server.origin}/images/a.png`]);
+    await server.close();
+  });
+
+  it('abandons a stalled tier after its share of the budget and still reaches the original', async () => {
+    const server = await startServer(new Map<string, Route>([
+      ['/images/a.avif', { hang: true }],
+      ['/images/a.png', imageRoute(PNG)],
+    ]));
+    const cache = createCache(await createImageDir(), server.origin, { tierTimeoutMs: 100, budgetMs: 5_000 });
+
+    const result = await cache.ensureImages([{ src: '/images/a.png', width: 1, height: 1, tiers: chain }]);
+
+    const key = cache.keyForSource('/images/a.png')!;
+    assert.deepEqual(result.get(key), { fileName: `${key}.png`, contentType: 'image/png' });
+    assert.deepEqual(server.hits, ['/images/a.avif', '/images/a.webp', '/images/a.png']);
+    await server.close();
+  });
+
+  it('stores nothing when every tier fails', async () => {
+    const server = await startServer(new Map([['/images/a.png', { status: 500 }]]));
+    const imageDir = await createImageDir();
+
+    const result = await createCache(imageDir, server.origin).ensureImages([
+      { src: '/images/a.png', width: 1, height: 1, tiers: chain },
+    ]);
+
+    assert.equal(result.size, 0);
+    assert.deepEqual(await listDirectory(imageDir), []);
+    assert.deepEqual(server.hits, ['/images/a.avif', '/images/a.webp', '/images/a.png']);
+    await server.close();
+  });
+
+  it('reuses a stored file for the key without requesting any tier', async () => {
+    const server = await startServer(new Map([
+      ['/images/a.avif', imageRoute(AVIF, 'image/avif')],
+      ['/images/a.png', imageRoute(PNG)],
+    ]));
+    const imageDir = await createImageDir();
+    const cache = createCache(imageDir, server.origin);
+    const key = cache.keyForSource('/images/a.png')!;
+    await fs.mkdir(imageDir, { recursive: true });
+    await fs.writeFile(path.join(imageDir, `${key}.avif`), AVIF);
+
+    const result = await cache.ensureImages([{ src: '/images/a.png', width: 1, height: 1, tiers: chain }]);
+
+    assert.deepEqual(result.get(key), { fileName: `${key}.avif`, contentType: 'image/avif' });
+    assert.deepEqual(server.hits, []);
     await server.close();
   });
 });

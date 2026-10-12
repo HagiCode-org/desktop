@@ -6,15 +6,22 @@ import { desktopHttpClient, type DesktopHttpClient } from './http-client.js';
 
 export const PROMOTE_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
 export const PROMOTE_IMAGE_CONCURRENCY = 2;
+export const PROMOTE_IMAGE_TIER_TIMEOUT_MS = 5_000;
 const STALE_TEMP_FILE_MS = 10 * 60 * 1000;
 const KEY_PATTERN = /^[0-9a-f]{32}$/;
 const STORED_NAME_PATTERN = /^([0-9a-f]{32})\.(png|jpg|webp|gif|avif)$/;
 const TEMP_NAME_PATTERN = /^\.promote-[0-9a-f]{32}-[0-9a-f-]{36}\.tmp$/;
 
+export interface PromoteImageTier {
+  src: string;
+  type?: string;
+}
+
 export interface PromoteImageSource {
   src: string;
   width: unknown;
   height: unknown;
+  tiers?: readonly PromoteImageTier[];
 }
 
 export interface PromoteStoredImage {
@@ -28,12 +35,23 @@ export interface PromoteImageCacheOptions {
   httpClient?: Pick<DesktopHttpClient, 'requestBinary'>;
   budgetMs: number;
   maxBytes?: number;
+  tierTimeoutMs?: number;
   now?: () => number;
 }
 
 interface ImageType {
   ext: 'png' | 'jpg' | 'webp' | 'gif' | 'avif';
   contentType: string;
+}
+
+interface ImageAttempt {
+  url: URL;
+  type?: string;
+}
+
+interface PendingImage {
+  key: string;
+  attempts: ImageAttempt[];
 }
 
 const CONTENT_TYPES: Record<ImageType['ext'], string> = {
@@ -95,6 +113,7 @@ export class PromoteImageCache {
   private readonly httpClient: Pick<DesktopHttpClient, 'requestBinary'>;
   private readonly budgetMs: number;
   private readonly maxBytes: number;
+  private readonly tierTimeoutMs: number;
   private readonly now: () => number;
 
   constructor(options: PromoteImageCacheOptions) {
@@ -103,6 +122,7 @@ export class PromoteImageCache {
     this.httpClient = options.httpClient ?? desktopHttpClient;
     this.budgetMs = options.budgetMs;
     this.maxBytes = options.maxBytes ?? PROMOTE_IMAGE_MAX_BYTES;
+    this.tierTimeoutMs = options.tierTimeoutMs ?? PROMOTE_IMAGE_TIER_TIMEOUT_MS;
     this.now = options.now ?? Date.now;
   }
 
@@ -113,7 +133,7 @@ export class PromoteImageCache {
 
   async ensureImages(sources: readonly PromoteImageSource[]): Promise<Map<string, PromoteStoredImage>> {
     const result = new Map<string, PromoteStoredImage>();
-    const pending = new Map<string, { url: URL; key: string }>();
+    const pending = new Map<string, PendingImage>();
 
     for (const source of sources) {
       if (!isPositiveInteger(source.width) || !isPositiveInteger(source.height)) continue;
@@ -123,7 +143,7 @@ export class PromoteImageCache {
         continue;
       }
       const key = imageKeyForUrl(url);
-      pending.set(key, { url, key });
+      pending.set(key, { key, attempts: this.attemptsFor(source.tiers ?? [], url) });
     }
     if (pending.size === 0) return result;
 
@@ -136,7 +156,7 @@ export class PromoteImageCache {
       return result;
     }
 
-    const queue: Array<{ url: URL; key: string }> = [];
+    const queue: PendingImage[] = [];
     for (const item of pending.values()) {
       const fileName = stored.get(item.key);
       if (fileName) {
@@ -151,7 +171,7 @@ export class PromoteImageCache {
       while (queue.length > 0) {
         const item = queue.shift();
         if (!item) return;
-        const file = await this.downloadOne(item.url, item.key, deadline);
+        const file = await this.downloadChain(item.key, item.attempts, deadline);
         if (file) result.set(item.key, file);
       }
     });
@@ -214,21 +234,47 @@ export class PromoteImageCache {
     return stored;
   }
 
-  private async downloadOne(url: URL, key: string, deadline: number): Promise<PromoteStoredImage | null> {
-    const remaining = deadline - this.now();
-    if (remaining <= 0) return null;
+  private attemptsFor(tiers: readonly PromoteImageTier[], original: URL): ImageAttempt[] {
+    const seen = new Set<string>([original.href]);
+    const attempts: ImageAttempt[] = [];
+    for (const tier of tiers) {
+      const url = resolveImageSource(tier.src, this.indexOrigin);
+      if (!url) {
+        log.warn('[PromoteImageCache] Dropped unusable image tier');
+        continue;
+      }
+      if (seen.has(url.href)) continue;
+      seen.add(url.href);
+      attempts.push({ url, type: tier.type });
+    }
+    attempts.push({ url: original });
+    return attempts;
+  }
 
+  private async downloadChain(key: string, attempts: readonly ImageAttempt[], deadline: number): Promise<PromoteStoredImage | null> {
+    for (const [index, attempt] of attempts.entries()) {
+      const remaining = deadline - this.now();
+      if (remaining <= 0) return null;
+      const isLast = index === attempts.length - 1;
+      const timeoutMs = isLast ? remaining : Math.min(this.tierTimeoutMs, remaining);
+      const file = await this.downloadTier(key, attempt, timeoutMs);
+      if (file) return file;
+    }
+    return null;
+  }
+
+  private async downloadTier(key: string, attempt: ImageAttempt, timeoutMs: number): Promise<PromoteStoredImage | null> {
     try {
-      const response = await this.httpClient.requestBinary(url.href, {
+      const response = await this.httpClient.requestBinary(attempt.url.href, {
         headers: { Accept: 'image/*' },
         redirect: 'error',
         maxBytes: this.maxBytes,
-        timeoutMs: remaining,
+        timeoutMs,
         validateStatus: (status) => status === 200,
       });
       const type = detectImageType(response.data);
-      if (!type) {
-        log.warn('[PromoteImageCache] Rejected image with unsupported content');
+      if (!type || (attempt.type !== undefined && type.contentType !== attempt.type)) {
+        log.warn('[PromoteImageCache] Rejected image tier with unsupported or mismatched content');
         return null;
       }
 
