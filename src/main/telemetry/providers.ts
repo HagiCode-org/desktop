@@ -73,7 +73,7 @@ class ConfiguredProvider implements TelemetryProvider {
 const noopSender: Sender = async () => {};
 
 function eventName(event: TelemetryEvent): string {
-  return event.name === 'event' ? String(event.properties?.name ?? 'desktop_event') : `desktop_${event.name}`;
+  return event.eventName ?? `desktop_${event.name}`;
 }
 
 function createOverseasSender(config: PublicTelemetryConfig): {

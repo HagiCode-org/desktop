@@ -50,6 +50,7 @@ export interface AppConfig {
   msstoreDonationItem?: MsstoreDonationItemState;
   interfaceOpeningMethod?: InterfaceOpeningMethod;
   serviceRegionPreference?: ServiceRegion;
+  anonymousInstallId?: string;
 }
 
 export const DEFAULT_VERSION_AUTO_UPDATE_SETTINGS: VersionAutoUpdateSettings = {
@@ -265,7 +266,8 @@ export class ConfigManager {
   }
 
   getAll(): AppConfig {
-    return this.store.store;
+    const { anonymousInstallId: _anonymousInstallId, ...config } = this.store.store;
+    return config;
   }
 
   reset(): void {

@@ -1,4 +1,11 @@
 import { randomUUID } from 'node:crypto';
+import {
+  getEventSpec,
+  isCatalogEvent,
+  type TelemetryCatalogEventName,
+  type TelemetryPropertySpec,
+  type TelemetrySamplingClass,
+} from '../../shared/telemetry-events.js';
 import type {
   PublicTelemetryConfig,
   TelemetryContext,
@@ -21,12 +28,21 @@ export interface TelemetryManagerOptions {
   arch?: string;
   createProvider?: (config: PublicTelemetryConfig) => TelemetryProvider;
   sessionId?: string;
+  installId?: string;
+  random?: () => number;
+}
+
+interface SendOptions {
+  sampling: TelemetrySamplingClass;
+  eventName?: TelemetryCatalogEventName;
+  schema?: Readonly<Record<string, TelemetryPropertySpec>>;
 }
 
 export class TelemetryManager implements TelemetryFacade {
   private provider: TelemetryProvider | null = null;
   private readonly queue: Array<Parameters<TelemetryProvider['send']>[0]> = [];
   private readonly context: TelemetryContext;
+  private readonly sampledIn: boolean;
   private user: TelemetryUser | undefined;
   private closed = false;
 
@@ -36,6 +52,8 @@ export class TelemetryManager implements TelemetryFacade {
       platform: options.platform ?? process.platform,
       arch: options.arch ?? process.arch,
     }, options.sessionId ?? randomUUID());
+    this.user = options.installId ? { id: options.installId, anonymous: true } : undefined;
+    this.sampledIn = (options.random ?? Math.random)() < options.config.sampleRate;
   }
 
   async init(): Promise<void> {
@@ -43,6 +61,7 @@ export class TelemetryManager implements TelemetryFacade {
     this.provider = (this.options.createProvider ?? createProvider)(this.options.config);
     try {
       await this.provider.init();
+      if (this.user) await this.provider.identify(this.user);
       await this.drain();
     } catch {
       if (telemetryDebugEnabled) {
@@ -64,28 +83,38 @@ export class TelemetryManager implements TelemetryFacade {
   }
 
   async reportError(error: unknown, properties?: Record<string, unknown>): Promise<void> {
-    await this.send('error', { ...properties, name: error instanceof Error ? error.name : 'UnknownError' });
+    await this.send('error', { ...properties, name: error instanceof Error ? error.name : 'UnknownError' }, { sampling: 'session' });
   }
   async track(name: string, properties?: Record<string, unknown>): Promise<void> {
-    await this.send('event', { ...properties, name });
+    if (!isCatalogEvent(name)) {
+      if (telemetryDebugEnabled) {
+        console.info('[Telemetry] event dropped: not in catalog', { provider: 'posthog', event: name });
+      }
+      return;
+    }
+    const spec = getEventSpec(name);
+    await this.send('event', properties, { sampling: spec.sampling, eventName: name, schema: spec.properties });
   }
   async recordPerformance(name: string, properties?: Record<string, unknown>): Promise<void> {
-    await this.send('performance', { ...properties, name });
+    await this.send('performance', { ...properties, name }, { sampling: 'session' });
   }
   async identify(id: string): Promise<void> {
     this.user = { id, anonymous: true };
     await this.provider?.identify(this.user);
   }
   async heartbeat(properties?: Record<string, unknown>): Promise<void> {
-    await this.send('heartbeat', properties);
+    await this.send('heartbeat', properties, { sampling: 'session' });
   }
   getStatus(): ProviderStatus | null { return this.provider?.status ?? null; }
 
-  private async send(name: Parameters<TelemetryProvider['send']>[0]['name'], properties?: Record<string, unknown>): Promise<void> {
-    const eventLabel = name === 'event' ? String(properties?.name ?? 'desktop_event') : `desktop_${name}`;
-    const criticalEvent = eventLabel === 'app_started' || eventLabel === 'main_view_entered';
+  private async send(
+    name: Parameters<TelemetryProvider['send']>[0]['name'],
+    properties: Record<string, unknown> | undefined,
+    options: SendOptions,
+  ): Promise<void> {
+    const eventLabel = options.eventName ?? `desktop_${name}`;
     if (this.closed) return;
-    if (!criticalEvent && Math.random() > this.options.config.sampleRate) {
+    if (options.sampling === 'session' && !this.sampledIn) {
       if (telemetryDebugEnabled) {
         console.info('[Telemetry] event sampled out', {
           provider: 'posthog',
@@ -97,7 +126,8 @@ export class TelemetryManager implements TelemetryFacade {
     }
     const event = {
       name,
-      properties: sanitizeProperties(properties),
+      eventName: options.eventName,
+      properties: sanitizeProperties(properties, options.schema),
       context: { ...this.context },
       user: this.user,
       timestamp: Date.now(),
@@ -108,7 +138,7 @@ export class TelemetryManager implements TelemetryFacade {
       if (telemetryDebugEnabled) {
         console.info('[Telemetry] event queued', {
           provider: 'posthog',
-          event: name,
+          event: eventLabel,
           queueSize: this.queue.length,
         });
       }

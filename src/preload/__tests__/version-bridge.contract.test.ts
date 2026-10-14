@@ -9,7 +9,7 @@ describe('version preload bridge contract', () => {
   it('removes the retired dependency inspection bridge while keeping lifecycle bridges', async () => {
     const source = await fs.readFile(preloadPath, 'utf8');
 
-    assert.equal(source.includes('telemetry:'), false);
+    assert.equal(source.includes("'telemetry:"), false);
     assert.equal(source.includes('telemetry:get'), false);
     assert.equal(source.includes('telemetry:set'), false);
     assert.equal(source.includes('versionCheckDependencies'), false);

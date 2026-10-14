@@ -97,6 +97,7 @@ import {
 } from '../types/turboengine-license.js';
 import { sponsorPlanProductConfig } from '../types/subscription.js';
 import { readPublicTelemetryConfig } from './telemetry/config.js';
+import { resolveInstallId } from './telemetry/identity.js';
 import { TelemetryManager } from './telemetry/telemetry-manager.js';
 import {
   executeWindowsStorePurchaseAddon,
@@ -341,6 +342,7 @@ let subscriptionFeatureEnabled = false;
 let turboEngineLicenseFeatureEnabled = false;
 let msstoreDonationItemFeatureEnabled = false;
 let telemetryManager: TelemetryManager | null = null;
+const telemetrySessionStartedAt = Date.now();
 let subscriptionPurchaseSmokeTestStarted = false;
 let lastAppliedTurboEngineDlcProgramOptionSignature = 'null|';
 const notificationService = new NotificationService({
@@ -2672,6 +2674,7 @@ app.whenReady().then(async () => {
   telemetryManager = new TelemetryManager({
     config: telemetryConfig,
     appVersion: app.getVersion(),
+    installId: telemetryConfig.enabled ? resolveInstallId(configManager.getStore()) : undefined,
   });
   await telemetryManager.init();
   await telemetryManager.track('app_started', {
@@ -2975,6 +2978,10 @@ app.on('before-quit', async (event) => {
     if (rssFeedManager) {
       rssFeedManager.destroy();
     }
+    await telemetryManager?.track('app_exited', {
+      status: 'normal',
+      duration: Date.now() - telemetrySessionStartedAt,
+    });
     await telemetryManager?.close();
     telemetryManager = null;
     versionUpdateManager?.dispose();

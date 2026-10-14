@@ -1,3 +1,5 @@
+import type { TelemetryCatalogEventName } from '../../shared/telemetry-events.js';
+
 export type TelemetryEventName =
   | 'error'
   | 'event'
@@ -18,6 +20,7 @@ export interface TelemetryUser {
 
 export interface TelemetryEvent {
   name: TelemetryEventName;
+  eventName?: TelemetryCatalogEventName;
   properties?: Record<string, unknown>;
   context: TelemetryContext;
   user?: TelemetryUser;
