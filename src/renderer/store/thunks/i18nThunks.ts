@@ -1,7 +1,7 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
-import { setCurrentLanguage } from '../slices/i18nSlice';
+import { setCurrentLanguage } from '../slices/i18nSlice.js';
 import i18n from '@/i18n';
-import { resolveDesktopLanguageCode } from '../../../shared/desktop-languages';
+import { resolveDesktopLanguageCode } from '../../../shared/desktop-languages.js';
 
 async function syncMainProcessLanguage(language: string): Promise<void> {
   const result = await (window.electronAPI as typeof window.electronAPI & {

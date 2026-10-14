@@ -9,8 +9,8 @@ import type {
   OnboardingDependencyInstallResult,
   OnboardingStartServiceResult,
   ResolvedLegalDocumentsPayload,
-} from '../../../types/onboarding';
-import { OnboardingStep } from '../../../types/onboarding';
+} from '../../../types/onboarding.js';
+import { OnboardingStep } from '../../../types/onboarding.js';
 import type { DependencyManagementBridge } from '../../../types/dependency-management.js';
 
 declare global {

@@ -1,7 +1,7 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import {
+  type OnboardingMode,
   type OnboardingShowPayload,
-  OnboardingMode,
   OnboardingStep,
   type DownloadProgress,
   type OnboardingRecoveryResult,
@@ -11,7 +11,7 @@ import {
   type StartupFailurePayload,
   type DependencyCheckResult,
   type ScriptOutput,
-} from '../../../types/onboarding';
+} from '../../../types/onboarding.js';
 import {
   createDefaultDistributionModeState,
   type DistributionModeState,
@@ -30,7 +30,7 @@ import {
   resetOnboarding,
   skipOnboarding,
   startService,
-} from '../thunks/onboardingThunks';
+} from '../thunks/onboardingThunks.js';
 
 const fullSequence = [
   OnboardingStep.LanguageSelection,

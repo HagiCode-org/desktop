@@ -12,8 +12,8 @@ import {
   completeInstall,
   DependencyType,
   type DependencyItem,
-} from '../slices/dependencySlice';
-import { setDependencyCheckResults } from '../slices/onboardingSlice';
+} from '../slices/dependencySlice.js';
+import { setDependencyCheckResults } from '../slices/onboardingSlice.js';
 import i18n from 'i18next';
 
 const tToast = (key: string, options?: Record<string, unknown>): string =>
