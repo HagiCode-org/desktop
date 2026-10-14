@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { ArrowRight, Star } from 'lucide-react';
 import { HAGICODE_DESKTOP_WINDOWS_STORE_REVIEW_URL } from '../../types/store-license.js';
 import { shouldShowRatingPrompt } from '../lib/msstore-rating-prompt.js';
+import { trackEvent } from '../telemetry';
 import { Button } from '@/components/ui/button';
 
 interface HomeStoreRatingPromptProps {}
@@ -61,7 +62,10 @@ export default function HomeStoreRatingPrompt({}: HomeStoreRatingPromptProps = {
         ns: 'pages',
         error: result.error || t('ratingPrompt.errors.openFailedFallback', { ns: 'pages' }),
       }));
+      return;
     }
+
+    trackEvent('store_rating_prompt_actioned', { action: 'rate' });
   };
 
   return (

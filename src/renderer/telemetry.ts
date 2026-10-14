@@ -1,3 +1,5 @@
+import type { TelemetryCatalogEventName, TelemetryEventProperties } from '../shared/telemetry-events.js';
+
 type TelemetryBridge = NonNullable<typeof window.electronAPI.cloudTelemetry>;
 
 export const telemetry: TelemetryBridge = {
@@ -8,6 +10,13 @@ export const telemetry: TelemetryBridge = {
   identify: (id) => window.electronAPI.cloudTelemetry?.identify(id) ?? Promise.resolve(),
   heartbeat: (properties) => window.electronAPI.cloudTelemetry?.heartbeat(properties) ?? Promise.resolve(),
 };
+
+export function trackEvent<N extends TelemetryCatalogEventName>(
+  name: N,
+  properties: TelemetryEventProperties<N>,
+): void {
+  telemetry.event(name, properties).catch(() => undefined);
+}
 
 export function installRendererTelemetry(): () => void {
   const onError = (event: ErrorEvent) => { void telemetry.error(event.error ?? event.message); };

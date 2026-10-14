@@ -29,6 +29,7 @@ import type {
   MsstoreDonationTipTierId,
 } from '../../types/msstore-donation-item.js';
 import { DEFAULT_MSSTORE_DONATION_PURCHASE_COUNTS_BY_TIER } from '../../types/msstore-donation-item.js';
+import { trackEvent } from '../telemetry';
 
 interface HomeStoreDonationItemProps {
   isWindowsStoreRuntime: boolean;
@@ -149,6 +150,7 @@ export default function HomeStoreDonationItem({ isWindowsStoreRuntime }: HomeSto
       return;
     }
 
+    trackEvent('donation_item_actioned', { action: 'purchase', tier });
     setPurchasingTier(tier);
     try {
       const debugBridge = (window as Window & {
@@ -242,6 +244,7 @@ export default function HomeStoreDonationItem({ isWindowsStoreRuntime }: HomeSto
       }
       const nextState = resultAction.payload as MsstoreDonationItemState;
       setState(nextState);
+      trackEvent('donation_item_actioned', { action: 'dismiss' });
       toast.success(t('donationItem.messages.dismissed', { ns: 'pages' }));
     } catch (error) {
       toast.error(t('donationItem.messages.dismissFailed', {

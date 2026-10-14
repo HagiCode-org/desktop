@@ -37,6 +37,11 @@ import {
 import type { ProcessStatus } from '../slices/webServiceSlice';
 import type { InstallWebServicePackageOptions, InstallWebServicePackageResult } from '../../../types/version-install.js';
 import { waitForStartupStoreLicenseVerification } from '../startupStoreLicenseVerification.js';
+import { trackEvent } from '../../telemetry';
+import type { TelemetryEventProperties } from '../../../shared/telemetry-events.js';
+
+type OutcomeStatus = 'success' | 'failure';
+type WebServiceStartOutcome = Omit<TelemetryEventProperties<'web_service_start_finished'>, 'duration'>;
 
 // Types for window electronAPI
 declare global {
@@ -108,6 +113,29 @@ function getInstallSuccessDescription(
   return i18n.t('pages:versionManagement.toast.installSuccessDescription');
 }
 
+function toStartErrorKind(type: string | undefined): NonNullable<WebServiceStartOutcome['errorKind']> {
+  switch (type) {
+    case 'no-active-version':
+      return 'no_active_version';
+    case 'version-not-ready':
+      return 'version_not_ready';
+    case 'dependency-requirements-not-met':
+      return 'dependencies_missing';
+    default:
+      return 'other';
+  }
+}
+
+function trackStartFinished(outcome: WebServiceStartOutcome, startedAt: number): void {
+  trackEvent('web_service_start_finished', { ...outcome, duration: Date.now() - startedAt });
+}
+
+function trackVersionInstallFinished(status: OutcomeStatus, startedAt: number, getState: () => unknown): void {
+  const progress = (getState() as { webService: { installProgress: InstallProgress | null } }).webService.installProgress;
+  if (!progress) return;
+  trackEvent('version_install_finished', { status, mode: progress.mode, duration: Date.now() - startedAt });
+}
+
 /**
  * Start web service
  * Replaces webServiceSaga/startWebServiceSaga
@@ -115,6 +143,8 @@ function getInstallSuccessDescription(
 export const startWebService = createAsyncThunk(
   'webService/start',
   async (_, { dispatch, getState }) => {
+    const startedAt = Date.now();
+    let startOutcome: WebServiceStartOutcome = { status: 'failure', errorKind: 'other' };
     dispatch(beginStartupBatch());
     const batch = (getState() as { webService: { startupBatch: number } }).webService.startupBatch;
     try {
@@ -130,10 +160,12 @@ export const startWebService = createAsyncThunk(
         await window.electronAPI.startWebService();
 
       if (result.success) {
+        startOutcome = { status: 'success' };
         dispatch(setStartupFailureForBatch({ batch, failure: null }));
         // Keep the card in checking state until the current batch is confirmed healthy.
         await dispatch(fetchWebServiceStatus(batch));
       } else {
+        startOutcome = { status: 'failure', errorKind: toStartErrorKind(result.error?.type) };
         if (result.startupFailure) {
           dispatch(setStartupFailureForBatch({ batch, failure: result.startupFailure }));
         }
@@ -167,6 +199,7 @@ export const startWebService = createAsyncThunk(
       throw error;
     } finally {
       dispatch(setOperatingForBatch({ batch, operating: false }));
+      trackStartFinished(startOutcome, startedAt);
     }
   }
 );
@@ -178,6 +211,8 @@ export const startWebService = createAsyncThunk(
 export const confirmStartWithWarning = createAsyncThunk(
   'webService/confirmStartWithWarning',
   async (_, { dispatch, getState }) => {
+    const startedAt = Date.now();
+    let startOutcome: WebServiceStartOutcome = { status: 'failure', errorKind: 'other' };
     dispatch(beginStartupBatch());
     const batch = (getState() as { webService: { startupBatch: number } }).webService.startupBatch;
     try {
@@ -195,10 +230,12 @@ export const confirmStartWithWarning = createAsyncThunk(
         await window.electronAPI.startWebService(true);
 
       if (result.success) {
+        startOutcome = { status: 'success' };
         dispatch(setStartupFailureForBatch({ batch, failure: null }));
         dispatch(setShowDependencyWarning(true));
         await dispatch(fetchWebServiceStatus(batch));
       } else {
+        startOutcome = { status: 'failure', errorKind: toStartErrorKind(result.error?.type) };
         if (result.startupFailure) {
           dispatch(setStartupFailureForBatch({ batch, failure: result.startupFailure }));
         }
@@ -219,6 +256,7 @@ export const confirmStartWithWarning = createAsyncThunk(
       throw error;
     } finally {
       dispatch(setOperatingForBatch({ batch, operating: false }));
+      trackStartFinished(startOutcome, startedAt);
     }
   }
 );
@@ -230,12 +268,15 @@ export const confirmStartWithWarning = createAsyncThunk(
 export const stopWebService = createAsyncThunk(
   'webService/stop',
   async (_, { dispatch, getState }) => {
+    const startedAt = Date.now();
+    let succeeded = false;
     dispatch(beginStartupBatch({ status: 'stopping', checking: false }));
     const batch = (getState() as { webService: { startupBatch: number } }).webService.startupBatch;
     try {
       dispatch(setErrorForBatch({ batch, error: null }));
 
       const success: boolean = await window.electronAPI.stopWebService();
+      succeeded = success;
 
       if (success) {
         dispatch(setStatusForBatch({ batch, status: 'stopped' }));
@@ -252,6 +293,10 @@ export const stopWebService = createAsyncThunk(
       throw error;
     } finally {
       dispatch(setOperatingForBatch({ batch, operating: false }));
+      trackEvent('web_service_stop_finished', {
+        status: succeeded ? 'success' : 'failure',
+        duration: Date.now() - startedAt,
+      });
     }
   }
 );
@@ -263,12 +308,15 @@ export const stopWebService = createAsyncThunk(
 export const restartWebService = createAsyncThunk(
   'webService/restart',
   async (_, { dispatch, getState }) => {
+    const startedAt = Date.now();
+    let succeeded = false;
     dispatch(beginStartupBatch({ status: 'stopping', checking: false }));
     const batch = (getState() as { webService: { startupBatch: number } }).webService.startupBatch;
     try {
       dispatch(setErrorForBatch({ batch, error: null }));
 
       const success: boolean = await window.electronAPI.restartWebService();
+      succeeded = success;
 
       if (success) {
         dispatch(setStatusForBatch({ batch, status: 'starting' }));
@@ -285,6 +333,10 @@ export const restartWebService = createAsyncThunk(
       throw error;
     } finally {
       dispatch(setOperatingForBatch({ batch, operating: false }));
+      trackEvent('web_service_restart_finished', {
+        status: succeeded ? 'success' : 'failure',
+        duration: Date.now() - startedAt,
+      });
     }
   }
 );
@@ -376,7 +428,7 @@ export const installWebServicePackage = createAsyncThunk(
       // Service is not running, proceed with installation
       dispatch(setInstallState(InstallState.Installing));
       dispatch(setInstallingVersionId(version));
-      return await doInstallPackage(version, options, dispatch);
+      return await doInstallPackage(version, options, dispatch, getState);
     } catch (error) {
       console.error('Install package error:', error);
       dispatch(setInstallProgress({
@@ -441,7 +493,7 @@ export const confirmInstallAndStop = createAsyncThunk(
       // Service stopped successfully, proceed with installation
       dispatch(setInstallState(InstallState.Installing));
       dispatch(setInstallingVersionId(pendingVersion));
-      const result = await doInstallPackage(pendingVersion, pendingInstallOptions, dispatch);
+      const result = await doInstallPackage(pendingVersion, pendingInstallOptions, dispatch, getState);
 
       // Hide confirmation dialog after installation completes
       dispatch(hideInstallConfirm());
@@ -466,7 +518,9 @@ async function doInstallPackage(
   version: string,
   options: InstallWebServicePackageOptions | undefined,
   dispatch: any,
+  getState: () => unknown,
 ) {
+  const startedAt = Date.now();
   dispatch(setInstallProgress({
     stage: 'queued',
     mode: 'http-direct',
@@ -477,7 +531,11 @@ async function doInstallPackage(
   }));
   dispatch(setError(null));
 
-  const result = await window.electronAPI.installWebServicePackage(version, options);
+  const result = await window.electronAPI.installWebServicePackage(version, options).catch((error: unknown) => {
+    trackVersionInstallFinished('failure', startedAt, getState);
+    throw error;
+  });
+  trackVersionInstallFinished(result.success ? 'success' : 'failure', startedAt, getState);
 
   if (result.success) {
     dispatch(setInstallState(InstallState.Completed));

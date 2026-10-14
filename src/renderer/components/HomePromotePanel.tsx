@@ -17,6 +17,7 @@ import {
   shouldAutoRotate,
 } from '@/lib/home-promote';
 import { resolveDesktopLanguageCode } from '../../shared/desktop-languages';
+import { trackEvent } from '../telemetry';
 
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
 
@@ -80,7 +81,9 @@ export default function HomePromotePanel() {
   const handleOpenLink = async () => {
     try {
       const result = await window.electronAPI.openExternal(current.link);
-      if (!result.success) {
+      if (result.success) {
+        trackEvent('promote_link_opened', { source: 'home_promote' });
+      } else {
         toast.error(t('homePromote.openFailed'));
       }
     } catch {

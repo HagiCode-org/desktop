@@ -39,7 +39,7 @@ import type { LogDirectoryOpenResult } from '../types/log-directory';
 import type { SubscriptionBridge } from '../types/subscription';
 import type { TurboEngineLicenseBridge } from '../types/turboengine-license';
 import type { PromoteBridge } from '../types/promote';
-import { telemetry } from './telemetry';
+import { trackEvent } from './telemetry';
 import { useSidebarLayout } from './hooks/useSidebarLayout';
 
 type BootstrapPhase = 'loading' | 'ready' | 'error';
@@ -494,7 +494,7 @@ function App({ onRendererMounted, onShellReady, onBootstrapErrorVisible }: AppPr
     }
 
     postShellInitializationStartedRef.current = true;
-    void telemetry.event('main_view_entered', {
+    trackEvent('main_view_entered', {
       source: 'renderer',
       kind: 'main_view',
     });

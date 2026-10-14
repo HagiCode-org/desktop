@@ -34,6 +34,7 @@ import versionUpdateReducer, {
   setVersionUpdateSnapshotFromEvent,
 } from './slices/versionUpdateSlice';
 import listenerMiddleware from './listenerMiddleware';
+import { registerTelemetryListeners } from './telemetryListeners';
 import { setProcessInfo, setStartupPhase } from './slices/webServiceSlice';
 import { updateWebServiceUrl } from './slices/viewSlice';
 
@@ -119,6 +120,8 @@ listenerMiddleware.startListening({
     }
   },
 });
+
+registerTelemetryListeners(listenerMiddleware.startListening);
 
 // Listen for dependency check after install trigger
 listenerMiddleware.startListening({
