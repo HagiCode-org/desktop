@@ -245,7 +245,6 @@ jobs:
         with:
           pattern: agent-cli-probe-*
           path: ${{ runner.temp }}/reports/input
-          merge-multiple: true
 
       - name: Apply policy and render report
         env:
