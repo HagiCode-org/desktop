@@ -108,7 +108,7 @@ import {
   type MsstoreDonationTipProductId,
 } from '../types/msstore-donation-item.js';
 
-const { app, BrowserWindow: ElectronBrowserWindow, ipcMain, nativeImage, shell } = electron;
+const { app, BrowserWindow: ElectronBrowserWindow, ipcMain, nativeImage, screen, shell } = electron;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEV_RENDERER_HOST = '127.0.0.1';
 const DEV_RENDERER_PORT = 36598;
@@ -634,7 +634,16 @@ function createWindow(): void {
   console.log('[Hagicode] Icon path:', iconPath);
   console.log('[Hagicode] __dirname:', __dirname);
 
+  // Create the window at the work-area size so the renderer lays out at its final width from the
+  // first frame (the sidebar auto-collapses below 1024px, so an 800x600 default would flash a
+  // collapsed layout before the window is maximized).
+  const { x, y, width, height } = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
+
   mainWindow = new ElectronBrowserWindow({
+    x,
+    y,
+    width,
+    height,
     minWidth: 800,
     minHeight: 600,
     show: false,
@@ -678,9 +687,9 @@ function createWindow(): void {
 
   mainWindow.once('ready-to-show', () => {
     console.log('[Hagicode] Window ready to show');
-    activateMainWindow('ready-to-show');
+    // Maximize before the first show so the user never sees an intermediate windowed state.
     mainWindow?.maximize();
-    activateMainWindow('ready-to-show-after-maximize');
+    activateMainWindow('ready-to-show');
   });
 
   mainWindow.webContents.on('did-finish-load', () => {
