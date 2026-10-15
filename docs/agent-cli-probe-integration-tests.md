@@ -88,7 +88,7 @@ It converts a `probe`-phase `probe-defect` to `xfail`. When the case passes, the
 - **Execution guard.** `scripts/agent-cli-probe/install-cli.mjs` refuses to run an installer unless `GITHUB_ACTIONS=true` or `HAGICODE_AGENT_CLI_PROBE_ALLOW_INSTALL=1` is set.
 - **Dry run.** `--dry-run` prints the planned commands and executes nothing. Example: `npm run probe:agent-cli:install -- --case claude-code/native-sh --dry-run`.
 - **No secrets.** The installer receives an allowlisted environment only. No token or repository secret is passed, and the workflow requests `permissions: contents: read`.
-- **Environment refresh.** On Windows, `post-install-env.mjs` rebuilds PATH from the persisted Machine and User values, so a newly opened terminal would see the same entries. It never adds a directory the install method did not persist. On Linux and macOS the runner environment passes through unchanged, and the probe's own login-shell resolution decides.
+- **Environment refresh.** On Windows, `post-install-env.mjs` rebuilds PATH from the persisted Machine and User values, so a newly opened terminal would see the same entries. It never adds a directory the install method did not persist. The refreshed value is applied inside the probe test process, as the only `PATH`, and is not exported through `GITHUB_ENV`. On Linux and macOS the runner environment passes through unchanged, and the probe's own login-shell resolution decides.
 - **Retries.** An installer is retried up to 3 times with 15 s and 45 s back-off. npm installs add fetch-retry flags. The attempt count is recorded in `result.json`.
 
 ## Triggers, tiers and cost
