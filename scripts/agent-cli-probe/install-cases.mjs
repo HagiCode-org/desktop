@@ -207,7 +207,12 @@ export const installCases = [
     container: null, install: { kind: 'shell', command: 'curl -fsSL https://opencode.ai/install | bash' },
     managedPackageId: null, probeSurfaces: ['A'],
     expectedLocation: { linux: ['$HOME/.opencode/bin', '$HOME/bin', '$HOME/.local/bin'], macos: ['$HOME/.opencode/bin', '$HOME/bin', '$HOME/.local/bin'] },
-    runnerPreinstalled: [], knownIssue: null, timeoutMinutes: 10,
+    runnerPreinstalled: [],
+    knownIssue: {
+      reason: 'Observed on hosted Linux: the oracle finds the binary in the install directory, but the production probe (login-shell command -v) reports it missing. The installer does not add that directory to PATH for the probe environment.',
+      trackedBy: 'https://github.com/HagiCode-org/desktop/actions/runs/38823855466',
+    },
+    timeoutMinutes: 10,
     verification: 'secondary', verifiedOn: VERIFIED_ON, source: OPENCODE_DOCS,
   },
   {
