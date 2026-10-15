@@ -27,7 +27,13 @@ export function collectResultFiles(dir) {
 
 export function loadResults(dir) {
   return collectResultFiles(dir)
-    .map((file) => JSON.parse(readFileSync(file, 'utf8')))
+    .map((file) => {
+      try {
+        return JSON.parse(readFileSync(file, 'utf8'));
+      } catch (error) {
+        throw new Error(`Unreadable result file ${file}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    })
     .filter((item) => item && item.schemaVersion === 1 && item.class);
 }
 
