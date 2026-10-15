@@ -1,0 +1,253 @@
+name: Agent CLI Probe Integration
+
+# Runs the unmodified Agent CLI probe against real installs of every registry case.
+# Cases come from scripts/agent-cli-probe/install-cases.mjs. See docs/agent-cli-probe-integration-tests.md.
+
+on:
+  pull_request:
+    paths:
+      - "src/main/system-diagnostic-manager.ts"
+      - "src/main/managed-cli-executable-resolver.ts"
+      - "src/shared/agent-cli-catalog.ts"
+      - "src/shared/npm-managed-packages.ts"
+      - "src/types/agent-cli-catalog.ts"
+      - "scripts/agent-cli-probe/**"
+      - "scripts/__tests__/agent-cli-probe-*.mjs"
+      - "src/main/__tests__/agent-cli-probe*.ts"
+      - "scripts/generate-managed-npm-packages.js"
+      - ".github/workflows/agent-cli-probe-integration.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "src/main/system-diagnostic-manager.ts"
+      - "src/main/managed-cli-executable-resolver.ts"
+      - "src/shared/agent-cli-catalog.ts"
+      - "src/shared/npm-managed-packages.ts"
+      - "src/types/agent-cli-catalog.ts"
+      - "scripts/agent-cli-probe/**"
+      - "scripts/__tests__/agent-cli-probe-*.mjs"
+      - "src/main/__tests__/agent-cli-probe*.ts"
+      - "scripts/generate-managed-npm-packages.js"
+      - ".github/workflows/agent-cli-probe-integration.yml"
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+    inputs:
+      tier:
+        description: "Tier to run: core (default), extended or all"
+        required: false
+        default: core
+        type: choice
+        options:
+          - core
+          - extended
+          - all
+      os:
+        description: "Operating system filter: empty for all, or linux, macos, windows"
+        required: false
+        default: ""
+        type: string
+      cli:
+        description: "CLI id filter (for example claude-code); empty for all"
+        required: false
+        default: ""
+        type: string
+      strict:
+        description: "Fail on env-failure as well as probe-defect"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agent-cli-probe-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  NODE_VERSION: "22"
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  plan:
+    name: Plan (harness tests, coverage guard, matrix)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --omit=dev --ignore-scripts
+
+      - name: Prepare managed npm package definitions
+        run: npm run prepare:managed-npm-packages
+
+      - name: Harness unit tests
+        run: node --test scripts/__tests__/agent-cli-probe-harness.test.mjs scripts/__tests__/agent-cli-probe-workflow.test.mjs
+
+      - name: Coverage guard
+        run: npm run test:source -- src/main/__tests__/agent-cli-probe-coverage.test.ts
+
+      - name: Plan matrix
+        id: plan
+        env:
+          TIER: ${{ inputs.tier }}
+          OS_FILTER: ${{ inputs.os }}
+          CLI_FILTER: ${{ inputs.cli }}
+          STRICT: ${{ inputs.strict }}
+        run: |
+          strict_flag=""
+          if [ "$STRICT" = "true" ]; then strict_flag="--strict"; fi
+          node scripts/agent-cli-probe/plan-matrix.mjs \
+            --trigger "$GITHUB_EVENT_NAME" \
+            --tier "$TIER" \
+            --os "$OS_FILTER" \
+            --cli "$CLI_FILTER" \
+            $strict_flag
+
+  probe:
+    name: ${{ matrix.name }}
+    needs: plan
+    if: ${{ needs.plan.result == 'success' }}
+    runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container != '' && matrix.container || null }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    env:
+      AGENT_CLI_CASE: ${{ matrix.caseId }}
+      AGENT_CLI_STATE: ${{ runner.temp }}/agent-cli-probe/state.json
+      AGENT_CLI_RESULTS: ${{ runner.temp }}/agent-cli-probe/results
+      AGENT_CLI_STRICT: ${{ matrix.strict }}
+      HAGICODE_AGENT_CLI_PROBE_CASE: ${{ matrix.caseId }}
+      HAGICODE_AGENT_CLI_PROBE_STATE: ${{ runner.temp }}/agent-cli-probe/state.json
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        if: ${{ matrix.container == '' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup Node.js in Fedora container
+        if: ${{ startsWith(matrix.container, 'fedora') }}
+        run: dnf install -y nodejs npm git curl
+
+      - name: Setup Node.js in Alpine container
+        if: ${{ startsWith(matrix.container, 'alpine') }}
+        run: apk add --no-cache nodejs npm git curl bash
+
+      - name: deps
+        id: deps
+        run: |
+          npm ci --omit=dev --ignore-scripts
+          npm run prepare:managed-npm-packages
+
+      - name: control
+        id: control
+        continue-on-error: true
+        env:
+          HAGICODE_AGENT_CLI_PROBE_PHASE: control
+        run: npm run test:agent-cli-probe
+
+      - name: install
+        id: install
+        continue-on-error: true
+        env:
+          GITHUB_ACTIONS: "true"
+        run: |
+          node --disable-warning=ExperimentalWarning --import ./scripts/register-ts-source-loader.mjs \
+            --experimental-transform-types scripts/agent-cli-probe/install-cli.mjs \
+            --case "$AGENT_CLI_CASE" --state "$AGENT_CLI_STATE"
+
+      - name: oracle
+        id: oracle
+        continue-on-error: true
+        if: ${{ always() && steps.install.outcome == 'success' }}
+        run: node scripts/agent-cli-probe/verify-installed-cli.mjs --case "$AGENT_CLI_CASE" --state "$AGENT_CLI_STATE"
+
+      - name: env refresh
+        id: refresh
+        if: ${{ always() && steps.oracle.outcome == 'success' }}
+        run: node scripts/agent-cli-probe/post-install-env.mjs "$AGENT_CLI_STATE"
+
+      - name: probe
+        id: probe
+        continue-on-error: true
+        if: ${{ always() && steps.refresh.outcome == 'success' }}
+        env:
+          HAGICODE_AGENT_CLI_PROBE_PHASE: probe
+        run: npm run test:agent-cli-probe
+
+      - name: classify
+        id: classify
+        if: ${{ always() }}
+        env:
+          STEP_CONTROL_OUTCOME: ${{ steps.control.outcome }}
+          STEP_INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          STEP_ORACLE_OUTCOME: ${{ steps.oracle.outcome }}
+          STEP_PROBE_OUTCOME: ${{ steps.probe.outcome }}
+        run: |
+          strict_flag=""
+          if [ "$AGENT_CLI_STRICT" = "true" ]; then strict_flag="--strict"; fi
+          node --disable-warning=ExperimentalWarning --import ./scripts/register-ts-source-loader.mjs \
+            --experimental-transform-types scripts/agent-cli-probe/classify-result.mjs \
+            --case "$AGENT_CLI_CASE" --state "$AGENT_CLI_STATE" --out "$AGENT_CLI_RESULTS" --gate $strict_flag
+
+      - name: Upload probe artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-cli-probe-${{ strategy.job-index }}
+          path: ${{ runner.temp }}/agent-cli-probe
+          if-no-files-found: warn
+          retention-days: 14
+
+  report:
+    name: Consolidated report
+    needs: [plan, probe]
+    if: ${{ always() && needs.plan.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Download probe artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: agent-cli-probe-*
+          path: ${{ runner.temp }}/reports/input
+          merge-multiple: true
+
+      - name: Apply policy and render report
+        env:
+          STRICT: ${{ inputs.strict || github.event_name == 'schedule' }}
+        run: |
+          strict_flag=""
+          if [ "$STRICT" = "true" ]; then strict_flag="--strict"; fi
+          mkdir -p "$RUNNER_TEMP/reports/input"
+          node scripts/agent-cli-probe/report.mjs --input "$RUNNER_TEMP/reports/input" $strict_flag --out "$RUNNER_TEMP/reports/report.md"
