@@ -199,6 +199,20 @@ function readState(): Record<string, unknown> {
   return existsSync(statePath) ? JSON.parse(readFileSync(statePath, 'utf8')) : {};
 }
 
+/**
+ * Makes the post-install PATH (from the refresh step) the single PATH the probe sees.
+ * On Windows, process.env can hold both `Path` and `PATH`; the probe copies process.env, so
+ * the stale one could win. Deleting every case variant first removes that ambiguity.
+ */
+function applyRefreshedPath(state: Record<string, unknown>): void {
+  const refreshed = typeof state.refreshedPath === 'string' ? state.refreshedPath : null;
+  if (refreshed === null) return;
+  for (const key of Object.keys(process.env)) {
+    if (key.toUpperCase() === 'PATH') delete process.env[key];
+  }
+  process.env.PATH = refreshed;
+}
+
 function writeState(patch: Record<string, unknown>): void {
   mkdirSync(path.dirname(statePath), { recursive: true });
   writeFileSync(statePath, `${JSON.stringify({ ...readState(), ...patch }, null, 2)}\n`);
@@ -226,6 +240,7 @@ describe('agent CLI probe integration', { skip: caseId ? false : 'HAGICODE_AGENT
     assert.ok(referenceVersion, 'oracle reference version missing from state; run the oracle step first');
     const context = { platform, env: process.env, npmGlobalBin: npmGlobalBinOf(platform), brewBin: brewBinOf() };
     const directories = expectedDirectories(row, osName, context);
+    applyRefreshedPath(readState());
     const probes = await runProductionProbe();
     const own = probes.find((item) => item.cliType === row.cliId);
     const violations: ContractViolation[] = assertSurfaceA({

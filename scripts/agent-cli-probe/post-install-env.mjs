@@ -2,7 +2,7 @@
 // Windows: only the persisted Machine and User Path values are used. Entries the install never persisted are not added.
 // Linux and macOS: pass-through, because installers persist to shell startup files and the probe's login shell reads them.
 import { execFileSync } from 'node:child_process';
-import { appendFileSync, writeFileSync, mkdirSync, readFileSync, existsSync } from 'node:fs';
+import { writeFileSync, mkdirSync, readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -75,10 +75,8 @@ function main() {
   });
   mkdirSync(path.dirname(statePath), { recursive: true });
   writeFileSync(statePath, `${JSON.stringify({ ...state, refreshedPath: refreshed }, null, 2)}\n`);
-  if (platform === 'win32' && process.env.GITHUB_ENV) {
-    // Later steps (the probe) see the refreshed PATH, as a newly opened terminal would.
-    appendFileSync(process.env.GITHUB_ENV, `PATH<<AGENT_CLI_PROBE_PATH\n${refreshed}\nAGENT_CLI_PROBE_PATH\n`);
-  }
+  // The refreshed PATH is stored in state and applied inside the probe test process.
+  // It is not exported through GITHUB_ENV, because on Windows that creates a second PATH key next to `Path`.
   console.log(`env refresh: ${platform === 'win32' ? 'persisted Machine+User PATH merged' : 'pass-through'} (${splitPath(refreshed, platform).length} entries)`);
 }
 
