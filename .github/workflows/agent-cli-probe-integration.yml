@@ -132,14 +132,18 @@ jobs:
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     env:
       AGENT_CLI_CASE: ${{ matrix.caseId }}
-      AGENT_CLI_STATE: ${{ runner.temp }}/agent-cli-probe/state.json
-      AGENT_CLI_RESULTS: ${{ runner.temp }}/agent-cli-probe/results
       AGENT_CLI_STRICT: ${{ matrix.strict }}
       HAGICODE_AGENT_CLI_PROBE_CASE: ${{ matrix.caseId }}
-      HAGICODE_AGENT_CLI_PROBE_STATE: ${{ runner.temp }}/agent-cli-probe/state.json
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # The runner context is not available in job-level env, so paths are exported here.
+      - name: Set probe paths
+        run: |
+          echo "AGENT_CLI_STATE=$RUNNER_TEMP/agent-cli-probe/state.json" >> "$GITHUB_ENV"
+          echo "AGENT_CLI_RESULTS=$RUNNER_TEMP/agent-cli-probe/results" >> "$GITHUB_ENV"
+          echo "HAGICODE_AGENT_CLI_PROBE_STATE=$RUNNER_TEMP/agent-cli-probe/state.json" >> "$GITHUB_ENV"
 
       - name: Setup Node.js
         if: ${{ matrix.container == '' }}
