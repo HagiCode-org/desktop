@@ -22,6 +22,9 @@ export const catalogCliIds = Object.freeze([
 
 export const VERIFIED_ON = '2026-10-15';
 
+/** Linux Homebrew is not on PATH until shellenv runs. The prefix is a no-op where it does not exist. */
+const BREW_ENV = '[ -x /home/linuxbrew/.linuxbrew/bin/brew ] && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"; ';
+
 const ANTHROPIC_NATIVE = 'https://code.claude.com/docs/en/setup';
 const ANTHROPIC_APT = 'https://code.claude.com/docs/en/setup';
 const COPILOT_DOCS = 'https://docs.github.com/copilot/how-tos/copilot-cli';
@@ -67,7 +70,12 @@ export const installCases = [
     container: null, install: { kind: 'powershell', command: 'irm https://claude.ai/install.ps1 | iex' },
     managedPackageId: null, probeSurfaces: ['A'],
     expectedLocation: { windows: ['%USERPROFILE%/.local/bin'] },
-    runnerPreinstalled: [], knownIssue: null, timeoutMinutes: 10,
+    runnerPreinstalled: [],
+    knownIssue: {
+      reason: 'Observed on hosted Windows (run 38826636715): the native installer places claude.exe in %USERPROFILE%\\.local\\bin without adding it to the persisted PATH, so a new terminal cannot find it. The vendor docs say to fix PATH manually.',
+      trackedBy: 'https://github.com/HagiCode-org/desktop/actions/runs/38826636715',
+    },
+    timeoutMinutes: 10,
     verification: 'official', verifiedOn: VERIFIED_ON, source: ANTHROPIC_NATIVE,
   },
   {
@@ -81,7 +89,7 @@ export const installCases = [
   },
   {
     id: 'claude-code/homebrew-cask', cliId: 'claude-code', method: 'homebrew-cask', tier: 'core', os: ['macos'],
-    container: null, install: { kind: 'shell', command: 'brew install --cask claude-code' },
+    container: null, install: { kind: 'shell', command: BREW_ENV + 'brew install --cask claude-code' },
     managedPackageId: null, probeSurfaces: ['A'],
     expectedLocation: { macos: ['brew-bin'] },
     runnerPreinstalled: [], knownIssue: null, timeoutMinutes: 15,
@@ -89,7 +97,7 @@ export const installCases = [
   },
   {
     id: 'claude-code/homebrew-cask-latest', cliId: 'claude-code', method: 'homebrew-cask-latest', tier: 'extended', os: ['macos'],
-    container: null, install: { kind: 'shell', command: 'brew install --cask claude-code@latest' },
+    container: null, install: { kind: 'shell', command: BREW_ENV + 'brew install --cask claude-code@latest' },
     managedPackageId: null, probeSurfaces: ['A'],
     expectedLocation: { macos: ['brew-bin'] },
     runnerPreinstalled: [], knownIssue: null, timeoutMinutes: 15,
@@ -140,7 +148,7 @@ export const installCases = [
   },
   {
     id: 'codex/homebrew-cask', cliId: 'codex', method: 'homebrew-cask', tier: 'core', os: ['macos'],
-    container: null, install: { kind: 'shell', command: 'brew install --cask codex' },
+    container: null, install: { kind: 'shell', command: BREW_ENV + 'brew install --cask codex' },
     managedPackageId: null, probeSurfaces: ['A'],
     expectedLocation: { macos: ['brew-bin'] },
     runnerPreinstalled: [], knownIssue: null, timeoutMinutes: 15,
@@ -217,7 +225,7 @@ export const installCases = [
   },
   {
     id: 'opencode/homebrew', cliId: 'opencode', method: 'homebrew', tier: 'core', os: ['linux', 'macos'],
-    container: null, install: { kind: 'shell', command: 'brew install anomalyco/tap/opencode' },
+    container: null, install: { kind: 'shell', command: BREW_ENV + 'brew install anomalyco/tap/opencode' },
     managedPackageId: null, probeSurfaces: ['A'],
     expectedLocation: { linux: ['brew-bin'], macos: ['brew-bin'] },
     runnerPreinstalled: [], knownIssue: null, timeoutMinutes: 15,
@@ -242,7 +250,7 @@ export const installCases = [
   },
   {
     id: 'gemini/homebrew', cliId: 'gemini', method: 'homebrew', tier: 'core', os: ['linux', 'macos'],
-    container: null, install: { kind: 'shell', command: 'brew install gemini-cli' },
+    container: null, install: { kind: 'shell', command: BREW_ENV + 'brew install gemini-cli' },
     managedPackageId: null, probeSurfaces: ['A'],
     expectedLocation: { linux: ['brew-bin'], macos: ['brew-bin'] },
     runnerPreinstalled: [], knownIssue: null, timeoutMinutes: 15,
@@ -266,7 +274,7 @@ export const installCases = [
   },
   {
     id: 'copilot/homebrew', cliId: 'copilot', method: 'homebrew', tier: 'core', os: ['linux', 'macos'],
-    container: null, install: { kind: 'shell', command: 'brew install copilot-cli' },
+    container: null, install: { kind: 'shell', command: BREW_ENV + 'brew install copilot-cli' },
     managedPackageId: null, probeSurfaces: ['A'],
     expectedLocation: { linux: ['brew-bin'], macos: ['brew-bin'] },
     runnerPreinstalled: [], knownIssue: null, timeoutMinutes: 15,
