@@ -68,6 +68,7 @@ function runDirect({ command, args }) {
 
 function npmGlobalBinNow(platform) {
   try {
+    // npm is npm.cmd on Windows, so the lookup needs a shell there.
     const prefix = execFileSync('npm', ['prefix', '-g'], { encoding: 'utf8', shell: platform === 'win32' }).trim();
     return platform === 'win32' ? prefix : path.join(prefix, 'bin');
   } catch {
