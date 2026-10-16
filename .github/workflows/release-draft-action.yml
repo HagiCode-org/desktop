@@ -1,0 +1,40 @@
+name: Release Draft (hagi-release-drafter)
+
+# Drafts the next stable release through the centralized HagiCode-org/hagi-release-drafter action.
+# Publishing the draft is a manual step; this workflow never publishes a release.
+# Coexists with the legacy release-drafter workflow. It runs on workflow_dispatch only until the
+# legacy workflow is removed, so the two drafters never race on push to main.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Optional stable X.Y.Z to use instead of the version derived from commits
+        required: false
+        type: string
+
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-draft
+  cancel-in-progress: false
+
+jobs:
+  draft:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+      - name: Draft release
+        id: draft
+        uses: HagiCode-org/hagi-release-drafter@v0.1.2
+        with:
+          version: ${{ inputs.version }}
+          title-template: 'v{version} 🌈'
