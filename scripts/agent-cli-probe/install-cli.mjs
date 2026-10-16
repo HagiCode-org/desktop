@@ -24,6 +24,11 @@ const PASSTHROUGH_ENV = new Set([
   'USER', 'USERNAME', 'SHELL', 'RUNNER_TEMP', 'COMSPEC', 'ComSpec', 'NODE_OPTIONS',
   // Install location and cache only. Registry auth settings are never passed.
   'NPM_CONFIG_PREFIX', 'npm_config_prefix', 'NPM_CONFIG_CACHE', 'npm_config_cache',
+  // Windows installers branch on these (for example the 32-bit check in install.cmd).
+  'PROCESSOR_ARCHITECTURE', 'PROCESSOR_ARCHITEW6432', 'PROCESSOR_IDENTIFIER', 'PROCESSOR_LEVEL',
+  'PROCESSOR_REVISION', 'NUMBER_OF_PROCESSORS', 'OS', 'COMPUTERNAME', 'USERDOMAIN', 'SystemDrive',
+  'windir', 'ProgramFiles', 'ProgramFiles(x86)', 'ProgramW6432', 'CommonProgramFiles', 'PSModulePath',
+  'HOMEDRIVE', 'HOMEPATH',
 ]);
 
 /** Installer environment: an allowlist only, so no token or repository secret is inherited. */
@@ -47,7 +52,10 @@ export function buildInstallPlan(row, { platform, managedPackages = [], buildIns
     if (!definition) throw new Error(`${row.id}: managed package "${row.managedPackageId}" not found`);
     if (kind === 'managed-npm') {
       const args = [...buildInstallArgs(definition), ...NPM_FETCH_RETRY_FLAGS];
-      return { kind, argv: ['npm', ...args], display: `npm ${args.join(' ')}` };
+      const display = `npm ${args.join(' ')}`;
+      // npm is npm.cmd on Windows, which spawn cannot start directly.
+      if (platform === 'win32') return { kind, argv: ['cmd.exe', '/d', '/s', '/c', display], display };
+      return { kind, argv: ['npm', ...args], display };
     }
     const installer = definition.externalCli?.installers?.[platform];
     if (!installer) throw new Error(`${row.id}: no external installer for ${platform}`);

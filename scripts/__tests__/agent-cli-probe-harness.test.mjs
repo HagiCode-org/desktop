@@ -173,6 +173,21 @@ describe('installer step', () => {
     assert.ok(plan.display.includes('--ignore-scripts'));
   });
 
+  it('runs managed npm through cmd.exe on Windows, where npm is npm.cmd', () => {
+    const plan = buildInstallPlan(
+      { id: 'x/npm', install: { kind: 'managed-npm' }, managedPackageId: 'pi' },
+      { platform: 'win32', managedPackages: [{ id: 'pi' }], buildInstallArgs: () => ['install', '-g', 'pi@0.78.1'] },
+    );
+    assert.deepEqual(plan.argv.slice(0, 4), ['cmd.exe', '/d', '/s', '/c']);
+    assert.match(plan.argv[4], /^npm install -g pi@0\.78\.1/);
+  });
+
+  it('passes the Windows architecture variables the installers branch on', () => {
+    const env = minimalInstallEnv({ PROCESSOR_ARCHITECTURE: 'AMD64', PROCESSOR_ARCHITEW6432: 'AMD64', GITHUB_TOKEN: 'x' });
+    assert.equal(env.PROCESSOR_ARCHITECTURE, 'AMD64');
+    assert.equal(env.GITHUB_TOKEN, undefined);
+  });
+
   it('chooses the shell per install kind', () => {
     const shell = buildInstallPlan({ id: 'a', install: { kind: 'shell', command: 'echo hi' }, managedPackageId: null }, { platform: 'linux', managedPackages: [] });
     assert.deepEqual(shell.argv, ['/bin/sh', '-c', 'echo hi']);
