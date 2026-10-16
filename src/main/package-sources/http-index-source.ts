@@ -493,12 +493,12 @@ export class HttpIndexPackageSource implements PackageSource {
   }
 
   private extractPlatformFromFilename(filename: string): string | null {
-    const newFormatMatch = filename.match(/^hagicode-([0-9]\.[0-9](?:\.[0-9])?(?:-[a-zA-Z0-9\.]+)?)-(linux-x64|linux-arm64|win-x64|osx-x64|osx-arm64)-nort\.zip$/);
+    const newFormatMatch = filename.match(/^hagicode-(\d+\.\d+(?:\.\d+)?(?:-[a-zA-Z0-9\.]+)?)-(linux-x64|linux-arm64|win-x64|osx-x64|osx-arm64)-nort\.zip$/);
     if (newFormatMatch) {
       return newFormatMatch[2];
     }
 
-    const oldFormatMatch = filename.match(/^hagicode-([0-9]\.[0-9](?:\.[0-9])?(?:-[a-zA-Z0-9\.]+)?)-(linux|osx|windows|win)-x64(-nort)?\.zip$/);
+    const oldFormatMatch = filename.match(/^hagicode-(\d+\.\d+(?:\.\d+)?(?:-[a-zA-Z0-9\.]+)?)-(linux|osx|windows|win)-x64(-nort)?\.zip$/);
     if (oldFormatMatch) {
       const platform = oldFormatMatch[2];
       if (platform === 'win') return 'win-x64';

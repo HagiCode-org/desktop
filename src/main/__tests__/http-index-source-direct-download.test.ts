@@ -186,4 +186,28 @@ describe('HTTP index direct download normalization', () => {
 
     await assert.rejects(source.listAvailableVersions(), /Invalid SHA-256 digest/);
   });
+
+  it('lists stable and beta channels together, newest first, with multi-digit version parts', async () => {
+    const versions = ['0.1.10', '0.1.0', '0.1.0-beta.96'];
+    const source = new HttpIndexPackageSource(
+      { type: 'http-index', indexUrl: 'https://example.com/index.json' },
+      stubHttpClient({
+        versions: versions.map((version) => ({
+          version,
+          assets: [{ name: assetName(version), size: 1, path: `./${version}/${assetName(version)}` }],
+        })),
+        channels: {
+          stable: { latest: '0.1.10', versions: ['0.1.10', '0.1.0'] },
+          beta: { latest: '0.1.0-beta.96', versions: ['0.1.0-beta.96'] },
+        },
+      }),
+    );
+
+    const listed = await source.listAvailableVersions();
+    assert.deepEqual(listed.map((item) => [item.version, item.channel]), [
+      ['0.1.10', 'stable'],
+      ['0.1.0', 'stable'],
+      ['0.1.0-beta.96', 'beta'],
+    ]);
+  });
 });

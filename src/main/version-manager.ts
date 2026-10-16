@@ -1210,7 +1210,7 @@ export class VersionManager {
    */
   private extractVersionFromFilename(filename: string): string {
     // Match simplified format: hagicode-{version}-{platform}.zip
-    const match = filename.match(/^hagicode-([0-9]\.[0-9]\.[0-9](?:-[a-zA-Z0-9\.]+)?)-(linux|windows|osx)\.zip$/);
+    const match = filename.match(/^hagicode-(\d+\.\d+\.\d+(?:-[a-zA-Z0-9\.]+)?)-(linux|windows|osx)\.zip$/);
     return match ? match[1] : 'unknown';
   }
 
@@ -1219,19 +1219,19 @@ export class VersionManager {
    */
   private extractPlatformFromFilename(filename: string): string {
     // New format: hagicode-{version}-{platform}-nort.zip
-    const newFormatMatch = filename.match(/^hagicode-([0-9]\.[0-9]\.[0-9](?:-[a-zA-Z0-9\.]+)?)-(linux-x64|linux-arm64|win-x64|osx-x64|osx-arm64)-nort\.zip$/);
+    const newFormatMatch = filename.match(/^hagicode-(\d+\.\d+\.\d+(?:-[a-zA-Z0-9\.]+)?)-(linux-x64|linux-arm64|win-x64|osx-x64|osx-arm64)-nort\.zip$/);
     if (newFormatMatch) {
       return newFormatMatch[2];
     }
 
     // Try to match simplified format: hagicode-{version}-{platform}.zip
-    let match = filename.match(/^hagicode-([0-9]\.[0-9]\.[0-9](?:-[a-zA-Z0-9\.]+)?)-(linux|windows|osx)\.zip$/);
+    let match = filename.match(/^hagicode-(\d+\.\d+\.\d+(?:-[a-zA-Z0-9\.]+)?)-(linux|windows|osx)\.zip$/);
     if (match) {
       return match[2];
     }
 
     // Fallback: try to match old format for backwards compatibility
-    match = filename.match(/^hagicode-([0-9]\.[0-9]\.[0-9](?:-[a-zA-Z0-9\.]+)?)-([a-zA-Z]+)-x64\.zip$/);
+    match = filename.match(/^hagicode-(\d+\.\d+\.\d+(?:-[a-zA-Z0-9\.]+)?)-([a-zA-Z]+)-x64\.zip$/);
     if (match) {
       const oldPlatform = match[2].toLowerCase();
       // Map old platform names to new simplified names
@@ -1248,7 +1248,7 @@ export class VersionManager {
     }
 
     // Try to match format without architecture: hagicode-{version}-{platform}.zip
-    match = filename.match(/^hagicode-([0-9]\.[0-9]\.[0-9](?:-[a-zA-Z0-9\.]+)?)-([a-zA-Z0-9\-]+)\.zip$/);
+    match = filename.match(/^hagicode-(\d+\.\d+\.\d+(?:-[a-zA-Z0-9\.]+)?)-([a-zA-Z0-9\-]+)\.zip$/);
     if (match) {
       const rawPlatform = match[2].toLowerCase();
       // Map various platform names to simplified names

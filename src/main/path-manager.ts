@@ -877,13 +877,13 @@ export class PathManager {
    */
   extractPlatformFromFilename(filename: string): Platform {
     // New format: hagicode-{version}-{platform}-nort.zip
-    const newFormatMatch = filename.match(/^hagicode-([0-9]\.[0-9]\.[0-9](?:-[a-zA-Z0-9\.]+)?)-(linux-x64|linux-arm64|win-x64|osx-x64|osx-arm64)-nort\.zip$/);
+    const newFormatMatch = filename.match(/^hagicode-(\d+\.\d+\.\d+(?:-[a-zA-Z0-9\.]+)?)-(linux-x64|linux-arm64|win-x64|osx-x64|osx-arm64)-nort\.zip$/);
     if (newFormatMatch) {
       return newFormatMatch[2] as Platform;
     }
 
     // Fallback: match old format for backwards compatibility
-    const oldFormatMatch = filename.match(/^hagicode-([0-9]\.[0-9]\.[0-9](?:-[a-zA-Z0-9\.]+)?)-([a-zA-Z]+)-x64(-nort)?\.zip$/);
+    const oldFormatMatch = filename.match(/^hagicode-(\d+\.\d+\.\d+(?:-[a-zA-Z0-9\.]+)?)-([a-zA-Z]+)-x64(-nort)?\.zip$/);
     if (oldFormatMatch) {
       const oldPlatform = oldFormatMatch[2].toLowerCase();
       if (oldPlatform.includes('linux') || oldPlatform.includes('ubuntu')) {
