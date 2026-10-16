@@ -79,15 +79,6 @@ export const installCases = [
     verification: 'official', verifiedOn: VERIFIED_ON, source: ANTHROPIC_NATIVE,
   },
   {
-    id: 'claude-code/native-cmd', cliId: 'claude-code', method: 'native-cmd', tier: 'core', os: ['windows'],
-    container: null,
-    install: { kind: 'cmd', command: 'curl -fsSL https://claude.ai/install.cmd -o install.cmd && install.cmd && del install.cmd' },
-    managedPackageId: null, probeSurfaces: ['A'],
-    expectedLocation: { windows: ['%USERPROFILE%/.local/bin'] },
-    runnerPreinstalled: [], knownIssue: null, timeoutMinutes: 10,
-    verification: 'official', verifiedOn: VERIFIED_ON, source: ANTHROPIC_NATIVE,
-  },
-  {
     id: 'claude-code/homebrew-cask', cliId: 'claude-code', method: 'homebrew-cask', tier: 'core', os: ['macos'],
     container: null, install: { kind: 'shell', command: BREW_ENV + 'brew install --cask claude-code' },
     managedPackageId: null, probeSurfaces: ['A'],
@@ -357,6 +348,7 @@ export const installCases = [
 export const exclusions = [
   { cliId: 'claude-code', method: 'winget', reason: 'WinGet is not listed in the Windows2025 runner-images inventory (checked 2026-10-15), so the hosted runner cannot provide the prerequisite.', source: 'https://github.com/actions/runner-images/blob/main/images/windows/Windows2025-Readme.md', verifiedOn: VERIFIED_ON },
   { cliId: 'claude-code', method: 'channel-stable', reason: 'Same install location and binary as the default channel, so no separate probe contract. Pinned-version channels are not separate methods.', source: ANTHROPIC_NATIVE, verifiedOn: VERIFIED_ON },
+  { cliId: 'claude-code', method: 'native-cmd', reason: 'Legacy Windows CMD install channel. Product decision: older Windows install paths are not supported, so this case is out of scope for the probe matrix.', source: ANTHROPIC_NATIVE, verifiedOn: VERIFIED_ON },
   { cliId: 'claude-code', method: 'wsl', reason: 'WSL is not a native Windows runner. Out of scope (design non-goals).', source: null, verifiedOn: VERIFIED_ON },
   { cliId: 'codex', method: 'release-binary-archive', reason: 'Placement of release archives is chosen by the user, so there is no fixed expected location to assert.', source: CODEX_DOCS, verifiedOn: VERIFIED_ON },
   { cliId: 'copilot', method: 'winget', reason: 'WinGet is not listed in the Windows2025 runner-images inventory (checked 2026-10-15), so the hosted runner cannot provide the prerequisite.', source: 'https://github.com/actions/runner-images/blob/main/images/windows/Windows2025-Readme.md', verifiedOn: VERIFIED_ON },
