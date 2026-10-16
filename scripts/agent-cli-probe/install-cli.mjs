@@ -147,9 +147,14 @@ function npmGlobalBinFor(platform, env) {
   }
 }
 
+/** Homebrew is not on the minimal PATH, so the known prefixes are tried directly. */
+const BREW_BINARIES = ['/home/linuxbrew/.linuxbrew/bin/brew', '/opt/homebrew/bin/brew', '/usr/local/bin/brew'];
+
 function brewBinFor(env) {
+  const brew = BREW_BINARIES.find((candidate) => existsSync(candidate));
+  if (!brew) return null;
   try {
-    return path.join(execFileSync('brew', ['--prefix'], { encoding: 'utf8', env }).trim(), 'bin');
+    return path.join(execFileSync(brew, ['--prefix'], { encoding: 'utf8', env }).trim(), 'bin');
   } catch {
     return null;
   }
