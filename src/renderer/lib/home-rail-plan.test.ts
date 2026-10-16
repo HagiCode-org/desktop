@@ -5,7 +5,7 @@ import {
   resolveHomeEntitlementTier,
   type HomeEntitlementInput,
   type HomeEntitlementSource,
-} from './home-rail-plan.ts';
+} from './home-rail-plan.js';
 
 const none: HomeEntitlementSource = { bridgeAvailable: false, snapshotStatus: undefined, hasError: false };
 const source = (snapshotStatus: string | undefined, extra: Partial<HomeEntitlementSource> = {}): HomeEntitlementSource => ({
