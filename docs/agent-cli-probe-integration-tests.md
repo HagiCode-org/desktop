@@ -116,7 +116,7 @@ The report lists one row per CLI and method, with one column per operating syste
 
 ## Reproducing one case locally
 
-Install opt-in and a temporary `HOME` and npm prefix keep the run isolated. Requires Node 22 and `npm ci --omit=dev --ignore-scripts` in this repository.
+Install opt-in and a temporary `HOME` and npm prefix keep the run isolated. Requires Node 24 and `npm ci --omit=dev --ignore-scripts` in this repository.
 
 **Use a clean PATH.** The probe reads the inherited PATH, so any agent CLI already installed on your machine (for example Claude Code or Codex) is reported as a false positive by the "no other CLI is available" assertion. Put only the Node directory, the temporary npm bin and the system directories on PATH, as the example does.
 
