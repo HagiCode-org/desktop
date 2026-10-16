@@ -77,11 +77,11 @@ webServiceStatus:
   cardTitle: Servicio web integrado
   cardDescription: Ver y administrar el estado de ejecución del servicio web
   status:
-    running: corriendo
+    running: En ejecución
     stopped: Detenido
-    error: error
-    starting: Empezando...
-    stopping: Parando...
+    error: Error
+    starting: Iniciando...
+    stopping: Deteniendo...
     unknown: Desconocido
     connected: Conectado al control remoto
   statusDescription:
@@ -118,7 +118,7 @@ webServiceStatus:
     port: Puerto
     version: Versión
     remoteUrl: Remoto URL
-    listenAddress: Escuchar Dirección
+    listenAddress: Dirección de escucha
   notInstalledAlert:
     title: Paquete no instalado
     message: El paquete de servicio web aún no está instalado. Primero instale el paquete desde la sección Administración de paquetes, luego regrese aquí para iniciar el servicio.
@@ -340,23 +340,6 @@ tray:
   openInBrowser: Abrir en el navegador
   startService: Iniciar servicio
   stopService: Detener servicio
-blogFeed:
-  title: Recomendaciones y actualizaciones
-  description: Revise las recomendaciones oficiales y las notas de actualización sin salir de la consola de control.
-  openRss: Abrir RSS
-  openRssFailed: No se pudo abrir el enlace RSS
-  refresh: Actualizar
-  loading: Cargando...
-  error: No se pudo cargar, inténtalo de nuevo más tarde.
-  noArticles: No hay artículos disponibles
-  lastUpdate: 'Última actualización: {{date}}'
-  labels:
-    recommended: Recomendado
-    updates: Actualizaciones
-    news: Noticias
-  actions:
-    readArticle: Leer artículo
-    openFeed: Abrir feed
 homePromote:
   title: Destacados de Hagicode
   regionLabel: Destacados de Hagicode

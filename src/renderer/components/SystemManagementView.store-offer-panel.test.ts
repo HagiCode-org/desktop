@@ -8,16 +8,22 @@ const homeStoreOfferPanelPath = path.resolve(process.cwd(), 'src/renderer/compon
 const homeStoreDonationItemPath = path.resolve(process.cwd(), 'src/renderer/components/HomeStoreDonationItem.tsx');
 
 describe('homepage store offer panel wiring', () => {
-  it('renders the homepage store offer panel in the supporting rail beside the operational panels, with the promotion panel after it', async () => {
+  it('maps the store panels into the entitlement-driven rail and band', async () => {
     const source = await fs.readFile(systemManagementViewPath, 'utf8');
 
     assert.match(source, /import HomeStoreDonationItem from '\.\/HomeStoreDonationItem';/);
     assert.match(source, /import HomeStoreOfferPanel from '\.\/HomeStoreOfferPanel';/);
     assert.match(source, /import HomeStoreRatingPrompt from '\.\/HomeStoreRatingPrompt';/);
+    assert.match(source, /useHomeEntitlementTier\(\)/);
     assert.match(
       source,
-      /<div className="min-w-0 space-y-4">\s*<HomeStoreDonationItem isWindowsStoreRuntime=\{distributionState\.winStoreMode\} \/>\s*<HomeStoreOfferPanel isWindowsStoreRuntime=\{distributionState\.winStoreMode\} \/>\s*<HomePromotePanel \/>\s*<HomeStoreRatingPrompt \/>\s*<BlogFeedCard \/>/s,
+      /offer: <HomeStoreOfferPanel isWindowsStoreRuntime=\{distributionState\.winStoreMode\} compact=\{railPlan\.offerCompact\} \/>/,
     );
+    assert.match(source, /donation: <HomeStoreDonationItem isWindowsStoreRuntime=\{distributionState\.winStoreMode\} \/>/);
+    assert.match(source, /rating: <HomeStoreRatingPrompt \/>/);
+    assert.doesNotMatch(source, /BlogFeedCard/);
+    assert.match(source, /railPlan\.side\.map/);
+    assert.match(source, /data-home-region="rail"/);
   });
 
   it('keeps store and non-store actions connected to the existing sponsor and TurboEngine flows', async () => {
@@ -43,10 +49,17 @@ describe('homepage store offer panel wiring', () => {
 
   it('loads donation state, purchases donation item, and gates dismiss on sponsor state', async () => {
     const source = await fs.readFile(homeStoreDonationItemPath, 'utf8');
+    const sliceSource = await fs.readFile(
+      path.resolve(process.cwd(), 'src/renderer/store/slices/msstoreDonationItemSlice.ts'),
+      'utf8',
+    );
 
-    assert.match(source, /window\.electronAPI\.msstoreDonationItem\?\.getState\(\)/);
-    assert.match(source, /window\.electronAPI\.msstoreDonationItem\.purchase\(\)/);
-    assert.match(source, /window\.electronAPI\.msstoreDonationItem\.dismiss\(\)/);
+    assert.match(source, /typeof window\.electronAPI\.msstoreDonationItem\?\.getState === 'function'/);
+    assert.match(source, /dispatch\(purchaseMsstoreDonationItem\(/);
+    assert.match(source, /dismissMsstoreDonationItem/);
     assert.match(source, /subscriptionState\.snapshot\?\.status === 'active'/);
+    assert.match(sliceSource, /getBridge\(\)\.getState\(\)/);
+    assert.match(sliceSource, /getBridge\(\)\.purchase\(/);
+    assert.match(sliceSource, /getBridge\(\)\.dismiss\(\)/);
   });
 });

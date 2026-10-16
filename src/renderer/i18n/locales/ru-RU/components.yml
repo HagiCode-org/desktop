@@ -77,10 +77,10 @@ webServiceStatus:
   cardTitle: Встроенный веб-сервис
   cardDescription: Просмотр и управление состоянием работы веб-службы
   status:
-    running: Бег
+    running: Работает
     stopped: Остановлено
     error: Ошибка
-    starting: Начало...
+    starting: Запуск...
     stopping: Остановка...
     unknown: Неизвестно
     connected: Подключено к удаленному
@@ -118,7 +118,7 @@ webServiceStatus:
     port: Порт
     version: Версия
     remoteUrl: Дистанционное URL
-    listenAddress: Прослушать адрес
+    listenAddress: Адрес прослушивания
   notInstalledAlert:
     title: Пакет не установлен
     message: Пакет веб-службы еще не установлен. Сначала установите пакет из раздела «Управление пакетами», а затем вернитесь сюда, чтобы запустить службу.
@@ -340,23 +340,6 @@ tray:
   openInBrowser: Открыть в браузере
   startService: Запустить службу
   stopService: Остановить службу
-blogFeed:
-  title: Рекомендации и обновления
-  description: Просматривайте официальные рекомендации и заметки об обновлениях, не покидая консоль управления.
-  openRss: Открыть RSS
-  openRssFailed: Не удалось открыть ссылку RSS
-  refresh: Обновить
-  loading: Загрузка...
-  error: Не удалось загрузить, повторите попытку позже.
-  noArticles: Нет доступных статей
-  lastUpdate: 'Последнее обновление: {{date}}'
-  labels:
-    recommended: Рекомендовано
-    updates: Обновления
-    news: Новости
-  actions:
-    readArticle: Открыть статью
-    openFeed: Открыть ленту
 homePromote:
   title: Рекомендации Hagicode
   regionLabel: Рекомендации Hagicode

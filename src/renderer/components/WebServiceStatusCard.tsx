@@ -555,12 +555,7 @@ const WebServiceStatusCard: React.FC = () => {
     >
       <Card className="relative overflow-hidden rounded-2xl border-border/80 shadow-sm">
         <CardHeader className="pb-4">
-          <motion.div
-            initial={{ x: -20, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ delay: 0.1 }}
-            className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
-          >
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-2">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <motion.div>
@@ -574,19 +569,19 @@ const WebServiceStatusCard: React.FC = () => {
               key={webServiceInfo.status}
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="self-start rounded-xl border border-border/70 bg-muted/25 px-3 py-2"
+              className="self-start"
             >
               <Badge variant={getStatusVariant(webServiceInfo.status)} className={statusBadgeClassName}>
                 {getStatusText(webServiceInfo.status)}
               </Badge>
             </motion.div>
-          </motion.div>
+          </div>
         </CardHeader>
         <CardContent className="@container space-y-5">
           <motion.div
-            initial={{ x: -20, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ delay: 0.15 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.2 }}
             className="rounded-xl border border-border/70 bg-muted/20 p-4"
           >
             <div className="flex flex-col gap-4 @[43rem]:flex-row @[43rem]:items-start @[43rem]:justify-between">
@@ -644,7 +639,7 @@ const WebServiceStatusCard: React.FC = () => {
                 >
                   {showRuntimeSecondaryControls && (
                     <>
-                      <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                      <div>
                         <Button
                           onClick={handleRestart}
                           disabled={isDisabled}
@@ -663,15 +658,15 @@ const WebServiceStatusCard: React.FC = () => {
                             </>
                           )}
                         </Button>
-                      </motion.div>
+                      </div>
 
-                      <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                      <div>
                         <Button
                           onClick={handleStop}
                           disabled={isDisabled}
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          className="border-destructive/40 text-destructive hover:border-destructive/60 hover:bg-destructive/10 hover:text-destructive"
                         >
                           {isDisabled && webServiceInfo.status === 'stopping' ? (
                             <>
@@ -685,12 +680,12 @@ const WebServiceStatusCard: React.FC = () => {
                             </>
                           )}
                         </Button>
-                      </motion.div>
+                      </div>
                     </>
                   )}
 
                   {showOpenLogsButton && (
-                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                    <div>
                       <Button
                         onClick={handleOpenLogs}
                         variant="outline"
@@ -700,7 +695,7 @@ const WebServiceStatusCard: React.FC = () => {
                         <FolderOpen className="w-4 h-4" />
                         {t('webServiceStatus.openLogsButton')}
                       </Button>
-                    </motion.div>
+                    </div>
                   )}
                 </motion.div>
               )}
@@ -888,23 +883,26 @@ const WebServiceStatusCard: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
-                className="grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-3 rounded-xl border border-border/60 bg-muted/25 p-4"
+                className="rounded-xl border border-border/60 px-4 py-3"
               >
-                {serviceDetailItems.map((item, index) => (
-                  <motion.div
-                    key={item.label}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    whileHover={{ y: -2 }}
-                    className="rounded-xl border border-border/60 bg-background/80 p-3 transition-all cursor-default"
-                  >
-                    <div className="mb-1 text-xs text-muted-foreground">{item.label}</div>
-                    <div className={`text-sm font-mono ${item.primary ? 'text-primary' : 'text-foreground'} break-all`}>
-                      {item.value}
+                <dl className="grid grid-cols-2 gap-x-6 gap-y-3 @lg:grid-cols-3 @2xl:grid-cols-5">
+                  {serviceDetailItems.map((item) => (
+                    <div
+                      key={item.label}
+                      className={cn('min-w-0', item.primary && 'col-span-full')}
+                    >
+                      <dt className="text-xs text-muted-foreground">{item.label}</dt>
+                      <dd
+                        className={cn(
+                          'mt-0.5 break-all font-mono text-sm tabular-nums',
+                          item.primary ? 'text-primary' : 'text-foreground',
+                        )}
+                      >
+                        {item.value}
+                      </dd>
                     </div>
-                  </motion.div>
-                ))}
+                  ))}
+                </dl>
               </motion.div>
             )}
           </AnimatePresence>

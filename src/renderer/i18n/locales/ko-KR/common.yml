@@ -62,6 +62,9 @@ settings:
   embeddedWebServicePort: 내장형 웹 서비스 포트
 footer:
   copyright: © 2026 Hagicode Desktop
+  buildVersion: 버전
+  buildBranch: 브랜치
+  buildCommit: 커밋
 menu:
   systemManagement: 시스템 관리
   hagicoWeb: Hagicode Web
@@ -505,7 +508,8 @@ system:
       manage: 버전 관리
     labels:
       version: 버전
-      installedAt: 설치 위치
+      package: 패키지
+      installedAt: 설치일
       status: 상태
     states:
       ready: 준비

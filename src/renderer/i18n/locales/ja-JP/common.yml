@@ -62,6 +62,9 @@ settings:
   embeddedWebServicePort: 組み込み Web サービス ポート
 footer:
   copyright: © 2026 Hagicode Desktop
+  buildVersion: バージョン
+  buildBranch: ブランチ
+  buildCommit: コミット
 menu:
   systemManagement: システム管理
   hagicoWeb: Hagicode Web
@@ -505,7 +508,8 @@ system:
       manage: バージョンの管理
     labels:
       version: バージョン
-      installedAt: 設置場所
+      package: パッケージ
+      installedAt: インストール日
       status: ステータス
     states:
       ready: 準備完了
@@ -513,8 +517,8 @@ system:
     title: 利用可能なアップデート
     labels:
       current: 現在
-      latest: 最新の
-      state: 州
+      latest: 最新
+      state: 状態
     states:
       checking: チェック中
       downloading: ダウンロード中

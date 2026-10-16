@@ -77,10 +77,10 @@ webServiceStatus:
   cardTitle: Serviço Web incorporado
   cardDescription: Visualize e gerencie o status de execução do serviço web
   status:
-    running: Correndo
+    running: Em execução
     stopped: Parado
     error: Erro
-    starting: Começando...
+    starting: Iniciando...
     stopping: Parando...
     unknown: Desconhecido
     connected: Conectado ao remoto
@@ -115,7 +115,7 @@ webServiceStatus:
     serviceUrl: Serviço URL
     uptime: Tempo de atividade
     restartCount: Reiniciar contagem
-    port: Porto
+    port: Porta
     version: Versão
     remoteUrl: Remoto URL
     listenAddress: Endereço de escuta
@@ -340,23 +340,6 @@ tray:
   openInBrowser: Abrir no navegador
   startService: Iniciar serviço
   stopService: Parar serviço
-blogFeed:
-  title: Recomendações e atualizações
-  description: Revise recomendações oficiais e notas de atualização sem sair do console de controle.
-  openRss: Abrir RSS
-  openRssFailed: Não foi possível abrir o link RSS
-  refresh: Atualizar
-  loading: Carregando...
-  error: Falha ao carregar, tente novamente mais tarde
-  noArticles: Nenhum artigo disponível
-  lastUpdate: 'Última atualização: {{date}}'
-  labels:
-    recommended: Recomendado
-    updates: Atualizações
-    news: Notícias
-  actions:
-    readArticle: Ler artigo
-    openFeed: Abrir feed
 homePromote:
   title: Destaques do Hagicode
   regionLabel: Destaques do Hagicode

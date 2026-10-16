@@ -1,12 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
 import { useNavigate } from '../hooks/useNavigate';
-import { Package, FolderOpen, Globe, Monitor, LoaderCircle, BellRing, ArrowRight } from 'lucide-react';
+import { useHomeEntitlementTier } from '../hooks/useHomeEntitlementTier';
+import { shortBuildCommit, useDesktopBuildInfo } from '../hooks/useDesktopBuildInfo';
+import { planHomeRail, type HomeRailSlot } from '../lib/home-rail-plan';
+import { selectHomePromoteItems } from '../store/slices/homePromoteSlice';
+import { Package, FolderOpen, Globe, Monitor, LoaderCircle, BellRing, ArrowRight, type LucideIcon } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
 import { toast } from 'sonner';
 import WebServiceStatusCard from './WebServiceStatusCard';
-import BlogFeedCard from './BlogFeedCard';
 import HomeStoreOfferPanel from './HomeStoreOfferPanel';
 import HomeStoreRatingPrompt from './HomeStoreRatingPrompt';
 import HomeStoreDonationItem from './HomeStoreDonationItem';
@@ -417,6 +420,25 @@ export default function SystemManagementView({
     installState === InstallState.StoppingService ||
     isLatestVersionInstalling;
   const hasInstalledVersions = installedVersions.length > 0;
+  const activeVersionStatus = activeVersion
+    ? ({
+        'installed-ready': { label: t('system.activeVersion.states.ready'), healthy: true },
+        'payload-invalid': { label: t('versionManagement.status.payloadInvalid', { ns: 'pages' }), healthy: false },
+        'runtime-incompatible': { label: t('versionManagement.status.runtimeIncompatible', { ns: 'pages' }), healthy: false },
+        'desktop-incompatible': { label: t('versionManagement.status.desktopIncompatible', { ns: 'pages' }), healthy: false },
+      } as const)[activeVersion.status] ?? { label: t('system.activeVersion.states.ready'), healthy: true }
+    : null;
+
+  const entitlementTier = useHomeEntitlementTier();
+  const buildInfo = useDesktopBuildInfo();
+  const hasHighlights = useSelector((state: RootState) => selectHomePromoteItems(state).length > 0);
+  const railPlan = planHomeRail(entitlementTier, { hasHighlights });
+  const railSlots: Record<HomeRailSlot, ReactNode> = {
+    highlights: <HomePromotePanel />,
+    offer: <HomeStoreOfferPanel isWindowsStoreRuntime={distributionState.winStoreMode} compact={railPlan.offerCompact} />,
+    donation: <HomeStoreDonationItem isWindowsStoreRuntime={distributionState.winStoreMode} />,
+    rating: <HomeStoreRatingPrompt />,
+  };
 
   const getHomepageInstallStageLabel = () => {
     if (installState === InstallState.Confirming) {
@@ -584,8 +606,15 @@ export default function SystemManagementView({
         disabled={distributionState.steamMode || onboardingActive || !homepageTourStartupResolved || homepageTourActive}
       />
 
-      {/* Operational panels lead; store offers and the feed sit in a supporting rail that drops below when the window is narrow. */}
-      <div className="grid gap-6 @4xl:grid-cols-[minmax(0,1fr)_22rem]">
+      {/*
+        Priority tiers (see lib/home-rail-plan). Daily operations (service, version, logs) own
+        the main column. A side rail beside it holds only the heavy commerce cards, so the two
+        columns stay close in height; Highlights and the quieter asks sit in a full-width band
+        below. Free users get the purchase panel in the rail, paid users get the full width and
+        a one-line license row. In a narrow window the order is the same: operations, rail, band.
+        The rail drops out entirely when it has nothing to show.
+      */}
+      <div className="grid gap-y-4 @4xl:grid-cols-[minmax(0,1fr)_auto]" data-home-entitlement={entitlementTier}>
         <div className="min-w-0 space-y-4">
           <div {...{ [HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE]: 'service-card' }}>
             <WebServiceStatusCard />
@@ -599,13 +628,15 @@ export default function SystemManagementView({
                 [HOMEPAGE_TOUR_VARIANT_ATTRIBUTE]: HOMEPAGE_TOUR_VARIANTS.activeVersion,
               }}
             >
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <h2 className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                    <Package className="h-4 w-4 text-primary" />
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+                  <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+                    <Package className="h-5 w-5 text-primary" />
                     {t('common.version')}
                   </h2>
-                  <p className="mt-1 text-xl font-semibold tracking-tight tabular-nums text-foreground">{activeVersion.version}</p>
+                  <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-sm tabular-nums text-foreground">
+                    {activeVersion.version}
+                  </span>
                 </div>
                 <Button type="button" variant="ghost" size="sm" onClick={handleOpenVersionManagement} className="text-primary">
                   {t('system.activeVersion.actions.manage')}
@@ -615,17 +646,29 @@ export default function SystemManagementView({
 
               <dl className="mt-4 grid gap-x-8 gap-y-3 border-t border-border/60 pt-4 @md:grid-cols-2">
                 {[
-                  { label: t('system.activeVersion.labels.version'), value: activeVersion.packageFilename },
+                  { label: t('system.activeVersion.labels.package'), value: activeVersion.packageFilename, mono: true },
                   { label: t('common.platform'), value: activeVersion.platform },
                   {
                     label: t('system.activeVersion.labels.installedAt'),
                     value: activeVersionInstalledAt ?? '-',
                   },
-                  { label: t('system.activeVersion.labels.status'), value: t('system.activeVersion.states.ready') },
+                  {
+                    label: t('system.activeVersion.labels.status'),
+                    value: activeVersionStatus?.label,
+                    unhealthy: activeVersionStatus ? !activeVersionStatus.healthy : false,
+                  },
                 ].map((item) => (
                   <div key={item.label} className="min-w-0">
                     <dt className="text-xs text-muted-foreground">{item.label}</dt>
-                    <dd className="mt-0.5 break-all text-sm font-medium text-foreground">{item.value}</dd>
+                    <dd
+                      className={cn(
+                        'mt-0.5 break-all text-sm font-medium',
+                        item.mono && 'font-mono text-[0.8125rem]',
+                        item.unhealthy ? 'text-destructive' : 'text-foreground',
+                      )}
+                    >
+                      {item.value}
+                    </dd>
                   </div>
                 ))}
               </dl>
@@ -675,7 +718,7 @@ export default function SystemManagementView({
             {...{ [HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE]: 'log-access' }}
           >
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-              <h2 className="flex items-center gap-2 text-base font-semibold">
+              <h2 className="flex items-center gap-2 text-lg font-semibold">
                 <FolderOpen className="h-5 w-5 text-primary" />
                 {t('system.logQuickAccess.title')}
               </h2>
@@ -743,17 +786,36 @@ export default function SystemManagementView({
           </section>
         </div>
 
-        <div className="min-w-0 space-y-4">
-          <HomeStoreDonationItem isWindowsStoreRuntime={distributionState.winStoreMode} />
-          <HomeStoreOfferPanel isWindowsStoreRuntime={distributionState.winStoreMode} />
-          <HomePromotePanel />
-          <HomeStoreRatingPrompt />
-          <BlogFeedCard />
+        <div
+          className="min-w-0 space-y-4 empty:hidden @4xl:ml-6 @4xl:w-[22rem]"
+          data-home-region="rail"
+        >
+          {railPlan.side.map((slot) => (
+            <Fragment key={slot}>{railSlots[slot]}</Fragment>
+          ))}
         </div>
+      </div>
+
+      <div
+        className="space-y-4 border-t border-border/60 pt-6 empty:hidden"
+        data-home-region="band"
+      >
+        {railPlan.band.map((slot) => (
+          <Fragment key={slot}>{railSlots[slot]}</Fragment>
+        ))}
       </div>
 
       <footer className="px-1 py-2 text-center">
         <p className="text-sm text-muted-foreground">{t('footer.copyright')}</p>
+        {buildInfo.status === 'ready' ? (
+          <p className="break-words text-sm text-muted-foreground">
+            <span>{t('footer.buildVersion')} {buildInfo.desktopVersion}</span>
+            <span aria-hidden="true"> · </span>
+            <span>{t('footer.buildBranch')} {buildInfo.buildBranch}</span>
+            <span aria-hidden="true"> · </span>
+            <span>{t('footer.buildCommit')} {shortBuildCommit(buildInfo.buildCommit)}</span>
+          </p>
+        ) : null}
       </footer>
     </PageShell>
   );

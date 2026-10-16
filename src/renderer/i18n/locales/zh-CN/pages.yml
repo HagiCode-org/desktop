@@ -394,7 +394,7 @@ subscription:
     secondaryHint: 可以先刷新一次，再决定是否购买。
   summary:
     planLabel: 计划
-    planName: Hagicode Sponsor Plan
+    planName: Hagicode 赞助者计划
     renewalLabel: 续费 / 到期
     lastSyncLabel: 最近一次成功同步
     entitlementsLabel: 已启用权益

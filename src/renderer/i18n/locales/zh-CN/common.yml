@@ -62,6 +62,9 @@ settings:
   embeddedWebServicePort: Hagicode 服务端口
 footer:
   copyright: © 2026 Hagicode Desktop
+  buildVersion: 版本
+  buildBranch: 分支
+  buildCommit: 提交
 menu:
   systemManagement: 系统管理
   hagicoWeb: Hagicode Web
@@ -505,6 +508,7 @@ system:
       manage: 管理版本
     labels:
       version: 版本
+      package: 软件包
       installedAt: 安装于
       status: 状态
     states:

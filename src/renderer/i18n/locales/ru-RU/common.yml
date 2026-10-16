@@ -62,6 +62,9 @@ settings:
   embeddedWebServicePort: Встроенный порт веб-службы
 footer:
   copyright: © 2026 Hagicode Desktop
+  buildVersion: Версия
+  buildBranch: Ветка
+  buildCommit: Коммит
 menu:
   systemManagement: Управление системой
   hagicoWeb: Hagicode Web
@@ -505,7 +508,8 @@ system:
       manage: Управление версиями
     labels:
       version: Версия
-      installedAt: Установлено в
+      package: Пакет
+      installedAt: Установлено
       status: Статус
     states:
       ready: Готово
@@ -513,8 +517,8 @@ system:
     title: Доступно обновление
     labels:
       current: Текущий
-      latest: Последние
-      state: Государство
+      latest: Последняя
+      state: Состояние
     states:
       checking: Проверка
       downloading: Загрузка

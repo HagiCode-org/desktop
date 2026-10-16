@@ -62,6 +62,9 @@ settings:
   embeddedWebServicePort: Eingebetteter Webdienst-Port
 footer:
   copyright: © 2026 Hagicode Desktop
+  buildVersion: Version
+  buildBranch: Branch
+  buildCommit: Commit
 menu:
   systemManagement: Systemmanagement
   hagicoWeb: Hagicode Web
@@ -484,9 +487,9 @@ system:
       description: Öffnen Sie das aktuelle Desktop-Protokollverzeichnis auf diesem Gerät.
       openSuccess: Desktop-Protokollordner geöffnet
     webApp:
-      label: Ordner „Web-App-Protokolle“.
+      label: Web-App-Protokollordner
       description: Öffnen Sie das Web-App-Protokollverzeichnis für die aktive Version.
-      openSuccess: Der Ordner „Web-App-Protokolle“ wurde geöffnet
+      openSuccess: Web-App-Protokollordner geöffnet
     errors:
       load_failed: Der Status des Protokollordners konnte nicht geladen werden
       logs_not_found: Protokollordner nicht gefunden
@@ -505,7 +508,8 @@ system:
       manage: Versionen verwalten
     labels:
       version: Version
-      installedAt: Installiert bei
+      package: Paket
+      installedAt: Installiert am
       status: Status
     states:
       ready: Bereit
@@ -514,7 +518,7 @@ system:
     labels:
       current: Aktuell
       latest: Neueste
-      state: Staat
+      state: Status
     states:
       checking: Überprüfen
       downloading: Herunterladen

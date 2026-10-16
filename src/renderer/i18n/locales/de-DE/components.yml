@@ -77,11 +77,11 @@ webServiceStatus:
   cardTitle: Eingebetteter Webdienst
   cardDescription: Anzeigen und Verwalten des Webdienst-Ausführungsstatus
   status:
-    running: Laufen
+    running: Läuft
     stopped: Angehalten
     error: Fehler
-    starting: Beginnt...
-    stopping: Stoppen...
+    starting: Startet...
+    stopping: Wird beendet...
     unknown: Unbekannt
     connected: Verbunden mit Remote
   statusDescription:
@@ -115,10 +115,10 @@ webServiceStatus:
     serviceUrl: Dienst-URL
     uptime: Betriebszeit
     restartCount: Zählung neu starten
-    port: Hafen
+    port: Port
     version: Version
     remoteUrl: Fernbedienung URL
-    listenAddress: Adresse anhören
+    listenAddress: Abhöradresse
   notInstalledAlert:
     title: Paket nicht installiert
     message: Das Webservice-Paket ist noch nicht installiert. Bitte installieren Sie das Paket zuerst über den Abschnitt „Paketverwaltung“ und kehren Sie dann hierher zurück, um den Dienst zu starten.
@@ -340,23 +340,6 @@ tray:
   openInBrowser: Im Browser öffnen
   startService: Dienst starten
   stopService: Stoppen Sie den Dienst
-blogFeed:
-  title: Empfehlungen und Updates
-  description: Prüfen Sie offizielle Hinweise und Update-Notizen, ohne die Steuerkonsole zu verlassen.
-  openRss: RSS öffnen
-  openRssFailed: RSS-Link konnte nicht geöffnet werden
-  refresh: Aktualisieren
-  loading: Laden...
-  error: Das Laden ist fehlgeschlagen. Bitte versuchen Sie es später noch einmal
-  noArticles: Keine Artikel verfügbar
-  lastUpdate: 'Letzte Aktualisierung: {{date}}'
-  labels:
-    recommended: Empfehlung
-    updates: Updates
-    news: Neuigkeiten
-  actions:
-    readArticle: Artikel öffnen
-    openFeed: Feed öffnen
 homePromote:
   title: Hagicode-Empfehlungen
   regionLabel: Hagicode-Empfehlungen

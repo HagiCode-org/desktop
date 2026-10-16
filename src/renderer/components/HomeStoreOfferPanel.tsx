@@ -39,6 +39,8 @@ import {
 
 interface HomeStoreOfferPanelProps {
   isWindowsStoreRuntime: boolean;
+  /** One-line entitlement row for users who already hold a license; no purchase actions. */
+  compact?: boolean;
 }
 
 interface CommerceRowProps {
@@ -93,7 +95,7 @@ function CommerceRow({
   );
 }
 
-export default function HomeStoreOfferPanel({ isWindowsStoreRuntime }: HomeStoreOfferPanelProps) {
+export default function HomeStoreOfferPanel({ isWindowsStoreRuntime, compact = false }: HomeStoreOfferPanelProps) {
   const { t } = useTranslation(['common', 'pages']);
   const dispatch = useDispatch<AppDispatch>();
   const { navigateTo } = useNavigate();
@@ -221,6 +223,39 @@ export default function HomeStoreOfferPanel({ isWindowsStoreRuntime }: HomeStore
     && effectiveTurboEngineBridgeAvailable
     && effectiveTurboEngineSnapshot?.availability === 'supported'
     && !turboEngineActive;
+  if (compact && (subscriptionActive || turboEngineActive)) {
+    return (
+      <section className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-border/80 bg-card px-4 py-3">
+        <BadgeCheck className="h-4 w-4 shrink-0 text-primary" />
+        <h2 className="min-w-0 flex-1 basis-40 text-sm font-medium text-foreground">
+          <button
+            type="button"
+            className="cursor-default text-left"
+            onClick={previewDebug.handleDebugTitleClick}
+          >
+            {t('system.commercePanel.title')}
+          </button>
+        </h2>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => navigateTo(subscriptionActive ? 'subscription' : 'turboengine')}
+          className="text-primary"
+        >
+          {t('system.commercePanel.actions.viewDetails')}
+          <ArrowRight className="h-4 w-4" />
+        </Button>
+        <CommercePreviewDebugDialog
+          open={previewDebug.dialogOpen}
+          onOpenChange={previewDebug.setDialogOpen}
+          scenario={previewDebug.scenario}
+          onScenarioChange={previewDebug.setScenario}
+        />
+      </section>
+    );
+  }
+
   return (
     <section className="commerce-premium-shell rounded-3xl p-6 sm:p-7">
       <div className="relative z-10">

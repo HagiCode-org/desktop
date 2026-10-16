@@ -62,6 +62,9 @@ settings:
   embeddedWebServicePort: Port de service Web intégré
 footer:
   copyright: © 2026 Hagicode Desktop
+  buildVersion: Version
+  buildBranch: Branche
+  buildCommit: Commit
 menu:
   systemManagement: Gestion du système
   hagicoWeb: Hagicode Web
@@ -505,7 +508,8 @@ system:
       manage: Gérer les versions
     labels:
       version: Version
-      installedAt: Installé à
+      package: Paquet
+      installedAt: Installé le
       status: Statut
     states:
       ready: Prêt
@@ -513,7 +517,7 @@ system:
     title: Mise à jour disponible
     labels:
       current: Actuel
-      latest: Dernier
+      latest: Dernière
       state: État
     states:
       checking: Vérification

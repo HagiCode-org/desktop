@@ -6,14 +6,14 @@ import { describe, it } from 'node:test';
 const systemManagementViewPath = path.resolve(process.cwd(), 'src/renderer/components/SystemManagementView.tsx');
 
 describe('homepage promotion panel placement', () => {
-  it('renders the promotion panel in the supporting rail directly after the Licenses and Sponsorship panel', async () => {
+  it('renders the Highlights panel in the full-width band through the entitlement-driven plan', async () => {
     const source = await fs.readFile(systemManagementViewPath, 'utf8');
 
     assert.match(source, /import HomePromotePanel from '\.\/HomePromotePanel';/);
-    assert.match(
-      source,
-      /<HomeStoreOfferPanel isWindowsStoreRuntime=\{distributionState\.winStoreMode\} \/>\s*<HomePromotePanel \/>\s*<HomeStoreRatingPrompt \/>/s,
-    );
+    assert.match(source, /planHomeRail\(entitlementTier, \{ hasHighlights \}\)/);
+    assert.match(source, /highlights: <HomePromotePanel \/>/);
+    assert.match(source, /railPlan\.band\.map/);
+    assert.match(source, /data-home-region="band"/);
   });
 
   it('mounts the promotion panel once', async () => {

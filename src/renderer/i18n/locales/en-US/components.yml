@@ -340,23 +340,6 @@ tray:
   openInBrowser: Open in Browser
   startService: Start Service
   stopService: Stop Service
-blogFeed:
-  title: Hagicode Recommendations & Updates
-  description: Review official recommendations and update notes without leaving the control console.
-  openRss: Open RSS
-  openRssFailed: Failed to open RSS link
-  refresh: Refresh
-  loading: Loading...
-  error: Failed to load, please try again later
-  noArticles: No articles available
-  lastUpdate: 'Last updated: {{date}}'
-  labels:
-    recommended: Recommended
-    updates: Updates
-    news: News
-  actions:
-    readArticle: Read article
-    openFeed: Open feed
 homePromote:
   title: Hagicode Highlights
   regionLabel: Hagicode highlights

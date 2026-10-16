@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { electron } from '../electron-api.js';
 import type { DesktopVersionInfoPayload } from '../types/version-info.js';
+import { BUILD_BRANCH, BUILD_COMMIT } from './generated/build-metadata.js';
 
 const { app } = electron;
 
@@ -38,11 +39,18 @@ function resolveWindowsStoreVersion(): string | null {
   return null;
 }
 
-export function getDesktopVersionInfo(): DesktopVersionInfoPayload {
-  const windowsStoreVersion = resolveWindowsStoreVersion();
-
+export function createDesktopVersionInfoPayload(
+  desktopVersion: string,
+  windowsStoreVersion: string | null,
+): DesktopVersionInfoPayload {
   return {
-    desktopVersion: app.getVersion(),
+    desktopVersion,
     windowsStoreVersion,
+    buildBranch: BUILD_BRANCH,
+    buildCommit: BUILD_COMMIT,
   };
+}
+
+export function getDesktopVersionInfo(): DesktopVersionInfoPayload {
+  return createDesktopVersionInfoPayload(app.getVersion(), resolveWindowsStoreVersion());
 }

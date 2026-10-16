@@ -62,6 +62,9 @@ settings:
   embeddedWebServicePort: Embedded Web Service Port
 footer:
   copyright: © 2026 Hagicode Desktop
+  buildVersion: Version
+  buildBranch: Branch
+  buildCommit: Commit
 menu:
   systemManagement: System Management
   hagicoWeb: Hagicode Web
@@ -505,6 +508,7 @@ system:
       manage: Manage Versions
     labels:
       version: Version
+      package: Package
       installedAt: Installed at
       status: Status
     states:

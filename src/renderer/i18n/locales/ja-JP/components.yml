@@ -77,7 +77,7 @@ webServiceStatus:
   cardTitle: 組み込み Web サービス
   cardDescription: Webサービスの実行ステータスの表示と管理
   status:
-    running: ランニング
+    running: 実行中
     stopped: 停止しました
     error: エラー
     starting: 開始中...
@@ -115,7 +115,7 @@ webServiceStatus:
     serviceUrl: サービス URL
     uptime: 稼働時間
     restartCount: 再起動回数
-    port: 港
+    port: ポート
     version: バージョン
     remoteUrl: リモート URL
     listenAddress: リッスンアドレス
@@ -340,23 +340,6 @@ tray:
   openInBrowser: ブラウザで開く
   startService: サービスを開始する
   stopService: サービスの停止
-blogFeed:
-  title: 推奨と更新
-  description: コントロールコンソールを離れずに、公式の推奨情報と更新内容を確認できます。
-  openRss: RSS を開く
-  openRssFailed: RSS リンクを開けません
-  refresh: リフレッシュ
-  loading: 読み込み中...
-  error: ロードに失敗しました。後でもう一度お試しください
-  noArticles: 利用できる記事はありません
-  lastUpdate: '最終更新日: {{date}}'
-  labels:
-    recommended: 推奨
-    updates: 更新
-    news: お知らせ
-  actions:
-    readArticle: 記事を開く
-    openFeed: フィードを開く
 homePromote:
   title: Hagicode のおすすめ
   regionLabel: Hagicode のおすすめ情報
