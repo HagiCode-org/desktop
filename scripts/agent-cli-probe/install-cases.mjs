@@ -22,6 +22,12 @@ export const catalogCliIds = Object.freeze([
 
 export const VERIFIED_ON = '2026-10-15';
 
+/** Shared by the Linux Homebrew cases: brew installs fine, but its bin directory is never persisted to the login-shell PATH. */
+const LINUX_BREW_PATH_ISSUE = {
+  reason: 'Observed on hosted Linux (run 38829806448): the oracle finds the binary under /home/linuxbrew/.linuxbrew/bin, but the production probe (login-shell command -v) reports it missing, because Homebrew only joins PATH once shellenv is added to a shell startup file. macOS is unaffected, so this notice can be ignored there.',
+  trackedBy: 'https://github.com/HagiCode-org/desktop/actions/runs/38829806448',
+};
+
 /** Linux Homebrew is not on PATH until shellenv runs. The prefix is a no-op where it does not exist. */
 const BREW_ENV = '[ -x /home/linuxbrew/.linuxbrew/bin/brew ] && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"; ';
 
@@ -219,7 +225,7 @@ export const installCases = [
     container: null, install: { kind: 'shell', command: BREW_ENV + 'brew install anomalyco/tap/opencode' },
     managedPackageId: null, probeSurfaces: ['A'],
     expectedLocation: { linux: ['brew-bin'], macos: ['brew-bin'] },
-    runnerPreinstalled: [], knownIssue: null, timeoutMinutes: 15,
+    runnerPreinstalled: [], knownIssue: LINUX_BREW_PATH_ISSUE, timeoutMinutes: 15,
     verification: 'secondary', verifiedOn: VERIFIED_ON, source: OPENCODE_DOCS,
     notes: 'Tap name taken from the README. Homebrew is preinstalled on the Linux and macOS images but needs shellenv on PATH.',
   },
@@ -244,7 +250,7 @@ export const installCases = [
     container: null, install: { kind: 'shell', command: BREW_ENV + 'brew install gemini-cli' },
     managedPackageId: null, probeSurfaces: ['A'],
     expectedLocation: { linux: ['brew-bin'], macos: ['brew-bin'] },
-    runnerPreinstalled: [], knownIssue: null, timeoutMinutes: 15,
+    runnerPreinstalled: [], knownIssue: LINUX_BREW_PATH_ISSUE, timeoutMinutes: 15,
     verification: 'official', verifiedOn: VERIFIED_ON, source: GEMINI_DOCS,
   },
   {
@@ -268,7 +274,7 @@ export const installCases = [
     container: null, install: { kind: 'shell', command: BREW_ENV + 'brew install copilot-cli' },
     managedPackageId: null, probeSurfaces: ['A'],
     expectedLocation: { linux: ['brew-bin'], macos: ['brew-bin'] },
-    runnerPreinstalled: [], knownIssue: null, timeoutMinutes: 15,
+    runnerPreinstalled: [], knownIssue: LINUX_BREW_PATH_ISSUE, timeoutMinutes: 15,
     verification: 'official', verifiedOn: VERIFIED_ON, source: COPILOT_DOCS,
     notes: 'Docs also show a cask form; the formula form is the one recorded here. Confirm in task 1.1.',
   },
