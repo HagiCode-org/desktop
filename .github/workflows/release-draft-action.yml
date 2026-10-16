@@ -2,8 +2,7 @@ name: Release Draft (hagi-release-drafter)
 
 # Drafts the next stable release through the centralized HagiCode-org/hagi-release-drafter action.
 # Publishing the draft is a manual step; this workflow never publishes a release.
-# Coexists with the legacy release-drafter workflow. It runs on workflow_dispatch only until the
-# legacy workflow is removed, so the two drafters never race on push to main.
+# Manual dispatch only. build.yml drafts on push to main through the same action.
 
 on:
   workflow_dispatch:
