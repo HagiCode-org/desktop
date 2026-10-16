@@ -13,6 +13,7 @@ import { manifestReader } from './manifest-reader.js';
 import { loadConsoleEnvironment } from './shell-env-loader.js';
 import { desktopHttpClient } from './http-client.js';
 import { executeCli } from './utils/cli-executor.js';
+import { pickInstallCandidate } from './version-channel.js';
 import { resolveDesktopLanguageCode } from '../shared/desktop-languages.js';
 import type {
   AcceptLegalDocumentsPayload,
@@ -367,8 +368,12 @@ export class OnboardingManager {
         return { success: false, error: 'No versions available' };
       }
 
-      // Get the first (latest) version
-      const latestVersion = versions[0];
+      // Prefer the newest stable release; prereleases are only picked when no stable release exists
+      // or the user explicitly follows another channel.
+      const latestVersion = pickInstallCandidate(
+        versions,
+        this.versionManager.getCurrentSourceConfig()?.defaultChannel,
+      ) ?? versions[0];
       log.info('[OnboardingManager] Latest version:', latestVersion.id);
 
       // Track download progress for speed calculation

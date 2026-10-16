@@ -86,6 +86,19 @@ describe('version update manager', () => {
     assert.equal(selected?.version, '1.2.0');
   });
 
+  it('moves a beta install onto the stable release and never offers prereleases to a stable install', () => {
+    const versions = [
+      createVersion('0.1.1-beta.1'),
+      createVersion('0.1.0'),
+      createVersion('0.1.0-beta.96'),
+    ];
+
+    assert.equal(selectLatestCompatibleVersion(versions, '0.1.0-beta.95')?.version, '0.1.1-beta.1');
+    assert.equal(selectLatestCompatibleVersion([versions[1], versions[2]], '0.1.0-beta.96')?.version, '0.1.0');
+    assert.equal(selectLatestCompatibleVersion(versions, '0.1.0'), null);
+    assert.equal(selectLatestCompatibleVersion(versions, '0.1.0', 'beta')?.version, '0.1.1-beta.1');
+  });
+
   it('skips predownloads in Steam mode and returns a disabled snapshot', async () => {
     const stateManager = new MemoryStateManager();
     const configManager = new MemoryConfigManager();

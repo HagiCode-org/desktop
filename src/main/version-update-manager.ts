@@ -15,6 +15,7 @@ import {
   type VersionUpdateVersionInfo,
 } from './state-manager.js';
 import type { InstalledVersion, Version, VersionManager } from './version-manager.js';
+import { filterUpdateCandidatesByChannel } from './version-channel.js';
 
 const DEFAULT_REFRESH_INTERVAL_MS = 60 * 60 * 1000;
 
@@ -160,7 +161,8 @@ export class VersionUpdateManager {
       });
     }
 
-    if (!this.versionManager.getCurrentSourceConfig()) {
+    const sourceConfig = this.versionManager.getCurrentSourceConfig();
+    if (!sourceConfig) {
       return this.persistSnapshot({
         ...currentSnapshot,
         status: 'disabled',
@@ -197,7 +199,11 @@ export class VersionUpdateManager {
 
     try {
       const versions = await this.versionManager.listVersions();
-      const latestVersion = selectLatestCompatibleVersion(versions, currentVersion.version);
+      const latestVersion = selectLatestCompatibleVersion(
+        versions,
+        currentVersion.version,
+        sourceConfig.defaultChannel,
+      );
 
       if (!latestVersion) {
         return this.persistSnapshot({
@@ -349,13 +355,20 @@ export class VersionUpdateManager {
   }
 }
 
-export function selectLatestCompatibleVersion(versions: Version[], currentVersion: string | null | undefined): Version | null {
+export function selectLatestCompatibleVersion(
+  versions: Version[],
+  currentVersion: string | null | undefined,
+  preferredChannel?: string | null,
+): Version | null {
   const normalizedCurrentVersion = normalizeSemver(currentVersion);
   if (!normalizedCurrentVersion) {
     return null;
   }
 
-  const sortedCandidates = [...versions]
+  const sortedCandidates = filterUpdateCandidatesByChannel(versions, {
+    preferredChannel,
+    currentVersion: normalizedCurrentVersion,
+  })
     .filter((version) => normalizeSemver(version.version))
     .sort((left, right) => compareVersions(right.version, left.version));
 
