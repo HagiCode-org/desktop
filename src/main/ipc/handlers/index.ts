@@ -46,8 +46,6 @@ export { registerDebugOptionsHandlers } from './debugOptionsHandlers.js';
 // Runtime data path handlers
 export { registerRuntimeDataPathHandlers } from './runtimeDataPathHandlers.js';
 
-// RSS handlers
-export { registerRssHandlers, initRssHandlers } from './rssHandlers.js';
 
 // Promote handlers
 export { registerPromoteHandlers } from './promoteHandlers.js';

@@ -34,7 +34,6 @@ import {
   buildSteamLinuxStartupCompatibilityLogContext,
   relaunchSteamLinuxOnHostIfNeeded,
 } from './steam-linux-startup-compatibility.js';
-import { RSSFeedManager, DEFAULT_RSS_FEED_URL } from './rss-feed-manager.js';
 import { PromoteImageCache } from './promote-image-cache.js';
 import { PROMOTE_DOCUMENT_TIMEOUT_MS, PROMOTE_INDEX_ORIGIN, PromoteManager } from './promote-manager.js';
 import {
@@ -62,7 +61,6 @@ import {
   registerDependencyManagementHandlers,
   registerDebugOptionsHandlers,
   registerRuntimeDataPathHandlers,
-  registerRssHandlers,
   registerPromoteHandlers,
   registerSubscriptionHandlers,
   disposeSubscriptionHandlers,
@@ -327,7 +325,6 @@ let systemDiagnosticManager: SystemDiagnosticManager | null = null;
 let dependencyManagementService: DependencyManagementService | null = null;
 let promptResourceResolver: PromptResourceResolver | null = null;
 let onboardingManager: OnboardingManager | null = null;
-let rssFeedManager: RSSFeedManager | null = null;
 let pathManager: PathManager | null = null;
 let aboutWindow: BrowserWindow | null = null;
 let bootstrapSnapshotCache: DesktopBootstrapSnapshot | null = null;
@@ -2129,7 +2126,6 @@ ipcMain.handle('language-changed', async (_, language: string) => {
     }
 
     setTrayLanguage(language);
-    rssFeedManager?.switchLanguage(language);
 
     return { success: true };
   } catch (error) {
@@ -2534,45 +2530,6 @@ ipcMain.handle('preset:get-provider', presetGetProviderHandler);
 ipcMain.handle('preset:get-all-providers', presetGetAllProvidersHandler);
 ipcMain.handle('preset:get-cache-stats', presetGetCacheStatsHandler);
 
-// RSS Feed IPC Handlers
-ipcMain.handle('rss-get-feed-items', async () => {
-  if (!rssFeedManager) {
-    return [];
-  }
-  try {
-    const items = await rssFeedManager.getFeedItems();
-    return items;
-  } catch (error) {
-    console.error('Failed to get RSS feed items:', error);
-    return [];
-  }
-});
-
-ipcMain.handle('rss-refresh-feed', async () => {
-  if (!rssFeedManager) {
-    return [];
-  }
-  try {
-    const items = await rssFeedManager.refreshFeed();
-    return items;
-  } catch (error) {
-    console.error('Failed to refresh RSS feed:', error);
-    return [];
-  }
-});
-
-ipcMain.handle('rss-get-last-update', async () => {
-  if (!rssFeedManager) {
-    return null;
-  }
-  try {
-    return rssFeedManager.getLastUpdateTime();
-  } catch (error) {
-    console.error('Failed to get last RSS update time:', error);
-    return null;
-  }
-});
-
 function startStatusPolling(): void {
   if (statusPollingInterval) {
     clearInterval(statusPollingInterval);
@@ -2849,22 +2806,8 @@ app.whenReady().then(async () => {
     return resolveBootstrapSnapshot(true);
   });
 
-  // Initialize RSS Feed Manager
   const initialLanguage = configManager.getCurrentLanguage() || 'zh-CN';
   setTrayLanguage(initialLanguage);
-  rssFeedManager = RSSFeedManager.getInstance({
-    feedUrl: DEFAULT_RSS_FEED_URL,
-    language: initialLanguage,
-    refreshInterval: 24 * 60 * 60 * 1000, // 24 hours
-    maxItems: 20,
-    storeKey: 'rssFeed',
-  },
-    configManager.getStore() as unknown as Store
-  );
-  log.info('[App] RSS Feed Manager initialized');
-
-  // Start auto-refresh for RSS feed
-  rssFeedManager.startAutoRefresh();
 
   const promoteManager = new PromoteManager({
     store: configManager.getStore() as unknown as Store,
@@ -2983,9 +2926,6 @@ app.on('before-quit', async (event) => {
     }
     if (webServiceManager) {
       await webServiceManager.cleanup();
-    }
-    if (rssFeedManager) {
-      rssFeedManager.destroy();
     }
     await telemetryManager?.track('app_exited', {
       status: 'normal',

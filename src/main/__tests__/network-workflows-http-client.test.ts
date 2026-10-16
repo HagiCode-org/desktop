@@ -102,16 +102,13 @@ describe('migrated network workflows', () => {
     }
   });
 
-  it('keeps RSS, legal metadata, and web-service health checks on the internal HTTP client', async () => {
-    const rssSource = await readSource('src/main/rss-feed-manager.ts');
+  it('keeps legal metadata and web-service health checks on the internal HTTP client', async () => {
     const onboardingSource = await readSource('src/main/onboarding-manager.ts');
     const webServiceSource = await readSource('src/main/web-service-manager.ts');
 
-    assert.match(rssSource, /this\.httpClient\.requestText\(this\.config\.feedUrl/);
     assert.match(onboardingSource, /desktopHttpClient\.requestJson<PublishedLegalDocumentsPayload>\(url/);
     assert.match(webServiceSource, /this\.httpClient\.requestText\(url/);
     const removedClientName = new RegExp(['ax', 'ios'].join(''));
-    assert.doesNotMatch(rssSource, removedClientName);
     assert.doesNotMatch(onboardingSource, removedClientName);
     assert.doesNotMatch(webServiceSource, removedClientName);
   });

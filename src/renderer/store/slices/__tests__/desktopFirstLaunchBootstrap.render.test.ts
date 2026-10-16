@@ -68,7 +68,7 @@ describe('desktop first-launch renderer bootstrap integration', () => {
     assert.match(backgroundSection, /checkOnboardingTrigger\(\)/);
     assert.match(backgroundSection, /initializePackageSource\(\)/);
     assert.match(backgroundSection, /initializeDependency\(\)/);
-    assert.match(backgroundSection, /initializeRSSFeed\(\)/);
+    assert.doesNotMatch(backgroundSection, /initializeRSSFeed/);
     assert.match(backgroundSection, /initializeWebService\(\)/);
     assert.match(backgroundSection, /verifySubscriptionStartup\(\)/);
     assert.match(backgroundSection, /verifyTurboEngineLicenseStartup\(\)/);

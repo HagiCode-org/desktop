@@ -110,25 +110,6 @@ declare global {
       onViewChange: (callback: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'settings' | 'subscription' | 'turboengine') => void) => () => void;
       languageChanged: (language: string) => Promise<{ success: boolean; error?: string }>;
       openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
-      rss: {
-        getFeedItems: () => Promise<Array<{
-          title: string;
-          link: string;
-          pubDate: string;
-          description: string;
-          guid?: string;
-          contentSnippet?: string;
-        }>>;
-        refreshFeed: () => Promise<Array<{
-          title: string;
-          link: string;
-          pubDate: string;
-          description: string;
-          guid?: string;
-          contentSnippet?: string;
-        }>>;
-        getLastUpdate: () => Promise<string | null>;
-      };
       openHagicodeInApp: (url: string) => Promise<{ success: boolean; error?: string }>;
       onOnboardingSwitchToWeb: (callback: (data: { versionId: string }) => void) => () => void;
       onOnboardingOpenHagicode: (callback: (data: { url: string; versionId: string }) => void) => () => void;

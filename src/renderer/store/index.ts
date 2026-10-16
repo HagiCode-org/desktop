@@ -7,7 +7,6 @@ import packageSourceReducer from './slices/packageSourceSlice';
 import serviceRegionReducer, { setServiceRegionState } from './slices/serviceRegionSlice';
 import { loadServiceRegion } from './thunks/serviceRegionThunks';
 import onboardingReducer from './slices/onboardingSlice';
-import rssFeedReducer from './slices/rssFeedSlice';
 import claudeConfigReducer from './slices/claudeConfigSlice';
 import settingsReducer, {
   setNotificationClicked,
@@ -44,7 +43,6 @@ import { initializeView } from './thunks/viewThunks';
 import { initializePackageSource } from './thunks/packageSourceThunks';
 import { initializeWebService, startWebService, stopWebService } from './thunks/webServiceThunks';
 import { initializeDependency } from './thunks/dependencyThunks';
-import { initializeRSSFeed } from './thunks/rssFeedThunks';
 import { checkOnboardingTrigger } from './thunks/onboardingThunks';
 import type { HagihubApi } from '../../shared/api.js';
 import type { ServiceRegionState } from '../../types/service-region.js';
@@ -79,7 +77,6 @@ export const store = configureStore({
     packageSource: packageSourceReducer,
     serviceRegion: serviceRegionReducer,
     onboarding: onboardingReducer,
-    rssFeed: rssFeedReducer,
     claudeConfig: claudeConfigReducer,
     settings: settingsReducer,
     subscription: subscriptionReducer,
@@ -281,7 +278,6 @@ export function startBackgroundStartupInitialization(): void {
     store.dispatch(loadServiceRegion()),
     store.dispatch(initializePackageSource()),
     store.dispatch(initializeDependency()),
-    store.dispatch(initializeRSSFeed()),
     store.dispatch(fetchVersionUpdateSnapshot()),
     store.dispatch(fetchVersionAutoUpdateSettings()),
     store.dispatch(initializeWebService()),

@@ -808,13 +808,6 @@ const electronAPI: ElectronAPI = {
     return () => ipcRenderer.removeListener('onboarding:show', listener);
   },
 
-  // RSS Feed APIs
-  rss: {
-    getFeedItems: () => ipcRenderer.invoke('rss-get-feed-items'),
-    refreshFeed: () => ipcRenderer.invoke('rss-refresh-feed'),
-    getLastUpdate: () => ipcRenderer.invoke('rss-get-last-update'),
-  },
-
   // Claude Config APIs
   claudeDetect: () => ipcRenderer.invoke('claude:detect'),
   claudeValidate: (provider: string, apiKey: string, endpoint?: string) => ipcRenderer.invoke('claude:validate', provider, apiKey, endpoint),
