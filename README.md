@@ -1,5 +1,8 @@
 # Hagicode Desktop
 
+[![license](https://img.shields.io/badge/license-AGPL--3.0-ffd43b)](./LICENSE)
+[![build](https://img.shields.io/github/actions/workflow/status/HagiCode-org/desktop/build.yml?branch=main&label=build)](https://github.com/HagiCode-org/desktop/actions/workflows/build.yml)
+
 [简体中文](./README_cn.md)
 
 Hagicode Desktop helps developers set up, run, and manage HagiCode Server from a desktop app.

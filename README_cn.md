@@ -1,5 +1,8 @@
 # Hagicode Desktop
 
+[![license](https://img.shields.io/badge/license-AGPL--3.0-ffd43b)](./LICENSE)
+[![build](https://img.shields.io/github/actions/workflow/status/HagiCode-org/desktop/build.yml?branch=main&label=build)](https://github.com/HagiCode-org/desktop/actions/workflows/build.yml)
+
 [English](./README.md)
 
 Hagicode Desktop 帮助开发者通过桌面应用完成 HagiCode Server 的安装、启动和日常管理。
