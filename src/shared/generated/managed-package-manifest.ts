@@ -41,10 +41,6 @@ export const runtimeManagedPackageManifestPackages: Readonly<Record<string, Runt
     version: "2.100.1",
     target: "2.100.1",
   },
-  "impeccable": {
-    version: "2.1.9",
-    target: "2.1.9",
-  },
   "opencode-ai": {
     version: "1.15.13",
     target: "1.15.13",

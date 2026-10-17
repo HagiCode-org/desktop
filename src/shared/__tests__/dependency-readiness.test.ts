@@ -271,3 +271,50 @@ describe('managed package minimum version satisfaction', () => {
     assert.equal(isManagedPackageVersionSatisfied(definition, '1.13'), true);
   });
 });
+
+describe('impeccable optional, unpinned managed package', () => {
+  function resolveImpeccableDefinition(): ManagedNpmPackageDefinition {
+    const definition = managedNpmPackages.find((item) => item.id === 'impeccable');
+    if (!definition) {
+      throw new Error('impeccable definition missing from managed catalog');
+    }
+
+    return definition;
+  }
+
+  it('resolves impeccable as optional with a bare install spec and no required version range', () => {
+    const definition = resolveImpeccableDefinition();
+
+    assert.equal(requiredManagedNpmPackages.some((item) => item.id === 'impeccable'), false);
+    assert.equal(optionalManagedNpmPackages.some((item) => item.id === 'impeccable'), true);
+    assert.equal(definition.installSpec, 'impeccable');
+    assert.equal(definition.requiredVersionRange, undefined);
+    assert.equal(getManagedPackageRequiredVersionRange(definition), null);
+  });
+
+  it('accepts an installed impeccable at any version because no range is required', () => {
+    const definition = resolveImpeccableDefinition();
+
+    assert.equal(isManagedPackageVersionSatisfied(definition, '1.0.0'), true);
+    assert.equal(isManagedPackageVersionSatisfied(definition, '2.1.9'), true);
+    assert.equal(isManagedPackageVersionSatisfied(definition, null), true);
+  });
+
+  it('never blocks required readiness when impeccable is not installed', () => {
+    const summary = evaluateDependencyReadiness(createSnapshot({ impeccable: 'not-installed' }), ['codex']);
+
+    assert.equal(summary.requiredReady, true);
+    assert.equal(summary.ready, true);
+    assert.equal(summary.missingRequiredPackageIds.includes('impeccable'), false);
+    assert.equal(summary.versionMismatchRequiredPackageIds.includes('impeccable'), false);
+  });
+
+  it('never reports a version mismatch for impeccable at an arbitrary installed version', () => {
+    const summary = evaluateDependencyReadiness(createSnapshot({}, { impeccable: '1.0.0' }), ['codex']);
+
+    assert.equal(summary.requiredReady, true);
+    assert.equal(summary.ready, true);
+    assert.equal(summary.missingRequiredPackageIds.includes('impeccable'), false);
+    assert.equal(summary.versionMismatchRequiredPackageIds.includes('impeccable'), false);
+  });
+});

@@ -122,9 +122,6 @@ npmSync:
       target: 0.78.1
       installArgs:
         - --ignore-scripts
-    impeccable:
-      version: 2.1.9
-      target: 2.1.9
     opencode-ai:
       version: 1.15.13
       target: 1.15.13
