@@ -63,6 +63,7 @@ import {
   FolderOpen,
 } from 'lucide-react';
 import HagicodeActionButton from './HagicodeActionButton';
+import { ServiceSignalLine, ServiceStatusDot } from './ServiceSignal';
 import {
   buildAccessUrl,
   DEFAULT_WEB_SERVICE_HOST,
@@ -548,12 +549,9 @@ const WebServiceStatusCard: React.FC = () => {
   ];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-    >
+    <div>
       <Card className="relative overflow-hidden rounded-2xl border-border/80 shadow-sm">
+        <ServiceSignalLine status={webServiceInfo.status} isBusy={isTransitioning} />
         <CardHeader className="pb-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-2">
@@ -572,6 +570,7 @@ const WebServiceStatusCard: React.FC = () => {
               className="self-start"
             >
               <Badge variant={getStatusVariant(webServiceInfo.status)} className={statusBadgeClassName}>
+                <ServiceStatusDot status={webServiceInfo.status} isBusy={isTransitioning} />
                 {getStatusText(webServiceInfo.status)}
               </Badge>
             </motion.div>
@@ -982,7 +981,7 @@ const WebServiceStatusCard: React.FC = () => {
           </Dialog>
         </CardContent>
       </Card>
-    </motion.div>
+    </div>
   );
 };
 

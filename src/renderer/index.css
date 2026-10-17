@@ -590,6 +590,53 @@
   }
 }
 
+/* Service signal (home status card): a highlight crossing the card's top edge, and a ring off the status dot. */
+@keyframes service-signal-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+
+@keyframes service-signal-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.45;
+  }
+  70%,
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+.service-signal-sweep {
+  transform: translateX(-100%);
+  animation: service-signal-sweep 5.5s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+  will-change: transform;
+}
+
+.service-signal-sweep-fast {
+  animation-duration: 1.5s;
+}
+
+.service-signal-ring {
+  animation: service-signal-ring 2.6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+.service-signal-ring-fast {
+  animation-duration: 1.2s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .service-signal-sweep,
+  .service-signal-ring {
+    display: none;
+  }
+}
+
 /* Apply custom animations */
 .animate-pulse-slow {
   animation: pulse-slow 3s ease-in-out infinite;

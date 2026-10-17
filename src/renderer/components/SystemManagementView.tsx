@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { motion } from 'motion/react';
+import { MotionConfig, motion } from 'motion/react';
 import { useNavigate } from '../hooks/useNavigate';
 import { useHomeEntitlementTier } from '../hooks/useHomeEntitlementTier';
 import { shortBuildCommit, useDesktopBuildInfo } from '../hooks/useDesktopBuildInfo';
@@ -73,6 +73,16 @@ declare global {
     };
   }
 }
+
+/**
+ * Home arrival: the service card lands first and furthest, everything else follows it down the
+ * page in reading order. Opacity + a short rise only, exponential ease-out, so it settles fast.
+ */
+const homeArrival = (order: number, distance = 10) => ({
+  initial: { opacity: 0, y: distance },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: order === 0 ? 0.55 : 0.4, delay: order * 0.07, ease: [0.16, 1, 0.3, 1] as const },
+});
 
 type LogTargetStateMap = Record<LogDirectoryTarget, LogDirectoryTargetStatus>;
 
@@ -529,6 +539,7 @@ export default function SystemManagementView({
       : '';
 
   return (
+    <MotionConfig reducedMotion="user">
     <PageShell>
       {shouldShowVersionUpdateReminder ? (
         <motion.div
@@ -616,9 +627,11 @@ export default function SystemManagementView({
       */}
       <div className="grid gap-y-4 @4xl:grid-cols-[minmax(0,1fr)_auto]" data-home-entitlement={entitlementTier}>
         <div className="min-w-0 space-y-4">
-          <div {...{ [HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE]: 'service-card' }}>
+          <motion.div {...homeArrival(0, 16)} {...{ [HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE]: 'service-card' }}>
             <WebServiceStatusCard />
-          </div>
+          </motion.div>
+
+          <motion.div className="space-y-4" {...homeArrival(1)}>
 
           {activeVersion ? (
             <section
@@ -713,8 +726,11 @@ export default function SystemManagementView({
             </section>
           )}
 
-          <section
+          </motion.div>
+
+          <motion.section
             className="rounded-2xl border border-border/80 bg-card p-6"
+            {...homeArrival(2)}
             {...{ [HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE]: 'log-access' }}
           >
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
@@ -783,27 +799,29 @@ export default function SystemManagementView({
                 );
               })}
             </ul>
-          </section>
+          </motion.section>
         </div>
 
-        <div
+        <motion.div
+          {...homeArrival(2, 14)}
           className="min-w-0 space-y-4 empty:hidden @4xl:ml-6 @4xl:w-[22rem]"
           data-home-region="rail"
         >
           {railPlan.side.map((slot) => (
             <Fragment key={slot}>{railSlots[slot]}</Fragment>
           ))}
-        </div>
+        </motion.div>
       </div>
 
-      <div
+      <motion.div
+        {...homeArrival(3)}
         className="space-y-4 border-t border-border/60 pt-6 empty:hidden"
         data-home-region="band"
       >
         {railPlan.band.map((slot) => (
           <Fragment key={slot}>{railSlots[slot]}</Fragment>
         ))}
-      </div>
+      </motion.div>
 
       <footer className="px-1 py-2 text-center">
         <p className="text-sm text-muted-foreground">{t('footer.copyright')}</p>
@@ -818,5 +836,6 @@ export default function SystemManagementView({
         ) : null}
       </footer>
     </PageShell>
+    </MotionConfig>
   );
 }
