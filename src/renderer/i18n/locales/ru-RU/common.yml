@@ -113,7 +113,6 @@ navigation:
   webServiceNotRunning: Веб-сервис не запущен
   officialWebsite: Официальный сайт
   officialWebsiteDesc: Посетите официальный сайт Hagicode для получения последних новостей и документации.
-  costCalculator: AI Калькулятор замены
   about:
     sectionDescription: Сначала визуализируйте связанный снимок, а затем обновите последние официальные места назначения.
     snapshotLabel: Пакетный снимок

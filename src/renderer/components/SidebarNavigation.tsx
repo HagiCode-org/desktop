@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ComponentType, type ReactElement } from 'react';
+import { Fragment, useEffect, useMemo, useState, type ComponentType, type ReactElement } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
@@ -6,7 +6,6 @@ import { useTheme } from '@/components/providers/theme-provider';
 import {
   AlertCircle,
   BadgeCheck,
-  Calculator,
   Cpu,
   ExternalLink,
   Globe as GlobeIcon,
@@ -43,12 +42,13 @@ import {
   type SidebarAboutModel,
   type SidebarAboutSectionId,
 } from '../lib/about-sidebar';
+import { buildRelatedSitesModel, type RelatedSitesModel } from '../lib/related-sites';
 import { cn } from '../lib/utils';
 
 type NavigationEmphasis = 'default' | 'sponsor' | 'turboengine';
 
 interface NavigationItem {
-  id: ViewType | 'official-website' | 'cost-calculator';
+  id: ViewType | 'official-website';
   labelKey: string;
   descriptionKey?: string;
   icon: ComponentType<{ className?: string }>;
@@ -98,15 +98,8 @@ const featuredNavigationItems: NavigationItem[] = [
   turboEngineNavigationItem,
 ];
 
-const remainingExternalLinkItems: NavigationItem[] = [
-  {
-    id: 'cost-calculator',
-    labelKey: 'navigation.costCalculator',
-    url: 'https://cost.hagicode.com',
-    icon: Calculator,
-    emphasis: 'default',
-  },
-];
+const ABOUT_SECTION_TITLE_CLASS =
+  'px-1 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground/90';
 
 interface SidebarNavigationProps {
   distributionState: DistributionModeState;
@@ -293,6 +286,7 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
     [i18n.language, i18n.resolvedLanguage],
   );
   const bundledAboutModel = useMemo(() => loadBundledSidebarAbout(aboutLocale), [aboutLocale]);
+  const relatedSitesModel = useMemo(() => buildRelatedSitesModel(aboutLocale), [aboutLocale]);
 
   const { collapsed, toggleCollapsed } = useSidebarLayout();
   const [versionInfo, setVersionInfo] = useState<DesktopVersionInfoPayload | null>(null);
@@ -378,6 +372,9 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
   const windowsStoreVersion = versionInfo?.windowsStoreVersion ?? null;
 
   const hasAboutContent = hasSidebarAboutEntries(aboutModel);
+  // The related-sites block follows the community section; without one it is appended after the About content.
+  const relatedSitesFollowCommunity = hasAboutContent
+    && Boolean(aboutModel?.sections.some((section) => section.id === 'community'));
 
   const openExternalUrl = async (url: string) => {
     try {
@@ -410,9 +407,39 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
   };
 
   const renderAboutSectionTitle = (sectionId: SidebarAboutSectionId) => (
-    <p className="px-1 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground/90">
+    <p className={ABOUT_SECTION_TITLE_CLASS}>
       {t(`navigation.about.sections.${sectionId}`)}
     </p>
+  );
+
+  const renderRelatedSitesBlock = (model: RelatedSitesModel) => (
+    <div className="space-y-2" data-related-sites>
+      <p className={ABOUT_SECTION_TITLE_CLASS}>{model.title}</p>
+      <div className="space-y-1.5">
+        {model.entries.map((entry) => {
+          const accessibleLabel = entry.description ? `${entry.name} · ${entry.description}` : entry.name;
+
+          return (
+            <button
+              key={entry.id}
+              type="button"
+              aria-label={accessibleLabel}
+              title={accessibleLabel}
+              onClick={() => void openExternalUrl(entry.href)}
+              className="group flex w-full items-center gap-2 rounded-xl border border-border/60 bg-background/80 px-3 py-2 text-left shadow-sm transition-colors hover:border-primary/40 hover:bg-accent/50 focus-visible:border-primary/40 focus-visible:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-xs font-medium text-foreground">{entry.name}</span>
+                {entry.description ? (
+                  <span className="block truncate text-[11px] text-muted-foreground">{entry.description}</span>
+                ) : null}
+              </span>
+              <ExternalLink aria-hidden className="h-3 w-3 shrink-0 text-muted-foreground" />
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 
   const renderAboutEntryIcon = (entry: SidebarAboutEntry) => {
@@ -685,49 +712,28 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
 
                     {hasAboutContent && aboutModel ? (
                       aboutModel.sections.map((section) => (
-                        <div key={section.id} className="space-y-2">
-                          {renderAboutSectionTitle(section.id)}
-                          <div className="grid grid-cols-4 gap-2">
-                            {section.entries.map((entry) => renderAboutEntryIcon(entry))}
+                        <Fragment key={section.id}>
+                          <div className="space-y-2">
+                            {renderAboutSectionTitle(section.id)}
+                            <div className="grid grid-cols-4 gap-2">
+                              {section.entries.map((entry) => renderAboutEntryIcon(entry))}
+                            </div>
                           </div>
-                        </div>
+                          {section.id === 'community' && relatedSitesModel
+                            ? renderRelatedSitesBlock(relatedSitesModel)
+                            : null}
+                        </Fragment>
                       ))
                     ) : (
                       <div className="rounded-xl border border-dashed border-border/60 bg-muted/10 px-3 py-2.5 text-xs text-muted-foreground">
                         {t('navigation.about.empty')}
                       </div>
                     )}
+                    {!relatedSitesFollowCommunity && relatedSitesModel
+                      ? renderRelatedSitesBlock(relatedSitesModel)
+                      : null}
                   </div>
                 ) : null}
-
-                {remainingExternalLinkItems.map((item) => {
-                  const Icon = item.icon;
-                  const label = t(item.labelKey);
-
-                  return (
-                    <CollapsedTooltip key={item.id} label={label} enabled={collapsed}>
-                      <motion.button
-                        type="button"
-                        onClick={() => void handleNavClick(item)}
-                        title={item.descriptionKey ? t(item.descriptionKey) : undefined}
-                        aria-label={collapsed ? label : undefined}
-                        whileTap={{ scale: 0.98 }}
-                        className={cn(
-                          navRowClass,
-                          'text-muted-foreground hover:bg-muted/60 hover:text-foreground focus-visible:ring-primary/35',
-                        )}
-                      >
-                        <Icon className="h-[18px] w-[18px] shrink-0" />
-                        {!collapsed ? (
-                          <>
-                            <span className="min-w-0 flex-1 break-words font-medium leading-5">{label}</span>
-                            <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-70 group-focus-visible:opacity-70" />
-                          </>
-                        ) : null}
-                      </motion.button>
-                    </CollapsedTooltip>
-                  );
-                })}
               </div>
             </div>
           </ScrollArea>

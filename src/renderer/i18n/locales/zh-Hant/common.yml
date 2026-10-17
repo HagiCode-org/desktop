@@ -113,7 +113,6 @@ navigation:
   webServiceNotRunning: Hagicode 服務未運行，無法存取
   officialWebsite: 官方網站
   officialWebsiteDesc: 造訪 Hagicode 官方網站以取得最新資訊和文檔
-  costCalculator: 算一算，AI會不會淘汰我
   about:
     sectionDescription: 首頁使用打包 snapshot，隨後自動刷新最新官方入口。
     snapshotLabel: 打包 snapshot

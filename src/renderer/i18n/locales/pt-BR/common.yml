@@ -113,7 +113,6 @@ navigation:
   webServiceNotRunning: O serviço da Web não está em execução
   officialWebsite: Site oficial
   officialWebsiteDesc: Visite o site oficial Hagicode para obter as últimas notícias e documentação
-  costCalculator: AI Calculadora de substituição
   about:
     sectionDescription: Renderize primeiro o snapshot incluído e, em seguida, atualize os destinos oficiais mais recentes.
     snapshotLabel: Instantâneo empacotado

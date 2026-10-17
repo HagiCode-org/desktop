@@ -113,7 +113,6 @@ navigation:
   webServiceNotRunning: 웹 서비스가 실행되고 있지 않습니다.
   officialWebsite: 공식 홈페이지
   officialWebsiteDesc: 최신 뉴스와 문서를 보려면 Hagicode 공식 웹사이트를 방문하세요.
-  costCalculator: AI 대체 계산기
   about:
     sectionDescription: 번들 스냅샷을 먼저 렌더링한 다음 최신 공식 대상을 제자리에 새로 고칩니다.
     snapshotLabel: 번들 스냅샷

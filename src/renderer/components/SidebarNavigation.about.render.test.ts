@@ -33,4 +33,22 @@ describe('sidebar about section integration', () => {
     assert.doesNotMatch(source, /discord-community/);
     assert.doesNotMatch(source, /github-project/);
   });
+
+  it('renders related sites from the core helper directly below the community section', async () => {
+    const source = await fs.readFile(sidebarPath, 'utf8');
+
+    assert.match(source, /import \{ buildRelatedSitesModel, type RelatedSitesModel \} from '\.\.\/lib\/related-sites'/);
+    assert.match(source, /const relatedSitesModel = useMemo\(\(\) => buildRelatedSitesModel\(aboutLocale\), \[aboutLocale\]\);/);
+    assert.match(source, /section\.id === 'community' && relatedSitesModel/);
+    assert.match(source, /!relatedSitesFollowCommunity && relatedSitesModel/);
+    assert.match(source, /data-related-sites/);
+  });
+
+  it('opens related sites through the existing external-link path without a hard-coded list', async () => {
+    const source = await fs.readFile(sidebarPath, 'utf8');
+
+    assert.match(source, /onClick=\{\(\) => void openExternalUrl\(entry\.href\)\}/);
+    assert.match(source, /<button\s+key=\{entry\.id\}\s+type="button"\s+aria-label=\{accessibleLabel\}/);
+    assert.doesNotMatch(source, /tasks\.hagicode\.com|cost\.hagicode\.com|status\.hagicode\.com|builder\.hagicode\.com|HagiTask/);
+  });
 });

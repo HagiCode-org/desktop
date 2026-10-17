@@ -113,7 +113,6 @@ navigation:
   webServiceNotRunning: Der Webdienst wird nicht ausgeführt
   officialWebsite: Offizielle Website
   officialWebsiteDesc: Besuchen Sie die offizielle Website für Hagicode, um die neuesten Nachrichten und Dokumentationen zu erhalten
-  costCalculator: AI Ersatzrechner
   about:
     sectionDescription: Rendern Sie zuerst den gebündelten Schnappschuss und aktualisieren Sie dann die neuesten offiziellen Ziele.
     snapshotLabel: Gebündelter Schnappschuss

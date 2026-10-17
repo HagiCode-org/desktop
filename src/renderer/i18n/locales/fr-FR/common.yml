@@ -113,7 +113,6 @@ navigation:
   webServiceNotRunning: Le service Web ne fonctionne pas
   officialWebsite: Site officiel
   officialWebsiteDesc: Visitez le site officiel de Hagicode pour les dernières nouvelles et la documentation
-  costCalculator: AI Calculateur de remplacement
   about:
     sectionDescription: Effectuez d'abord le rendu de l'instantané fourni, puis actualisez les dernières destinations officielles en place.
     snapshotLabel: Instantané groupé

@@ -113,7 +113,6 @@ navigation:
   webServiceNotRunning: Webサービスが実行されていません
   officialWebsite: 公式ウェブサイト
   officialWebsiteDesc: 最新ニュースとドキュメントについては、Hagicode 公式 Web サイトにアクセスしてください。
-  costCalculator: AI 交換用計算機
   about:
     sectionDescription: まずバンドルされたスナップショットをレンダリングしてから、最新の公式デスティネーションを適切な場所に更新します。
     snapshotLabel: バンドルされたスナップショット

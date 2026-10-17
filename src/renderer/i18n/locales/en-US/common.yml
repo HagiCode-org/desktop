@@ -113,7 +113,6 @@ navigation:
   webServiceNotRunning: Web service is not running
   officialWebsite: Official Website
   officialWebsiteDesc: Visit Hagicode official website for latest news and documentation
-  costCalculator: AI Replacement Calculator
   about:
     sectionDescription: Render the bundled snapshot first, then refresh the latest official destinations in place.
     snapshotLabel: Bundled snapshot
