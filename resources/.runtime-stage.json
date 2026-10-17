@@ -6,17 +6,17 @@
   "allowedDownloadHosts": [
     "builds.dotnet.microsoft.com"
   ],
-  "releaseVersion": "10.0.10",
-  "releaseDate": "2026-07-14",
-  "downloadUrl": "https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/10.0.10/aspnetcore-runtime-10.0.10-linux-x64.tar.gz",
+  "releaseVersion": "10.0.12",
+  "releaseDate": "2026-09-08",
+  "downloadUrl": "https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/10.0.12/aspnetcore-runtime-10.0.12-linux-x64.tar.gz",
   "sourceHost": "builds.dotnet.microsoft.com",
   "archiveType": "tar.gz",
-  "archivePath": "/home/newbe36524/.config/Hagicode Desktop/build/embedded-runtime/downloads/aspnetcore-runtime-10.0.10-linux-x64.tar.gz",
+  "archivePath": "/home/newbe36524/.config/Hagicode Desktop/build/embedded-runtime/downloads/aspnetcore-runtime-10.0.12-linux-x64.tar.gz",
   "dotnetPath": "/home/newbe36524/repos/hagi/hagicode-mono/repos/hagicode-desktop/resources/components/dotnet/runtime/linux-x64/current/dotnet",
   "runtimeRoot": "/home/newbe36524/repos/hagi/hagicode-mono/repos/hagicode-desktop/resources/components/dotnet/runtime/linux-x64/current",
-  "aspNetCoreVersion": "10.0.10",
-  "netCoreVersion": "10.0.10",
-  "hostFxrVersion": "10.0.10",
-  "stagedAt": "2026-09-26T01:49:58.410Z",
+  "aspNetCoreVersion": "10.0.12",
+  "netCoreVersion": "10.0.12",
+  "hostFxrVersion": "10.0.12",
+  "stagedAt": "2026-10-17T04:15:50.159Z",
   "ownership": "desktop-direct-managed"
 }
