@@ -511,7 +511,7 @@ turboEngine:
     inactiveDescription: TurboEngine uses a separate perpetual Microsoft Store license. This workspace lets you verify the current state, buy the license, and confirm the latest runtime diagnostics.
   article:
     unlockTitle: Купите один раз и разблокируйте навсегда
-    unlockLead: DLC TurboEngine объединяет высокую параллельность предложений, настройку бренда, расширенные темы и ресурсы аватаров в один постоянный пакет. После покупки подписка не нужна, а возможности сразу влияют на ваш текущий рабочий стол.
+    unlockLead: DLC TurboEngine объединяет высокую параллельность предложений, настройку бренда, расширенные темы и загрузку пользовательских аватаров в один постоянный пакет. После покупки подписка не нужна, а возможности сразу влияют на ваш текущий рабочий стол.
     featuresTitle: Основные разблокировки
     purchaseNoticeTitle: Важная информация о покупке
     purchaseNoticeItems:
@@ -534,9 +534,6 @@ turboEngine:
       avatarUpload:
         title: Загрузка собственных аватаров и общее повторное использование
         description: Теперь можно загружать собственный аватар для текущего агента, а общую библиотеку пользовательских аватаров использовать повторно в сценариях создания, редактирования и пакетного создания.
-      avatarPacks:
-        title: Больше ресурсов аватаров
-        description: В комплект входят пять новых встроенных наборов аватаров для агента.
   messages:
     refreshSuccess: Статус TurboEngine обновлён.
     refreshStale: Desktop kept the cached TurboEngine snapshot because the Microsoft Store refresh did not complete.

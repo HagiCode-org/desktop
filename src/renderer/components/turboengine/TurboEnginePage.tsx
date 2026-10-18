@@ -73,7 +73,6 @@ const articleFeatureKeys = [
   'composeCommitCoAuthor',
   'branding',
   'avatarUpload',
-  'avatarPacks',
 ] as const;
 
 const purchaseNoticeKeys = ['channel', 'restart', 'online'] as const;

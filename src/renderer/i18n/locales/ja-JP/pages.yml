@@ -511,7 +511,7 @@ turboEngine:
     inactiveDescription: TurboEngine uses a separate perpetual Microsoft Store license. This workspace lets you verify the current state, buy the license, and confirm the latest runtime diagnostics.
   article:
     unlockTitle: 一度購入すれば永続的に解放
-    unlockLead: TurboEngine DLC は、高い提案同時実行数、ブランドのカスタマイズ、拡張テーマ、アバター素材を 1 つの恒久的な解放パックにまとめたものです。購入後はサブスクリプション不要で、機能はそのまま現在のワークベンチ体験に反映されます。
+    unlockLead: TurboEngine DLC は、高い提案同時実行数、ブランドのカスタマイズ、拡張テーマ、カスタムアバターアップロードを 1 つの恒久的な解放パックにまとめたものです。購入後はサブスクリプション不要で、機能はそのまま現在のワークベンチ体験に反映されます。
     featuresTitle: 主な解放内容
     purchaseNoticeTitle: 購入に関する注意
     purchaseNoticeItems:
@@ -534,9 +534,6 @@ turboEngine:
       avatarUpload:
         title: カスタムアバターのアップロードと共有再利用
         description: 現在の Agent 用にカスタムアバターをアップロードできるようになり、共有カスタムアバターライブラリも作成、編集、一括作成の各フローで再利用できます。
-      avatarPacks:
-        title: さらに多くのアバター素材
-        description: 新しい内蔵 Agent アバターセットが 5 組追加されています。
   messages:
     refreshSuccess: TurboEngine の状態を更新しました。
     refreshStale: Desktop kept the cached TurboEngine snapshot because the Microsoft Store refresh did not complete.

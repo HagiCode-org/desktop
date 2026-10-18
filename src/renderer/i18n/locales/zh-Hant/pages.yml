@@ -511,7 +511,7 @@ turboEngine:
     inactiveDescription: TurboEngine uses a separate perpetual Microsoft Store license. This workspace lets you verify the current state, buy the license, and confirm the latest runtime diagnostics.
   article:
     unlockTitle: 一次購買，永久解鎖
-    unlockLead: TurboEngine DLC 將高並發提案、品牌自訂、主題擴充與頭像資源整合成一個永久解鎖包。買斷後不需要訂閱，功能會直接作用在你目前這套工作台體驗上。
+    unlockLead: TurboEngine DLC 將高並發提案、品牌自訂、主題擴充與自訂頭像上傳整合成一個永久解鎖包。買斷後不需要訂閱，功能會直接作用在你目前這套工作台體驗上。
     featuresTitle: 主要解鎖特性
     purchaseNoticeTitle: 購買須知
     purchaseNoticeItems:
@@ -534,9 +534,6 @@ turboEngine:
       avatarUpload:
         title: 自訂頭像上傳與共享復用
         description: 現在已支援上傳目前 Agent 的自訂頭像，也支援把共享自訂頭像庫復用到新建、編輯與批次建立流程裡。
-      avatarPacks:
-        title: 更多頭像資源
-        description: 內建了五套新的 Agent 頭像可以選擇。
   messages:
     refreshSuccess: TurboEngine 狀態已刷新。
     refreshStale: Desktop kept the cached TurboEngine snapshot because the Microsoft Store refresh did not complete.

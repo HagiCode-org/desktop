@@ -511,7 +511,7 @@ turboEngine:
     inactiveDescription: TurboEngine 使用独立的永久许可证。这个页面只保留购买、刷新和诊断所需的信息。
   article:
     unlockTitle: 一次购买，永久解锁
-    unlockLead: TurboEngine DLC 把高并发提案、品牌定制、主题扩展和头像资源整合成一个永久解锁包。买断后不需要订阅，功能会直接作用到你当前这套工作台体验。
+    unlockLead: TurboEngine DLC 把高并发提案、品牌定制、主题扩展和自定义头像上传整合成一个永久解锁包。买断后不需要订阅，功能会直接作用到你当前这套工作台体验。
     featuresTitle: 主要解锁特性
     purchaseNoticeTitle: 购买须知
     purchaseNoticeItems:
@@ -534,9 +534,6 @@ turboEngine:
       avatarUpload:
         title: 自定义头像上传与共享复用
         description: 现在已经支持上传当前 Agent 的自定义头像，也支持把共享自定义头像库复用到新建、编辑和批量创建流程里。
-      avatarPacks:
-        title: 更多头像资源
-        description: 内置了五套新的 Agent 头像可以选择。
   messages:
     refreshSuccess: TurboEngine 状态已刷新。
     refreshStale: Microsoft Store 刷新未完成，Desktop 已继续使用上次已知的 TurboEngine 状态。

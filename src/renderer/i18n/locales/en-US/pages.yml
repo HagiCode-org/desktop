@@ -534,9 +534,6 @@ turboEngine:
       avatarUpload:
         title: Custom avatar upload and shared reuse
         description: You can now upload a custom avatar for the current agent, and the shared custom avatar library can also be reused across create, edit, and batch-create flows.
-      avatarPacks:
-        title: More avatar resources
-        description: Five new built-in agent avatar sets are included.
   messages:
     refreshSuccess: TurboEngine status refreshed.
     refreshStale: Desktop kept the last known TurboEngine state because the Microsoft Store refresh did not complete.
