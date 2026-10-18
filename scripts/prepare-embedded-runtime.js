@@ -19,6 +19,7 @@ import {
   isManagedDesktopRuntimeComponentExecution,
   resolveManagedDesktopRuntimeComponentRoot,
 } from './desktop-runtime-hagiscript.js';
+import { retryAsync } from './retry-async.js';
 
 const runtimePlatform = process.env.HAGICODE_EMBEDDED_DOTNET_PLATFORM || detectRuntimePlatform();
 const runtimeConfig = readPinnedRuntimeConfig();
@@ -97,12 +98,17 @@ async function main() {
 async function downloadArchive(downloadUrl, destinationPath) {
   const startedAt = Date.now();
   console.log(`[embedded-runtime] Downloading runtime archive from ${downloadUrl}`);
-  const response = await fetch(downloadUrl);
-  if (!response.ok) {
-    throw new Error(`Failed to download pinned dotnet runtime (${response.status} ${response.statusText}): ${downloadUrl}`);
-  }
+  // The body read sits inside the retry too: a connection reset mid-transfer surfaces there, not at fetch().
+  const archiveBuffer = await retryAsync(async () => {
+    const response = await fetch(downloadUrl);
+    if (!response.ok) {
+      const error = new Error(`Failed to download pinned dotnet runtime (${response.status} ${response.statusText}): ${downloadUrl}`);
+      error.retryable = response.status >= 500 || response.status === 408 || response.status === 429;
+      throw error;
+    }
 
-  const archiveBuffer = Buffer.from(await response.arrayBuffer());
+    return Buffer.from(await response.arrayBuffer());
+  }, { label: '[embedded-runtime] Runtime archive download' });
   await writeFile(destinationPath, archiveBuffer);
   console.log(
     `[embedded-runtime] Downloaded ${(archiveBuffer.byteLength / 1024 / 1024).toFixed(1)} MiB in ${Date.now() - startedAt}ms`,
