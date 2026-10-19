@@ -19,7 +19,14 @@ npm install
 npm run dev
 npm run build:prod
 npm run build:tsc:check
+npm run build:check          # tsc --noEmit + renderer build
 npm run smoke-test
+npm run package:smoke-test   # smoke test against a packaged build (requires the embedded runtime)
+npm run test:source -- <test files>
+npm run test:main:non-interactive
+npm run test:agent-cli-probe
+npm run verify:libs          # native library verification
+npm run check:telemetry-bundle
 npm run i18n:check
 npm run build:win
 npm run build:mac
@@ -35,7 +42,10 @@ npm run build:linux
 - `src/renderer/i18n/`: desktop translations
 - `src/main/telemetry/`: PostHog telemetry (see `docs/cloud-telemetry.md`)
 - `src/renderer/i18n/locales/`: YAML translation sources (generated runtime JSON lives in git-ignored `generated-locales/`)
+- `src/shared/`: types and catalogs shared by main and renderer (agent CLI catalog, telemetry events, package-source defaults)
+- `src/ipc/handlers/`, `src/services/`: IPC handlers and preset loading/caching services
 - `scripts/`: packaging, runtime preparation, and verification helpers
+- `config/`, `native/StorePurchaseAddon/`: release/store packaging config and the Windows Store native addon
 - `docs/`: development, i18n, telemetry, npm management, and agent CLI probe guides
 - `PRODUCT.md`, `DESIGN.md`: product and design context for UI work
 
@@ -49,6 +59,7 @@ npm run build:linux
 - Source tests run with `npm run test:source -- <test files>` (Node test runner with a TS loader); use Node 24, matching CI.
 - New cloud telemetry events must be added to the typed event catalog and documented in `docs/cloud-telemetry.md`.
 - If packaging, runtime bootstrapping, or native dependency behavior changes, run the relevant smoke or verification scripts.
+- CI: `.github/workflows/pr-checks.yml` runs `npm ci`, `npm run build:tsc:check`, `npm run build:prod`, and `npm run smoke-test` on Node 24; `build.yml` handles release builds and `non-interactive-integration.yml` runs the packaged non-interactive check. Keep the PR checks passing.
 - Desktop packages retain the managed .NET runtime and do not bundle Node or PM2 for Desktop-owned process management; external service distributions may still include their own Node tooling.
 
 ## References
