@@ -46,7 +46,7 @@ npm run build:linux
 - `src/ipc/handlers/`, `src/services/`: IPC handlers and preset loading/caching services
 - `scripts/`: packaging, runtime preparation, and verification helpers
 - `config/`, `native/StorePurchaseAddon/`: release/store packaging config and the Windows Store native addon
-- `docs/`: development, i18n, telemetry, npm management, and agent CLI probe guides
+- `docs/`: development, i18n, telemetry, npm management, and agent CLI probe guides (plus `docs/release-notes/`)
 - `PRODUCT.md`, `DESIGN.md`: product and design context for UI work
 
 ## Agent Guidelines
@@ -57,6 +57,7 @@ npm run build:linux
 - Route all user-facing strings through the repo's i18n flow: edit the YAML sources (en-US first), never the generated JSON, and run `npm run i18n:check`; it needs the global `hagi18n` CLI (see `docs/i18n-hagi18n.md`).
 - Do not hand-edit git-ignored generated files such as `src/main/generated/` or `src/renderer/i18n/generated-locales/`; the `prepare:*` scripts regenerate them.
 - Source tests run with `npm run test:source -- <test files>` (Node test runner with a TS loader); use Node 24, matching CI.
+- There is no `npm test` script. Tests for the packaging/runtime scripts live in `scripts/__tests__/*.test.mjs` and `scripts/*.test.js`; run one with `node --test <file>`.
 - New cloud telemetry events must be added to the typed event catalog and documented in `docs/cloud-telemetry.md`.
 - If packaging, runtime bootstrapping, or native dependency behavior changes, run the relevant smoke or verification scripts.
 - CI: `.github/workflows/pr-checks.yml` runs `npm ci`, `npm run build:tsc:check`, `npm run build:prod`, and `npm run smoke-test` on Node 24; `build.yml` handles release builds and `non-interactive-integration.yml` runs the packaged non-interactive check. Keep the PR checks passing.
