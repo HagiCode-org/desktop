@@ -13,7 +13,6 @@ export const DEFAULT_STORE_CONFIG_PATH = path.join(projectRoot, 'config', 'store
 
 export const REQUIRED_SERVER_PAYLOAD_PATHS = [
   'manifest.json',
-  'config',
   path.join('lib', 'PCode.Web.dll'),
   path.join('lib', 'PCode.Web.runtimeconfig.json'),
   path.join('lib', 'PCode.Web.deps.json'),
