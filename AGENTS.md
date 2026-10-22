@@ -46,7 +46,7 @@ npm run build:linux
 - `src/ipc/handlers/`, `src/services/`: IPC handlers and preset loading/caching services
 - `scripts/`: packaging, runtime preparation, and verification helpers
 - `config/`, `native/StorePurchaseAddon/`: release/store packaging config and the Windows Store native addon
-- `docs/`: development, i18n, telemetry, npm management, and agent CLI probe guides (plus `docs/release-notes/`)
+- `docs/`: development, i18n, telemetry, npm management, agent CLI probe, artifact signing, R2 storage sync, and channel testing guides (plus `docs/release-notes/`)
 - `PRODUCT.md`, `DESIGN.md`: product and design context for UI work
 
 ## Agent Guidelines
