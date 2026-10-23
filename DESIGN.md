@@ -10,7 +10,7 @@ colors:
   neutral-surface-alt: "#EEF2F8"
   neutral-border: "#D9E0EC"
   neutral-text: "#162033"
-  neutral-text-muted: "#66748E"
+  neutral-text-muted: "#5B6984"
   dark-bg: "#0F1525"
   dark-surface: "#161E31"
   dark-surface-alt: "#1C2740"
@@ -111,12 +111,18 @@ The palette is restrained and task-oriented: cool neutrals with one confident bl
 - **Panel Wash** (`#EEF2F8`): Alternate light surface for grouped controls and secondary containers.
 - **Quiet Border** (`#D9E0EC`): Borders, dividers, and control outlines.
 - **Ink** (`#162033`): Primary text and high-priority labels.
-- **Support Text** (`#66748E`): Secondary descriptions, helper text, and metadata.
+- **Support Text** (`#5B6984`): Secondary descriptions, helper text, and metadata.
 - **Night Console** (`#0F1525`): Dark theme background.
 - **Night Surface** (`#161E31`): Dark theme primary panel surface.
 - **Night Surface Raised** (`#1C2740`): Dark theme alternate surface.
 - **Night Border** (`#2A3550`): Dark theme outline and separator color.
 - **Night Ink** (`#EEF2FB`): Dark theme primary text.
+
+### Status
+Status colors are semantic tokens (`text-success`, `text-warning`, `bg-warning-soft`, `text-destructive`) that remap per theme; never use raw palette classes such as `amber-500` or `gray-800` in components. Each is tuned so text clears 4.5:1 on its surface in both themes.
+- **Success** (`#237A50` light, `#55B488` dark): confirmed-good state text and icons.
+- **Warning** (`#9A4A06` light, `#F2B84B` dark) on **Warning Wash** (`#FCF3E2` light, `#2D281E` dark): caution callouts and mismatch notes.
+- **Destructive** (`#B93A46` light, `#F0707A` dark with dark foreground): errors and destructive actions; lightened in dark the same way the blue is.
 
 ### Named Rules
 **The One-Accent Rule.** Blue is the only assertive accent on routine product screens. If a surface feels like it needs more color to work, the layout is probably under-resolved.
