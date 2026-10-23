@@ -39,9 +39,9 @@ npm run build:linux
 - `src/preload/`: preload bridge and IPC surface
 - `src/renderer/`: React renderer app
 - `src/renderer/store/`: Redux store, slices, and thunks
-- `src/renderer/i18n/`: desktop translations
+- `src/renderer/i18n/`: desktop translations; `locales/` holds the YAML sources (generated runtime JSON lives in git-ignored `generated-locales/`)
+- `src/renderer/assets/illustrations/`: compact AVIF artwork catalog, exposed through `index.ts`; keep new artwork small
 - `src/main/telemetry/`: PostHog telemetry (see `docs/cloud-telemetry.md`)
-- `src/renderer/i18n/locales/`: YAML translation sources (generated runtime JSON lives in git-ignored `generated-locales/`)
 - `src/shared/`: types and catalogs shared by main and renderer (agent CLI catalog, telemetry events, package-source defaults)
 - `src/ipc/handlers/`, `src/services/`: IPC handlers and preset loading/caching services
 - `scripts/`: packaging, runtime preparation, and verification helpers
@@ -66,5 +66,3 @@ npm run build:linux
 ## References
 
 - `README.md`
-- `src/main/`
-- `src/renderer/`
