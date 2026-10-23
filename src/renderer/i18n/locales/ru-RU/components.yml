@@ -38,7 +38,6 @@ dependencyWarningBanner:
   fixLater: Исправить позже
 packageManagement:
   cardTitle: Управление пакетами
-  cardDescription: Управление установкой пакетов веб-сервисов
   platformLabel: Платформа
   detecting: Обнаружение...
   installationStatusLabel: Статус установки
@@ -75,7 +74,6 @@ packageManagement:
     error: Ошибка
 webServiceStatus:
   cardTitle: Встроенный веб-сервис
-  cardDescription: Просмотр и управление состоянием работы веб-службы
   status:
     running: Работает
     stopped: Остановлено
@@ -95,7 +93,6 @@ webServiceStatus:
   dependencyReadinessButton: Открытое управление зависимостями
   managedStartup:
     label: Совместный запуск управляемых служб
-    description: Выберите, какие управляемые службы должны запускаться вместе при запуске Hagicode.
   dependencyReadinessAlert:
     title: Зависимости не готовы
     message: Перед запуском Hagicode установите необходимые зависимости, управляемые рабочим столом; дополнительные зависимости не блокируют запуск базовой службы.
@@ -146,13 +143,9 @@ webServiceStatus:
     copyEmpty: Нет содержимого журнала для копирования
   startupProgress:
     title: Запуск службы
-    description: Desktop проверяет активную версию, убеждается в готовности необходимых зависимостей и ждёт, пока локальная служба Hagicode завершит запуск.
     successTitle: Служба готова
-    successDescription: Локальная служба прошла проверки запуска и готова к открытию.
     failureTitle: Запуск не завершён
-    failureDescription: При запуске службы Desktop столкнулся с проблемой. Просмотрите журнал сбоев или закройте это окно и продолжите поиск причины.
     currentStepLabel: Текущий прогресс
-    waitingHint: Запуск может занять несколько секунд. Desktop обновляет это окно, показывая текущий шаг и состояние выполнения.
     states:
       pending: Ожидается
       active: Выполняется
@@ -187,32 +180,25 @@ webServiceStatus:
     openLogsError: Не удалось открыть папку веб-журналов активной версии.
   listenAddress:
     label: Адрес прослушивания
-    description: Выберите, как Desktop привязывает встроенную веб-службу, пока она остановлена.
     customInputLabel: Пользовательский IPv4
     customPlaceholder: 192.168.1.24
     customError: Введите действительный адрес IPv4
     accessUrlPreviewLabel: Доступ к предварительному просмотру URL
     wildcardHint: '`0.0.0.0` связывает каждый интерфейс. Рабочий стол по-прежнему открывает локальный клиент через `127.0.0.1`.'
-    localOnlyHint: Изменения вступят в силу при следующем запуске локальной службы.
     presets:
       localhost:
         label: локальный хост
-        description: Лучше всего подходит для встроенного WebView и браузера на этом компьютере.
       loopback:
         label: 127.0.0.1
-        description: Используйте явный адрес обратной связи IPv4 для локального доступа.
       wildcard:
         label: 0.0.0.0
-        description: Привяжите каждый локальный интерфейс, чтобы другие устройства в локальной сети могли подключаться.
       custom:
         label: Пользовательский IP-адрес
-        description: Привяжите один конкретный интерфейс IPv4, например выделенный адаптер локальной сети.
 languageSelector:
   currentLanguage: Текущий язык
   selectLanguage: Выберите язык
 dependencyManagement:
   title: Системные зависимости
-  description: Проверяйте и управляйте зависимостями времени выполнения системы, необходимыми веб-службой.
   batch:
     selectedCount: 'Выбрано: {{count}}'
     generate: Создать пакетную команду
@@ -249,10 +235,8 @@ dependencyManagement:
     systemSource: Системный источник
   manualHandoff:
     title: Требуется установка пакета вручную CLI
-    description: Запустите предложенную команду за пределами рабочего стола. Текущую информацию о среде Node/npm и поведении PATH, входящей в состав Desktop, можно найти в FAQ.
     faqLinkLabel: Посмотреть часто задаваемые вопросы по среде Node
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
-    refreshHint: Обновите после завершения команды, чтобы повторно проверить зависимости, управляемые рабочим столом.
   noDependencies: Зависимости не обнаружены
   installToast:
     manualDisabledTitle: Автоматическая установка отключена
@@ -353,17 +337,13 @@ homePromote:
 serviceRegion:
   title: Регион службы
   resetTitle: Повторно проверить выбор региона
-  resetDescription: Сбросить сохранённый выбор и снова показать подсказку при следующем открытии главной страницы. Текущий источник пакетов не изменится.
   resetButton: Сбросить выбор
   resetSuccess: Выбор региона сброшен. Подсказка появится при следующем открытии главной страницы.
   promptTitle: Выберите регион сервера
   confirmChoice: Использовать этот регион
   later: Позже
   successTitle: Регион службы сохранён
-  successDescription: Позже его можно изменить в разделе «Настройки > Регион».
   done: Понятно
-  promptDescription: Выбор определяет адреса загрузки обновлений Hagicode и связанных программных пакетов. Язык интерфейса и зеркала зависимостей не меняются.
-  description: Определяет официальный индекс пакетов сервера и приоритетный источник загрузки. Язык интерфейса и зеркала зависимостей не меняются.
   choiceLabel: Регион службы
   loading: Загрузка региона...
   saving: Применение региона...

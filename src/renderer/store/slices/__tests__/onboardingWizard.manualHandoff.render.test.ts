@@ -58,10 +58,10 @@ describe('onboarding wizard manual handoff integration', () => {
     assert.match(welcomeSource, /welcome\.steps\.languageSelection/);
     assert.doesNotMatch(welcomeSource, /welcome\.steps\.dependencyPreparation/);
     assert.match(welcomeSource, /const steps = stepSequence\.map\(\(step, index\) => \(\{/);
-    assert.match(welcomeSource, /t\('welcome\.description', \{ count: steps\.length \}\)/);
+    assert.doesNotMatch(welcomeSource, /welcome\.description/);
     assert.match(welcomeSource, /t\('welcome\.processTitle', \{ count: steps\.length \}\)/);
-    assert.match(String(zhOnboarding.welcome.description), /\{\{count\}\}/);
-    assert.match(String(enOnboarding.welcome.description), /\{\{count\}\}/);
+    assert.match(String(zhOnboarding.welcome.processTitle), /\{\{count\}\}/);
+    assert.match(String(enOnboarding.welcome.processTitle), /\{\{count\}\}/);
     assert.match(String(zhOnboarding.download.complete.message), /返回首页/);
     assert.match(String(zhOnboarding.download.complete.message), /手动启动服务/);
     assert.match(String(enOnboarding.download.complete.message), /return to the homepage/i);

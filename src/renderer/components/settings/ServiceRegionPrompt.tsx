@@ -5,7 +5,6 @@ import { Check, MapPin } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -68,7 +67,7 @@ export function ServiceRegionPrompt({ disabled = false }: ServiceRegionPromptPro
 
   return (
     <Dialog open={open || confirmed} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg" aria-describedby={undefined}>
         {confirmed ? (
           <>
             <DialogHeader>
@@ -76,7 +75,6 @@ export function ServiceRegionPrompt({ disabled = false }: ServiceRegionPromptPro
                 <Check className="h-5 w-5" aria-hidden="true" />
               </div>
               <DialogTitle>{t('serviceRegion.successTitle')}</DialogTitle>
-              <DialogDescription>{t('serviceRegion.successDescription')}</DialogDescription>
             </DialogHeader>
             <DialogFooter>
               <Button onClick={() => handleOpenChange(false)}>{t('serviceRegion.done')}</Button>
@@ -89,7 +87,6 @@ export function ServiceRegionPrompt({ disabled = false }: ServiceRegionPromptPro
                 <MapPin className="h-5 w-5" aria-hidden="true" />
               </div>
               <DialogTitle>{t('serviceRegion.promptTitle')}</DialogTitle>
-              <DialogDescription>{t('serviceRegion.promptDescription')}</DialogDescription>
             </DialogHeader>
 
             <RadioGroup

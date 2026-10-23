@@ -232,9 +232,6 @@ export default function TurboEnginePage() {
                 <h2 className="commerce-premium-heading text-3xl font-semibold tracking-[-0.02em] [text-wrap:balance] sm:text-4xl">
                   {t('turboEngine.article.unlockTitle')}
                 </h2>
-                <p className="commerce-premium-copy mt-4 text-sm leading-7 sm:text-base">
-                  {t('turboEngine.article.unlockLead')}
-                </p>
               </div>
 
               <div className="mt-8">
@@ -252,9 +249,6 @@ export default function TurboEnginePage() {
                           {index + 1}
                         </span>
                         <span>{t(`turboEngine.article.features.${featureKey}.title`)}</span>
-                      </p>
-                      <p className="commerce-premium-copy mt-3 max-w-[72ch] pl-10 text-sm leading-7 sm:text-base">
-                        {t(`turboEngine.article.features.${featureKey}.description`)}
                       </p>
                     </li>
                   ))}

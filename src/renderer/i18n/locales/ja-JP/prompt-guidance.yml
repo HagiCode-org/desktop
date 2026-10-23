@@ -2,9 +2,6 @@ loading: プロンプト ガイダンスを読み込んでいます...
 emptyState: Desktop はプロンプトを解決し、そのプロンプトの出所を示し、正確なテキストをコピー/ペーストできる状態に保つことができます。
 availableTools: 利用可能なツール
 promptTitle: プロンプト
-promptDescription: プロンプト全体を表示どおりにコピーしてから、AI CLI に貼り付けます。
-tipTitle: このプロンプトの使用方法
-tipDescription: 推奨されたディレクトリでサポートされている CLI を開き、プロンプトを貼り付け、推奨された変更を適用した後に戻ってください。
 actions:
   refresh: リロードガイダンス
   loading: 読み込み中

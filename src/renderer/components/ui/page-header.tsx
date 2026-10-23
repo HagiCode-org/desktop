@@ -5,12 +5,11 @@ import { useTranslation } from 'react-i18next';
 interface PageHeaderProps {
   icon: LucideIcon;
   titleKey: string;
-  descriptionKey: string;
   actions?: ReactNode;
   summaryTiles?: ReactNode;
 }
 
-export function PageHeader({ icon: Icon, titleKey, descriptionKey, actions, summaryTiles }: PageHeaderProps) {
+export function PageHeader({ icon: Icon, titleKey, actions, summaryTiles }: PageHeaderProps) {
   const { t } = useTranslation(['pages', 'common']);
 
   return (
@@ -22,7 +21,6 @@ export function PageHeader({ icon: Icon, titleKey, descriptionKey, actions, summ
           </div>
           <div className="min-w-0">
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">{t(titleKey)}</h1>
-            <p className="mt-0.5 text-sm text-muted-foreground">{t(descriptionKey)}</p>
           </div>
         </div>
         {actions ? <div className="shrink-0">{actions}</div> : null}

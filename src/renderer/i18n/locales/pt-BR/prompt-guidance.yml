@@ -2,9 +2,6 @@ loading: Carregando orientação imediata...
 emptyState: O Desktop pode resolver o prompt, mostrar de onde ele veio e manter o texto exato pronto para copiar/colar.
 availableTools: Ferramentas disponíveis
 promptTitle: Alerta
-promptDescription: Copie o prompt completo exatamente como mostrado antes de colá-lo em seu AI CLI.
-tipTitle: Como usar este prompt
-tipDescription: Abra qualquer CLI compatível no diretório sugerido, cole o prompt e volte após aplicar as alterações recomendadas.
 actions:
   refresh: Orientação para recarregar
   loading: Carregando

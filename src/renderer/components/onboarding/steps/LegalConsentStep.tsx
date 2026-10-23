@@ -159,12 +159,7 @@ const LegalConsentStep = forwardRef<LegalConsentStepHandle, LegalConsentStepProp
           decoding="async"
           className="mx-auto h-36 w-full max-w-xl rounded-2xl object-cover sm:h-44"
         />
-        <div className="space-y-2">
-          <h2 className="text-3xl font-semibold">{t('legal.title')}</h2>
-          <p className="mx-auto max-w-2xl text-sm text-muted-foreground md:text-base">
-            {t(mode === 'legal-only' ? 'legal.descriptionLegalOnly' : 'legal.descriptionFull')}
-          </p>
-        </div>
+        <h2 className="text-3xl font-semibold">{t('legal.title')}</h2>
         <div className="flex flex-wrap items-center justify-center gap-2">
           <Badge variant={source === 'unavailable' ? 'destructive' : source === 'cache' ? 'secondary' : 'default'}>
             {t(sourceLabelKey)}

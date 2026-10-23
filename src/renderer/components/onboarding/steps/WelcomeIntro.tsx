@@ -29,17 +29,14 @@ function WelcomeIntro({ stepSequence }: WelcomeIntroProps) {
     {
       icon: CheckCircle2,
       title: t('welcome.features.manage.title'),
-      description: t('welcome.features.manage.description'),
     },
     {
       icon: Zap,
       title: t('welcome.features.monitor.title'),
-      description: t('welcome.features.monitor.description'),
     },
     {
       icon: Download,
       title: t('welcome.features.dependencies.title'),
-      description: t('welcome.features.dependencies.description'),
     },
   ];
 
@@ -62,12 +59,7 @@ function WelcomeIntro({ stepSequence }: WelcomeIntroProps) {
             className="h-44 w-full object-cover sm:h-52"
           />
           <div className="p-6 sm:p-7">
-            <div className="space-y-3">
-              <h2 className="text-3xl font-semibold tracking-tight">{t('welcome.title')}</h2>
-              <p className="max-w-2xl text-sm text-muted-foreground md:text-base">
-                {t('welcome.description', { count: steps.length })}
-              </p>
-            </div>
+            <h2 className="text-3xl font-semibold tracking-tight">{t('welcome.title')}</h2>
           </div>
         </div>
 
@@ -95,16 +87,9 @@ function WelcomeIntro({ stepSequence }: WelcomeIntroProps) {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <feature.icon className="h-5 w-5" />
             </div>
-            <div className="mt-4 space-y-2">
-              <h3 className="font-semibold">{feature.title}</h3>
-              <p className="text-sm text-muted-foreground">{feature.description}</p>
-            </div>
+            <h3 className="mt-4 font-semibold">{feature.title}</h3>
           </div>
         ))}
-      </div>
-
-      <div className="border-t pt-6">
-        <p className="text-sm text-muted-foreground">{t('welcome.description', { count: steps.length })}</p>
       </div>
     </div>
   );

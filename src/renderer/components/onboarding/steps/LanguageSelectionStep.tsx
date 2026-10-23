@@ -35,12 +35,7 @@ function LanguageSelectionStep({
           decoding="async"
           className="mx-auto h-36 w-full max-w-xl rounded-2xl object-cover sm:h-44"
         />
-        <div className="space-y-2">
-          <h2 className="text-3xl font-semibold">{t('languageSelection.title')}</h2>
-          <p className="mx-auto max-w-2xl text-sm text-muted-foreground md:text-base">
-            {t('languageSelection.description')}
-          </p>
-        </div>
+        <h2 className="text-3xl font-semibold">{t('languageSelection.title')}</h2>
       </div>
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">

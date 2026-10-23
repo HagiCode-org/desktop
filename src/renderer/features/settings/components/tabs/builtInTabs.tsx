@@ -1,6 +1,6 @@
 import { Languages } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LanguageSelector } from '@/components/settings';
 import { DebugOptionsSettings } from '@/components/settings/DebugOptionsSettings';
 import { OnboardingSettings } from '@/components/settings/OnboardingSettings';
@@ -34,11 +34,9 @@ export function LanguageSettingsTab() {
           <Languages className="h-5 w-5" />
           <CardTitle>{t('settings.languageSettings.title')}</CardTitle>
         </div>
-        <CardDescription>{t('settings.languageSettings.description')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <LanguageSelector />
-        <p className="text-sm text-muted-foreground">{t('settings.languageSettings.helper')}</p>
       </CardContent>
     </Card>
   );

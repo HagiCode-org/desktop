@@ -6,7 +6,6 @@ steps:
   completed: Завершено
 apiKey:
   title: Введите клавишу Claude API
-  description: Чтобы использовать функцию установки с использованием AI, вам необходимо предоставить ключ Claude API. Вы можете получить его на Anthropic Console.
   placeholder: ск-муравей-...
   show: Показать
   hide: Скрыть
@@ -21,7 +20,6 @@ status:
   international: Международный
 callingApi:
   message: Вызов Claude API...
-  hint: Claude анализирует вашу систему и выполняет команды установки.
 confirmation:
   title: Подтверждение
   message: Claude завершил проверку установки. Пожалуйста, подтвердите результаты.

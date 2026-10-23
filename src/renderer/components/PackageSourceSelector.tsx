@@ -21,7 +21,7 @@ import {
   resolveSourceChoice,
 } from './packageSourceSelectorState';
 import { Button } from './ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
@@ -94,7 +94,6 @@ export function PackageSourceSelector() {
           <Package className="h-5 w-5" />
           {t('packageSource.cardTitle')}
         </CardTitle>
-        <CardDescription>{t('packageSource.cardDescription')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
@@ -175,9 +174,6 @@ export function PackageSourceSelector() {
               readOnly
               className="font-mono text-sm"
             />
-            <p className="text-xs text-muted-foreground">
-              {t('packageSource.httpIndex.indexUrl.hint')}
-            </p>
           </div>
         )}
 

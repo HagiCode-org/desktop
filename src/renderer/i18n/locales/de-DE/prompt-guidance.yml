@@ -2,9 +2,6 @@ loading: Prompt-Anleitung wird geladen...
 emptyState: Desktop kann die Eingabeaufforderung auflösen, Ihnen zeigen, woher sie kommt, und den genauen Text zum Kopieren/Einfügen bereithalten.
 availableTools: Verfügbare Werkzeuge
 promptTitle: Prompt
-promptDescription: Kopieren Sie die vollständige Eingabeaufforderung genau wie gezeigt, bevor Sie sie in Ihr AI CLI einfügen.
-tipTitle: So verwenden Sie diese Eingabeaufforderung
-tipDescription: Öffnen Sie alle unterstützten CLI im vorgeschlagenen Verzeichnis, fügen Sie die Eingabeaufforderung ein und kehren Sie zurück, nachdem Sie die empfohlenen Änderungen übernommen haben.
 actions:
   refresh: Anleitung neu laden
   loading: Laden

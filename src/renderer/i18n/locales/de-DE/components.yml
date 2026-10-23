@@ -38,7 +38,6 @@ dependencyWarningBanner:
   fixLater: Später reparieren
 packageManagement:
   cardTitle: Paketverwaltung
-  cardDescription: Verwalten Sie die Installation von Webdienstpaketen
   platformLabel: Plattform
   detecting: Erkennen...
   installationStatusLabel: Installationsstatus
@@ -75,7 +74,6 @@ packageManagement:
     error: Fehler
 webServiceStatus:
   cardTitle: Eingebetteter Webdienst
-  cardDescription: Anzeigen und Verwalten des Webdienst-Ausführungsstatus
   status:
     running: Läuft
     stopped: Angehalten
@@ -95,7 +93,6 @@ webServiceStatus:
   dependencyReadinessButton: Öffnen Sie das Abhängigkeitsmanagement
   managedStartup:
     label: Gemeinsamer Start verwalteter Dienste
-    description: Wählen Sie aus, welche verwalteten Dienste gemeinsam gestartet werden sollen, wenn Sie Hagicode starten.
   dependencyReadinessAlert:
     title: Abhängigkeiten sind noch nicht bereit
     message: Installieren Sie die erforderlichen vom Desktop verwalteten Abhängigkeiten, bevor Sie mit Hagicode beginnen. Optionale Abhängigkeiten blockieren den Start des Basisdienstes nicht.
@@ -146,13 +143,9 @@ webServiceStatus:
     copyEmpty: Kein Protokollinhalt zum Kopieren
   startupProgress:
     title: Dienst wird gestartet
-    description: Desktop prüft die aktive Version, validiert erforderliche Abhängigkeiten und wartet, bis der lokale Hagicode-Dienst vollständig gestartet ist.
     successTitle: Dienst ist bereit
-    successDescription: Der lokale Dienst hat die Startprüfungen abgeschlossen und kann geöffnet werden.
     failureTitle: Start nicht abgeschlossen
-    failureDescription: Beim Starten des Dienstes ist in Desktop ein Problem aufgetreten. Prüfen Sie das Fehlerprotokoll oder schließen Sie diesen Dialog und setzen Sie die Fehlersuche fort.
     currentStepLabel: Aktueller Fortschritt
-    waitingHint: Der Start kann einige Sekunden dauern. Desktop hält diesen Dialog mit dem aktuellen Schritt und dem Ausführungsstatus auf dem Laufenden.
     states:
       pending: Ausstehend
       active: In Bearbeitung
@@ -187,32 +180,25 @@ webServiceStatus:
     openLogsError: Der Webprotokollordner der aktiven Version konnte nicht geöffnet werden
   listenAddress:
     label: Höradresse
-    description: Wählen Sie aus, wie Desktop den eingebetteten Webdienst bindet, während er gestoppt ist.
     customInputLabel: Benutzerdefiniertes IPv4
     customPlaceholder: 192.168.1.24
     customError: Geben Sie eine gültige IPv4-Adresse ein
     accessUrlPreviewLabel: Greifen Sie auf die URL-Vorschau zu
     wildcardHint: '`0.0.0.0` bindet jede Schnittstelle. Desktop öffnet weiterhin den lokalen Client über `127.0.0.1`.'
-    localOnlyHint: Änderungen werden beim nächsten Start des lokalen Dienstes wirksam.
     presets:
       localhost:
         label: localhost
-        description: Am besten für das integrierte WebView und den Browser auf diesem Computer.
       loopback:
         label: 127.0.0.1
-        description: Verwenden Sie eine explizite IPv4-Loopback-Adresse für den ausschließlich lokalen Zugriff.
       wildcard:
         label: 0.0.0.0
-        description: Binden Sie jede lokale Schnittstelle, damit andere Geräte im LAN eine Verbindung herstellen können.
       custom:
         label: Benutzerdefinierte IP
-        description: Binden Sie eine bestimmte IPv4-Schnittstelle, beispielsweise einen dedizierten LAN-Adapter.
 languageSelector:
   currentLanguage: Aktuelle Sprache
   selectLanguage: Wählen Sie Sprache aus
 dependencyManagement:
   title: Systemabhängigkeiten
-  description: Überprüfen und verwalten Sie die vom Webdienst benötigten Systemlaufzeitabhängigkeiten
   batch:
     selectedCount: 'Ausgewählt: {{count}}'
     generate: Stapelbefehl generieren
@@ -249,10 +235,8 @@ dependencyManagement:
     systemSource: Systemquelle
   manualHandoff:
     title: Manuelle CLI-Paketinstallation erforderlich
-    description: Führen Sie den vorgeschlagenen Befehl außerhalb des Desktops aus. Aktuelle Details zur gebündelten Node/npm-Umgebung und zum PATH-Verhalten von Desktop finden Sie in den FAQ.
     faqLinkLabel: Häufig gestellte Fragen zur Knotenumgebung anzeigen
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
-    refreshHint: Aktualisieren Sie nach Abschluss des Befehls, um die vom Desktop verwalteten Abhängigkeiten erneut zu überprüfen.
   noDependencies: Keine Abhängigkeiten erkannt
   installToast:
     manualDisabledTitle: Automatische Installation ist deaktiviert
@@ -353,17 +337,13 @@ homePromote:
 serviceRegion:
   title: Dienstregion
   resetTitle: Regionsauswahl erneut testen
-  resetDescription: Löschen Sie die gespeicherte Auswahl, damit der Hinweis beim nächsten Öffnen der Startseite erneut erscheint. Die aktuelle Paketquelle bleibt unverändert.
   resetButton: Auswahl zurücksetzen
   resetSuccess: Regionsauswahl zurückgesetzt. Der Hinweis erscheint beim nächsten Öffnen der Startseite erneut.
   promptTitle: Dienstregion für den Server auswählen
   confirmChoice: Diese Region verwenden
   later: Später
   successTitle: Dienstregion gespeichert
-  successDescription: Sie können die Region später unter Einstellungen > Region ändern.
   done: Verstanden
-  promptDescription: Diese Auswahl legt die Download-Endpunkte für Hagicode-Updates und zugehörige Softwarepakete fest. Sprache und Abhängigkeits-Mirrors bleiben unverändert.
-  description: Legt den offiziellen Serverpaketindex und die bevorzugte Downloadquelle fest. Sprache und Abhängigkeits-Mirrors bleiben unverändert.
   choiceLabel: Dienstregion
   loading: Region wird geladen...
   saving: Region wird angewendet...

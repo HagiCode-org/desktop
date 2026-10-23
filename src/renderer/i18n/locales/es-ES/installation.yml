@@ -6,7 +6,6 @@ steps:
   completed: Completado
 apiKey:
   title: Introduzca la clave Claude API
-  description: Para utilizar la función de instalación con alimentación AI, debe proporcionar una clave Claude API. Puede obtener uno en Anthropic Console.
   placeholder: sk-hormiga-...
   show: Mostrar
   hide: Ocultar
@@ -21,7 +20,6 @@ status:
   international: Internacional
 callingApi:
   message: Llamando al Claude API...
-  hint: Claude está analizando su sistema y ejecutando comandos de instalación.
 confirmation:
   title: Confirmación
   message: Claude ha completado la verificación de instalación. Por favor confirme los resultados.

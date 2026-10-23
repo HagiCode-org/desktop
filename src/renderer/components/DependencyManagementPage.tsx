@@ -64,7 +64,7 @@ export default function DependencyManagementPage() {
   useEffect(() => setRepairCompletionState('idle'), [repairIntent?.failureKind, repairIntent?.targetPackageIds.join('|')]);
 
   if (pageStatus === 'loading') {
-    return <PageShell><PageHeader icon={PackageOpen} titleKey="dependencyManagement.title" descriptionKey="dependencyManagement.description" /><StatusCard><Loader2 className="h-5 w-5 animate-spin" />{t('dependencyManagement.loading')}</StatusCard></PageShell>;
+    return <PageShell><PageHeader icon={PackageOpen} titleKey="dependencyManagement.title" /><StatusCard><Loader2 className="h-5 w-5 animate-spin" />{t('dependencyManagement.loading')}</StatusCard></PageShell>;
   }
 
   const managedPackages = snapshot?.packages ?? [];
@@ -112,7 +112,7 @@ export default function DependencyManagementPage() {
   };
   const activeConfig = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
   return <PageShell>
-    <PageHeader icon={PackageOpen} titleKey="dependencyManagement.title" descriptionKey="dependencyManagement.description" />
+    <PageHeader icon={PackageOpen} titleKey="dependencyManagement.title" />
     {pageStatus === 'error' ? <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertTitle>{t('dependencyManagement.errors.loadFailed')}</AlertTitle><AlertDescription>{errorMessage}</AlertDescription></Alert> : null}
     {pageStatus === 'ready' && snapshot ? <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)} className="w-full">
       <TabsList className="mb-4 flex h-auto w-full flex-wrap justify-start gap-1 rounded-xl border border-border/70 bg-muted/25 p-1.5">{tabs.map((tab) => { const Icon = tab.icon; return <TabsTrigger key={tab.id} value={tab.id} className="gap-2 rounded-lg px-3 py-2"><Icon className="h-4 w-4" />{t(tab.labelKey, { ns: 'pages' })}</TabsTrigger>; })}</TabsList>

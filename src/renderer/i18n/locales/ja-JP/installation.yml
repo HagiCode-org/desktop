@@ -6,7 +6,6 @@ steps:
   completed: 完了
 apiKey:
   title: Claude API キーを入力してください
-  description: AI を使用したインストール機能を使用するには、Claude API キーを提供する必要があります。 Anthropic Console から入手できます。
   placeholder: スク-アリ-...
   show: 表示する
   hide: 隠す
@@ -21,7 +20,6 @@ status:
   international: インターナショナル
 callingApi:
   message: Claude API に電話をかけています...
-  hint: Claude はシステムを分析し、インストール コマンドを実行しています。
 confirmation:
   title: 確認
   message: Claude はインストールチェックを完了しました。結果をご確認ください。

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BellRing } from 'lucide-react';
 import { toast } from 'sonner';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -89,7 +89,6 @@ export function VersionUpdateSettings({ distributionState }: VersionUpdateSettin
             <BellRing className="h-5 w-5" />
             <CardTitle>{t('settings.updates.title')}</CardTitle>
           </div>
-          <CardDescription>{t('settings.updates.description')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="rounded-xl border border-border bg-muted/30 p-4">
@@ -108,15 +107,11 @@ export function VersionUpdateSettings({ distributionState }: VersionUpdateSettin
           <BellRing className="h-5 w-5" />
           <CardTitle>{t('settings.updates.title')}</CardTitle>
         </div>
-        <CardDescription>{t('settings.updates.description')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="rounded-xl border border-border bg-muted/30 p-4">
           <div className="flex items-start justify-between gap-4">
-            <div className="space-y-1">
-              <h3 className="font-medium text-foreground">{t('settings.updates.enabled.label')}</h3>
-              <p className="text-sm text-muted-foreground">{t('settings.updates.enabled.description')}</p>
-            </div>
+            <h3 className="font-medium text-foreground">{t('settings.updates.enabled.label')}</h3>
             <Switch
               checked={localEnabled}
               onCheckedChange={setLocalEnabled}
@@ -135,18 +130,12 @@ export function VersionUpdateSettings({ distributionState }: VersionUpdateSettin
             onChange={(event) => setLocalRetainedArchiveCount(event.target.value)}
             disabled={isLoading || isSaving}
           />
-          <p className="text-sm text-muted-foreground">{t('settings.updates.retainedArchiveCount.description')}</p>
           {validationMessage ? (
             <p className="text-sm text-destructive">{validationMessage}</p>
           ) : null}
           {saveError ? (
             <p className="text-sm text-destructive">{t('settings.updates.errors.saveErrorDetail', { error: saveError })}</p>
           ) : null}
-        </div>
-
-        <div className="rounded-xl border border-border bg-background p-4 text-sm text-muted-foreground">
-          <p>{t('settings.updates.notes.snapshotModel')}</p>
-          <p className="mt-1">{t('settings.updates.notes.retentionPolicy')}</p>
         </div>
 
         <div className="flex gap-3 pt-2">

@@ -1,17 +1,13 @@
 title: 初回セットアップ
 welcome:
   title: Hagicode Desktopへようこそ
-  description: Hagicode Desktop は Hagicode のローカル ランチャーです。初回セットアップと適合確認は {{count}} のステップで完了します。
   features:
     manage:
       title: バージョン管理
-      description: Hagicode Server のインストールとアップデートを管理する
     monitor:
       title: サービス監視
-      description: サービスの状態を開始、停止、監視する
     dependencies:
       title: 依存関係の管理
-      description: システムの依存関係を表示および管理する
   processTitle: 初回セットアップには {{count}} つの手順があります。
   steps:
     welcome: セットアップと次に何が起こるかを確認してください
@@ -40,8 +36,6 @@ download:
   pleaseWait: ダウンロードするまでお待ちください...
 dependencies:
   title: システムの依存関係をインストールする
-  subtitle: Hagicode が適切に機能するには、特定のシステム依存関係が必要です。
-  description: システムの依存関係のインストール状況を確認する
   installButton: 依存関係のインストール
   status:
     installed: インストール済み
@@ -75,10 +69,8 @@ dependencies:
     message: 一部の依存関係のインストールに失敗しました。手動でインストールして続行してください。
   manualHandoff:
     title: 手動 CLI パッケージのインストールが必要
-    description: 推奨されたコマンドをデスクトップの外で実行します。 Desktop のバンドルされた Node/npm 環境と PATH の動作の現在の詳細については、FAQ を参照してください。
     faqLinkLabel: ノード環境のよくある質問を見る
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
-    refreshHint: コマンドの終了後に更新して、デスクトップ管理の依存関係を再確認します。
 depInstallConfirm:
   title: 不足している依存関係をインストールする
   installingTitle: 依存関係のインストール
@@ -105,10 +97,8 @@ launch:
   title: サービスを開始する
   starting:
     title: Hagicode Server を開始します...
-    subtitle: サービスコンポーネントを初期化しています...
   complete:
     title: セットアップ完了！
-    subtitle: Hagicode Desktop は正常にインストールされ、起動されました。
     success: おめでとうございます！ Hagicode Desktop は正常にインストールされ、起動されました。
     ready: これで、すべての機能の使用を開始できるようになります。
     button: メインインターフェイスに入る
@@ -130,8 +120,6 @@ launch:
     issues: 問題を報告する
   failure:
     title: 起動に失敗しました
-    subtitle: Hagicode Server は起動を完了できませんでした。セットアップを続行する前に、診断を確認して再インストールしてください。
-    guidance: 完全なログを開いてから、現在のバージョンを再インストールし、セットアップ フローを再開します。
     viewLog: 完全なログを表示
     retryButton: 起動を再試行する
     reinstallButton: 再インストールしてセットアップを再起動する
@@ -140,8 +128,6 @@ launch:
     emptySummary: 起動失敗の概要はキャプチャされませんでした
     emptyLog: 起動失敗ログは取得されませんでした
     meta: 'ポート: {{port}} · 時刻: {{timestamp}}'
-    truncatedHint: 起動ログは最新の出力に切り詰められました。
-    recoveryHint: セットアップを再試行する前に、現在のバージョンを再インストールし、オンボーディングをリセットすることをお勧めします。
     copyButton: ログのコピー
     copySuccess: 起動失敗ログをコピーしました
     copyError: 起動失敗ログのコピーに失敗しました
@@ -161,12 +147,10 @@ skip:
     スキップした後は、次のことができます。
     • メインインターフェースの「パッケージ管理」を通じて Hagicode Server を手動でインストールします。
     • 設定でセットアッププロセスを再度有効にする
-  reenableNote: Hagicode Desktop を初めて使用する場合は、セットアップ プロセスを完了することをお勧めします。
   cancel: キャンセル
   confirm: セットアップをスキップ
 dependencyManagement:
   title: 依存関係の管理
-  description: システムの依存関係を表示および管理する
   status:
     installed: インストール済み
     bundled: デスクトップにバンドルされている
@@ -193,10 +177,8 @@ dependencyManagement:
     systemSource: システムソース
   manualHandoff:
     title: 手動 CLI パッケージのインストールが必要
-    description: 推奨されたコマンドをデスクトップの外で実行します。 Desktop のバンドルされた Node/npm 環境と PATH の動作の現在の詳細については、FAQ を参照してください。
     faqLinkLabel: ノード環境のよくある質問を見る
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
-    refreshHint: コマンドの終了後に更新して、デスクトップ管理の依存関係を再確認します。
   noDependencies: 依存関係が検出されませんでした
 dependencyCheck:
   title: 依存関係チェックの結果
@@ -212,8 +194,6 @@ dependencyCheck:
     requiredVersion: 必要なバージョン
 legal:
   title: エンドユーザーライセンス契約とプライバシーポリシー
-  descriptionFull: HagiCode サーバーをダウンロードする前に、現在の EULA とプライバシー ポリシーの改訂を確認してください。公式ドキュメントはデフォルトのブラウザで開きます。
-  descriptionLegalOnly: 現在の法改正はまだ受け入れられていません。デフォルトのブラウザで公式ドキュメントを確認し、デスクトップに戻って確認します。
   progressFull: '完全なセットアップ: {{steps}}'
   progressLegalOnly: 'コンプライアンスゲートモード: 現在の法的同意の前に言語選択が表示されます'
   browserInstruction: 同意する前に、デフォルトのブラウザで公式ドキュメントを開いてください。デスクトップには改訂の概要のみが表示され、法的な全文は表示されません。
@@ -247,7 +227,6 @@ legal:
     privacy-policy: プライバシーポリシー
 languageSelection:
   title: 言語を選択
-  description: 先に Hagicode Desktop で使う言語を選択します。組み込みバックエンドの初回起動でも、対応する既定言語が使われます。
   recommended: おすすめ
   selected: 選択済み
   choose: この言語を選ぶ

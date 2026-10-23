@@ -31,10 +31,7 @@ export default function DownloadedVersionsTab({
         <div className="rounded-xl border border-dashed border-border/70 bg-background/50 p-10">
           <div className="space-y-6 text-center">
             <div className="flex justify-center"><div className="rounded-full bg-primary/10 p-4"><Rocket className="h-12 w-12 text-primary" /></div></div>
-            <div>
-              <h2 className="mb-2 text-2xl font-bold text-foreground">{t('versionManagement.noVersionsInstalled.title')}</h2>
-              <p className="mx-auto max-w-md text-muted-foreground">{t('versionManagement.noVersionsInstalled.description')}</p>
-            </div>
+            <h2 className="text-2xl font-bold text-foreground">{t('versionManagement.noVersionsInstalled.title')}</h2>
             <Button onClick={onStartOnboarding}><Rocket className="h-5 w-5" />{t('versionManagement.noVersionsInstalled.startButton')}</Button>
           </div>
         </div>

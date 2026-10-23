@@ -32,7 +32,7 @@ describe('service-region renderer integration', () => {
     assert.match(selector, /role="alert"/);
     assert.match(prompt, /!isLoading && !isExplicit && !skipped && !confirmed/);
     assert.match(prompt, /setServiceRegion\(selectedRegion\)/);
-    assert.match(prompt, /serviceRegion\.successDescription/);
+    assert.doesNotMatch(prompt, /serviceRegion\.successDescription/);
     assert.match(prompt, /serviceRegion\.regionDetails\.\$\{value\}/);
     assert.match(prompt, /setConfirmed\(true\)/);
     assert.match(prompt, /serviceRegion\.done/);
@@ -84,14 +84,10 @@ describe('service-region renderer integration', () => {
 
     for (const resource of resources) {
       assert.match(resource, /^serviceRegion:/m);
-      assert.match(resource, /^\s+description:/m);
       assert.match(resource, /^\s+INTERNATIONAL:/m);
       assert.match(resource, /^\s+steamRestricted:/m);
       assert.match(resource, /^\s+promptTitle:/m);
-      assert.match(resource, /^\s+successDescription:/m);
-      assert.match(resource, /^\s+promptDescription:/m);
       assert.match(resource, /^\s+regionDetails:/m);
-      assert.match(resource, /^\s+resetDescription:/m);
       assert.match(resource, /^\s+resetSuccess:/m);
     }
   });

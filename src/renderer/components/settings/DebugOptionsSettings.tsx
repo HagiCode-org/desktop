@@ -3,7 +3,7 @@ import { Bug } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import type {
@@ -117,18 +117,12 @@ export function DebugOptionsSettings() {
           <Bug className="h-5 w-5" />
           <CardTitle>{t('settings.debugOptions.title')}</CardTitle>
         </div>
-        <CardDescription>{t('settings.debugOptions.description')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {settings ? (
           <>
             <div className="space-y-3 rounded-xl border border-border/60 bg-muted/30 p-4">
-              <div>
-                <h4 className="text-sm font-medium">{t('settings.debugOptions.useIgnoreScriptsForManagedNpm.label')}</h4>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {t('settings.debugOptions.useIgnoreScriptsForManagedNpm.description')}
-                </p>
-              </div>
+              <h4 className="text-sm font-medium">{t('settings.debugOptions.useIgnoreScriptsForManagedNpm.label')}</h4>
               <div className="flex items-center justify-between rounded-lg border border-border/50 bg-background px-3 py-2">
                 <span className="text-sm">--ignore-scripts</span>
                 <Switch
@@ -141,12 +135,7 @@ export function DebugOptionsSettings() {
             </div>
 
             <div className="space-y-3 rounded-xl border border-border/60 bg-muted/30 p-4">
-              <div>
-                <h4 className="text-sm font-medium">{t('settings.debugOptions.skipPurchaseSimulateSuccess.label')}</h4>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {t('settings.debugOptions.skipPurchaseSimulateSuccess.description')}
-                </p>
-              </div>
+              <h4 className="text-sm font-medium">{t('settings.debugOptions.skipPurchaseSimulateSuccess.label')}</h4>
               <div className="flex items-center justify-between rounded-lg border border-border/50 bg-background px-3 py-2">
                 <span className="text-sm">{t('settings.debugOptions.skipPurchaseSimulateSuccess.shortLabel')}</span>
                 <Switch
@@ -162,9 +151,6 @@ export function DebugOptionsSettings() {
               <div>
                 <h4 className="text-sm font-medium">{t('settings.debugOptions.installDate.label')}</h4>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {t('settings.debugOptions.installDate.description')}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
                   {t('settings.debugOptions.installDate.ageDays', {
                     value: settings.msstoreInstallAgeDays == null
                       ? t('settings.debugOptions.installDate.ageDaysUnknown')
@@ -178,11 +164,6 @@ export function DebugOptionsSettings() {
                 disabled={isSaving || settings === null}
                 placeholder={t('settings.debugOptions.installDate.placeholder')}
               />
-            </div>
-
-            <div className="text-xs text-muted-foreground space-y-1">
-              <p>{t('settings.debugOptions.notes.scope')}</p>
-              <p>{t('settings.debugOptions.notes.npm')}</p>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">

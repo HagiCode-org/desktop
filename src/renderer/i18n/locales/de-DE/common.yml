@@ -52,13 +52,11 @@ header:
   runningSuccessfully: Läuft erfolgreich
   language:
     label: Sprache
-    description: Wählen Sie die Sprache der Anwendungsoberfläche aus
   embeddedWebServicePort: Eingebetteter Webdienst-Port
 settings:
   title: Einstellungen
   language:
     label: Sprache
-    description: Wählen Sie die Sprache der Anwendungsoberfläche aus
   embeddedWebServicePort: Eingebetteter Webdienst-Port
 footer:
   copyright: © 2026 Hagicode Desktop
@@ -112,9 +110,7 @@ navigation:
   versionManagement: Versionsverwaltung
   webServiceNotRunning: Der Webdienst wird nicht ausgeführt
   officialWebsite: Offizielle Website
-  officialWebsiteDesc: Besuchen Sie die offizielle Website für Hagicode, um die neuesten Nachrichten und Dokumentationen zu erhalten
   about:
-    sectionDescription: Rendern Sie zuerst den gebündelten Schnappschuss und aktualisieren Sie dann die neuesten offiziellen Ziele.
     snapshotLabel: Gebündelter Schnappschuss
     runtimeLabel: Live-Daten
     updatedAt: Aktualisiert {{value}}
@@ -156,12 +152,10 @@ sidebar:
   expand: Erweitern
 dependencyManagement:
   title: Abhängigkeitsmanagement
-  description: Verwalten Sie erforderliche und optionale Befehlszeilenabhängigkeiten für die Startbereitschaft von HagiCode und überprüfen Sie die eingebettete Node/npm-Umgebung von Desktop.
   loading: Abhängigkeitsstatus wird gelesen...
   unavailable: Nicht verfügbar
   environment:
     title: Knotenumgebung
-    description: Desktop verwendet seine eigene Node/npm-Laufzeit für verwaltete CLI-Pakete.
     managedNotice: Lesen Sie die FAQ für aktuelle Details zur Node/npm-Laufzeit von Desktop, zur PATH-Isolation, zu Paketspeicherorten und zur Fehlerbehebung.
     externalNotice: Desktop prüft derzeit die globale Node/npm-Umgebung, die auf diesem System bereits vorhanden ist.
     rationaleTitle: Desktop-verwaltete Node/npm-Umgebung
@@ -180,19 +174,14 @@ dependencyManagement:
       error: Fehler
   mirror:
     title: npm Spiegelbeschleunigung
-    description: Aktivieren Sie npmmirror.com für verwaltete npm-Paketsynchronisierungs- und Installationsvorgänge.
     toggleLabel: Verwenden Sie die npmmirror.com-Beschleunigung
     registryUrl: Registrierung URL
     enabled: Aktiviert
     disabled: Deaktiviert
     saving: Sparen
-    enabledHelp: Zukünftige Synchronisierungs-/Installationsvorgänge werden den Registrierungsspiegel von npmmirror.com verwenden.
-    disabledHelp: Kommende npm-Vorgänge verwenden das standardmäßige npm-Registrierungsverhalten.
-    readOnlyHelp: Spiegeleinstellungen haben keine Wirkung, solange sich das Abhängigkeitsmanagement im externen Nur-Lese-Modus befindet.
     saveFailed: Spiegeleinstellung konnte nicht gespeichert werden
   vendoredRuntime:
     title: Desktop-verwaltete Laufzeiten
-    description: Mitgelieferte Laufzeiten werden von Desktop bereitgestellt und überwacht, statt über die npm-Paketverwaltung verwaltet zu werden.
     managedByDesktop: Direkt von Desktop verwaltet
     runtimeState: Laufzeitstatus
     runtimeRoot: Laufzeit-Stammverzeichnis
@@ -202,7 +191,6 @@ dependencyManagement:
     metadataPath: Metadatenpfad
     healthUrl: Lokale URL
     diagnostics: Diagnoseinformationen
-    reinstallHint: Diese mitgelieferte Laufzeit wird mit dem Desktop-Paket ausgeliefert. Installieren Sie Desktop neu, um eine beschädigte gepackte Kopie wiederherzustellen.
     primaryDescriptions:
       installed: Laufzeitdateien sind installiert und entsprechen dem aktuellen Desktop-Laufzeitvertrag.
       packaged: Das gepackte Archiv ist bereit, die beschreibbare Laufzeit wurde jedoch noch nicht aktiviert.
@@ -256,15 +244,12 @@ dependencyManagement:
     unknown: Unbekannt
   uninstall:
     title: Deinstallation bestätigen
-    description: "{{name}} aus der {{mode}}-Umgebung deinstallieren? Aktive Komponenten werden zuerst deaktiviert."
     cancel: Abbrechen
     confirm: Deinstallieren
     success: Komponente erfolgreich deinstalliert.
     alreadyRemoved: Komponente war bereits entfernt.
     blocked: Deinstallation nicht möglich, da andere Komponenten davon abhängen.
   packages:
-    hagiscript:
-      description: Metadaten der alten Standalone-CLI bleiben aus Kompatibilitätsgründen erhalten. Desktop synchronisiert verwaltete Werkzeuge jetzt über das integrierte SDK.
     openspec:
       description: OpenSpec Angebots-, Spezifikations- und Aufgaben-Workflow CLI.
     skills:
@@ -299,11 +284,9 @@ dependencyManagement:
   bootstrap:
     title: Alte CLI
     selectorLabel: Installationsziel
-    selectorHint: Desktop installiert keine eigenständige hagiscript-CLI mehr. Diese Bezeichnungen bleiben nur zur Kompatibilität mit älteren Oberflächen erhalten.
     currentTarget: 'Altes Ziel: {{target}}'
     customVersionLabel: Benutzerdefinierte Version
     customVersionPlaceholder: Geben Sie eine Version wie 0.2.3 ein
-    customVersionDescription: Eigenständige hagiscript-Versionen werden in Desktop-verwalteten Abhängigkeitsabläufen nicht mehr verwendet.
     targetOptions:
       latest: Neueste stabile Version
       dev: Entwicklungs-Build
@@ -314,20 +297,16 @@ dependencyManagement:
     unknown: Desktop kann die verwaltete npm-Umgebung derzeit nicht überprüfen. Aktualisieren oder reparieren Sie zuerst die verwalteten Abhängigkeiten, bevor Sie andere Werkzeuge ändern.
   packageTable:
     title: Befehlszeilenabhängigkeiten
-    description: Wählen Sie Agent-CLI- und Workflow-Abhängigkeiten aus, die über den npm-Synchronisierungsablauf des Desktop SDK installiert werden sollen.
     groups:
       base:
         title: Grundabhängigkeiten
-        description: Installieren Sie OpenSpec, Skills und weitere Desktop-Grundlagen für Workflows an einem Ort.
       agentCli:
         title: Agent CLI
-        description: Wählen Sie die Agent-CLI-Tools aus, die Sie anbinden möchten, und installieren Sie sie über den npm-Sync-Ablauf des Desktop SDK.
     tool: Werkzeug
     status: Status
     action: Aktion
   batchLog:
     title: Batch-Installationsprotokoll
-    description: Kombinierte Ausgabe für {{count}} ausgewählte Pakete.
     empty: Nach dem Start der Batch-Installation werden hier Protokolle angezeigt.
     completed: Batch-Installation abgeschlossen.
     status:
@@ -381,9 +360,7 @@ bootstrap:
     logsFailed: Der Desktop-Protokollordner konnte nicht geöffnet werden
 systemDiagnostic:
   title: Systemdiagnose
-  description: Erfassen Sie die lokalen Umgebungsdetails dieses Geräts und geben Sie den Klartextbericht an den technischen Support weiter.
   reportTitle: Nur-Text-Bericht
-  reportDescription: Bei jeder Wiederholung wird der vorherige Bericht ersetzt, sodass der kopierte Inhalt immer den neuesten Diagnose-Snapshot widerspiegelt.
   empty: Führen Sie eine Systemdiagnose durch, um Betriebssystem-, Hardware-, Agent CLI-Registrierungsprüfungen und Kern-Toolchain-Details zu erfassen.
   loading: Details zur lokalen Umgebung werden erfasst...
   actions:
@@ -451,11 +428,8 @@ systemDiagnostic:
 system:
   dashboard:
     title: Desktop-Kontrollzentrum
-    description: Bündelt Servicestatus, Start- und Stopp-Aktionen, aktive Version, Log-Zugänge und empfohlene Updates in einer fokussierten Arbeitsfläche.
   commercePanel:
     title: Lizenzen und Sponsoring
-    storeDescription: Überprüfen Sie hier schnell den aktuellen Status von TurboEngine und dem Sponsorplan. Öffnen Sie den Detailbereich nur dann, wenn Sie kaufen, verwalten oder aktualisieren müssen.
-    nonStoreDescription: Diese Laufzeit ist nicht die Microsoft-Store-Edition. Nutzen Sie die Links hier, um die Produktseiten zu öffnen und bei Bedarf zur Store-Version zu wechseln.
     sponsorSummary: Ihre Unterstützung ist der Antrieb, der unsere Updates möglich macht
     actions:
       viewDetails: Details anzeigen
@@ -475,19 +449,15 @@ system:
         active: Simuliert die Store-Edition nach der Aktivierung, damit Sie das Layout nach dem Kauf prüfen können.
   logQuickAccess:
     title: Schnellzugriff protokollieren
-    description: Öffnen Sie die Desktop- und Web-App-Protokollordner direkt, um die Diagnosezeit zu verkürzen.
     loading: Protokollordner werden überprüft...
-    hint: Schaltflächenzustände werden automatisch mit der aktiven Version aktualisiert
     status:
       available: Verfügbar
       unavailable: Nicht verfügbar
     desktop:
       label: Desktop-Protokollordner
-      description: Öffnen Sie das aktuelle Desktop-Protokollverzeichnis auf diesem Gerät.
       openSuccess: Desktop-Protokollordner geöffnet
     webApp:
       label: Web-App-Protokollordner
-      description: Öffnen Sie das Web-App-Protokollverzeichnis für die aktive Version.
       openSuccess: Web-App-Protokollordner geöffnet
     errors:
       load_failed: Der Status des Protokollordners konnte nicht geladen werden
@@ -496,11 +466,9 @@ system:
       open_failed: Der Protokollordner konnte nicht geöffnet werden
   noVersionInstalled:
     title: Noch keine Versionen installiert
-    description: Der einfachste Weg, mit Hagicode Desktop zu beginnen, ist unser geführter Einrichtungsassistent. Komplette Installation und Konfiguration in nur wenigen Schritten.
     startWizard: Assistent starten
   noActiveVersion:
     title: Eine Laufzeit ist installiert, aber keine aktive Version ist ausgewählt
-    description: Es wurde eine lokale Laufzeit gefunden, aber der Zeiger auf die aktive Version fehlt oder ist ungültig. Öffnen Sie zuerst die Versionsverwaltung und wählen Sie eine nutzbare Version aus.
     manageVersions: Versionsverwaltung öffnen
   activeVersion:
     actions:
@@ -571,7 +539,6 @@ system:
         description: Wenn noch kein Paket installiert ist, verwenden Sie diesen Call-to-Action, um den Setup-Assistenten zu starten und die erste Laufzeitinstallation abzuschließen.
   services:
     title: Verwaltete Dienste
-    description: Überwachen und steuern Sie von Desktop verwaltete Dienste an einem Ort.
     viewDetails: Details
     port: 'Port: {{port}}'
     notReady: Nicht bereit

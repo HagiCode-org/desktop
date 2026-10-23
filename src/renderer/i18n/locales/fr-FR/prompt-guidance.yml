@@ -2,9 +2,6 @@ loading: Chargement des instructions d'invite...
 emptyState: Desktop peut résoudre l'invite, vous montrer d'où elle vient et conserver le texte exact prêt à être copié/collé.
 availableTools: Outils disponibles
 promptTitle: Invite
-promptDescription: Copiez l'invite complète exactement comme indiqué avant de la coller dans votre AI CLI.
-tipTitle: Comment utiliser cette invite
-tipDescription: Ouvrez n'importe quel CLI pris en charge dans le répertoire suggéré, collez l'invite et revenez après avoir appliqué les modifications recommandées.
 actions:
   refresh: Conseils de rechargement
   loading: Chargement

@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import {
   AlertCircle,
-  CheckCircle2,
   Clipboard,
   ExternalLink,
   Loader2,
@@ -13,7 +12,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { PromptGuidanceResponse } from '../../../types/prompt-guidance.js';
@@ -28,7 +27,6 @@ type PromptGuidanceStatus = 'idle' | 'loading' | 'resolved';
 
 interface PromptGuidancePanelProps {
   title: string;
-  description: string;
   guidance: PromptGuidanceResponse | null;
   status: PromptGuidanceStatus;
   onRefresh: () => Promise<void> | void;
@@ -45,7 +43,6 @@ declare global {
 
 export function PromptGuidancePanel({
   title,
-  description,
   guidance,
   status,
   onRefresh,
@@ -119,7 +116,6 @@ export function PromptGuidancePanel({
               <Sparkles className="h-4 w-4 text-primary" />
               {title}
             </CardTitle>
-            <CardDescription>{description}</CardDescription>
           </div>
           <Button
             variant="outline"
@@ -186,10 +182,7 @@ export function PromptGuidancePanel({
             {guidance.success ? (
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{t('promptTitle')}</p>
-                    <p className="text-xs text-muted-foreground">{t('promptDescription')}</p>
-                  </div>
+                  <p className="text-sm font-medium text-foreground">{t('promptTitle')}</p>
                   <Button size="sm" onClick={() => void handleCopy()} disabled={isCopying}>
                     {isCopying ? (
                       <>
@@ -276,14 +269,6 @@ export function PromptGuidancePanel({
                   ))}
               </div>
             </div>
-
-            {guidance.success && (
-              <Alert>
-                <CheckCircle2 className="h-4 w-4" />
-                <AlertTitle>{t('tipTitle')}</AlertTitle>
-                <AlertDescription>{t('tipDescription')}</AlertDescription>
-              </Alert>
-            )}
           </>
         )}
       </CardContent>

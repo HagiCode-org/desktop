@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { AppDispatch, RootState } from '@/store';
 import {
   buildTestNotificationParams,
@@ -51,15 +51,11 @@ export function NotificationTab() {
             <BellRing className="h-5 w-5" />
             <CardTitle>{t('settings.notification.title')}</CardTitle>
           </div>
-          <CardDescription>{t('settings.notification.description')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h3 className="font-medium text-foreground">{t('settings.notification.testSectionTitle')}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{t('settings.notification.testSectionDescription')}</p>
-              </div>
+              <h3 className="font-medium text-foreground">{t('settings.notification.testSectionTitle')}</h3>
               <Button type="button" onClick={() => void handleSend()} disabled={sendStatus === 'sending'}>
                 {sendStatus === 'sending' ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
                 {sendStatus === 'sending' ? t('settings.notification.sending') : t('settings.notification.testButton')}
@@ -71,7 +67,6 @@ export function NotificationTab() {
             <Alert>
               <CheckCircle2 className="h-4 w-4" />
               <AlertTitle>{t('settings.notification.testSuccess')}</AlertTitle>
-              <AlertDescription>{t('settings.notification.testSuccessDescription')}</AlertDescription>
             </Alert>
           ) : null}
 
@@ -120,7 +115,6 @@ export function NotificationTab() {
       <Card>
         <CardHeader>
           <CardTitle>{t('settings.notification.previewTitle')}</CardTitle>
-          <CardDescription>{t('settings.notification.previewDescription')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {previewRows.map((row) => (

@@ -1,17 +1,13 @@
 title: Configuración por primera vez
 welcome:
   title: Bienvenido a Hagicode Desktop
-  description: Hagicode Desktop es el iniciador local de Hagicode. Terminaremos la configuración inicial y la confirmación de cumplimiento en {{count}} pasos.
   features:
     manage:
       title: Gestión de versiones
-      description: Administrar Hagicode Server instalación y actualizaciones
     monitor:
       title: Monitoreo de servicio
-      description: Iniciar, detener y monitorear el estado del servicio
     dependencies:
       title: Gestión de dependencias
-      description: Ver y administrar dependencias del sistema
   processTitle: 'La configuración inicial tiene {{count}} pasos:'
   steps:
     welcome: Revise la configuración y lo que sucederá a continuación.
@@ -40,8 +36,6 @@ download:
   pleaseWait: Espere mientras descargamos...
 dependencies:
   title: Instalar dependencias del sistema
-  subtitle: Hagicode requiere ciertas dependencias del sistema para funcionar correctamente.
-  description: Verifique el estado de instalación de las dependencias del sistema.
   installButton: Instalar dependencias
   status:
     installed: Instalado
@@ -75,10 +69,8 @@ dependencies:
     message: Algunas dependencias no se pudieron instalar. Instálelos manualmente y continúe.
   manualHandoff:
     title: Se requiere instalación manual del paquete CLI
-    description: Ejecute el comando sugerido fuera del escritorio. Para obtener detalles actualizados sobre el entorno Node/npm incluido en Desktop y el comportamiento de PATH, lea las preguntas frecuentes.
     faqLinkLabel: Ver preguntas frecuentes sobre el entorno de nodo
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
-    refreshHint: Actualice después de que finalice el comando para volver a verificar las dependencias administradas por el escritorio.
 depInstallConfirm:
   title: Instalar dependencias faltantes
   installingTitle: Instalación de dependencias
@@ -105,10 +97,8 @@ launch:
   title: Iniciar servicio
   starting:
     title: A partir de Hagicode Server...
-    subtitle: Inicializando componentes de servicio...
   complete:
     title: ¡Configuración completa!
-    subtitle: Hagicode Desktop se ha instalado e iniciado correctamente.
     success: ¡Felicitaciones! Hagicode Desktop se ha instalado e iniciado correctamente.
     ready: Ahora puede comenzar a utilizar todas las funciones.
     button: Ingrese a la interfaz principal
@@ -130,8 +120,6 @@ launch:
     issues: Informar problemas
   failure:
     title: Error de inicio
-    subtitle: Hagicode Server no pudo terminar de comenzar. Revise los diagnósticos y reinstale antes de continuar con la instalación.
-    guidance: Abra el registro completo, luego reinstale la versión actual y reinicie el flujo de configuración.
     viewLog: Ver registro completo
     retryButton: Reintentar inicio
     reinstallButton: Reinstalar y reiniciar la configuración
@@ -140,8 +128,6 @@ launch:
     emptySummary: No se capturó ningún resumen de fallas de inicio
     emptyLog: No se capturó ningún registro de errores de inicio
     meta: 'Puerto: {{port}} · Hora: {{timestamp}}'
-    truncatedHint: El registro de inicio se truncó al resultado más reciente.
-    recoveryHint: Recomendamos reinstalar la versión actual y restablecer la incorporación antes de intentar la configuración nuevamente.
     copyButton: Copiar registro
     copySuccess: Registro de errores de inicio copiado
     copyError: No se pudo copiar el registro de errores de inicio
@@ -161,12 +147,10 @@ skip:
     Después de saltar, puedes:
     • Instale Hagicode Server manualmente a través de "Administración de paquetes" en la interfaz principal
     • Vuelva a habilitar el proceso de configuración en la configuración
-  reenableNote: Si es la primera vez que utiliza Hagicode Desktop, le recomendamos completar el proceso de configuración.
   cancel: Cancelar
   confirm: Saltar configuración
 dependencyManagement:
   title: Gestión de dependencias
-  description: Ver y administrar dependencias del sistema
   status:
     installed: Instalado
     bundled: Incluido con el escritorio
@@ -193,10 +177,8 @@ dependencyManagement:
     systemSource: Fuente del sistema
   manualHandoff:
     title: Se requiere instalación manual del paquete CLI
-    description: Ejecute el comando sugerido fuera del escritorio. Para obtener detalles actualizados sobre el entorno Node/npm incluido en Desktop y el comportamiento de PATH, lea las preguntas frecuentes.
     faqLinkLabel: Ver preguntas frecuentes sobre el entorno de nodo
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
-    refreshHint: Actualice después de que finalice el comando para volver a verificar las dependencias administradas por el escritorio.
   noDependencies: No se detectaron dependencias
 dependencyCheck:
   title: Resultados de la verificación de dependencia
@@ -212,8 +194,6 @@ dependencyCheck:
     requiredVersion: Versión requerida
 legal:
   title: Acuerdo de licencia de usuario final y política de privacidad
-  descriptionFull: Antes de descargar HagiCode Server, confirme las revisiones actuales del EULA y la Política de privacidad. Los documentos oficiales se abren en su navegador predeterminado.
-  descriptionLegalOnly: Las revisiones legales actuales aún no han sido aceptadas. Revise los documentos oficiales en su navegador predeterminado, luego regrese al Escritorio para confirmar.
   progressFull: 'Configuración completa: {{steps}}'
   progressLegalOnly: 'Modo de puerta de cumplimiento: la selección de idioma aparece antes del paso legal actual'
   browserInstruction: Abra los documentos oficiales en su navegador predeterminado antes de aceptar. Desktop solo muestra el resumen de la revisión, no el texto legal completo.
@@ -247,7 +227,6 @@ legal:
     privacy-policy: Política de privacidad
 languageSelection:
   title: Elegir idioma
-  description: Primero elige el idioma que usará Hagicode Desktop. El primer arranque del backend integrado también usará un valor predeterminado compatible.
   recommended: Recomendado
   selected: Seleccionado
   choose: Elegir este idioma

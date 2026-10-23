@@ -33,7 +33,7 @@ describe('debug options settings renderer wiring', () => {
     assert.match(debugOptionsSettingsSource, /skipPurchaseSimulateSuccess/);
     assert.match(debugOptionsSettingsSource, /msstoreInstallDateRaw/);
     assert.match(debugOptionsSettingsSource, /settings\.debugOptions\.installDate\.label/);
-    assert.match(debugOptionsSettingsSource, /settings\.debugOptions\.installDate\.description/);
+    assert.doesNotMatch(debugOptionsSettingsSource, /settings\.debugOptions\.installDate\.description/);
     assert.match(debugOptionsSettingsSource, /settings\.debugOptions\.installDate\.ageDays/);
   });
 

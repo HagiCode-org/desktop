@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetFooter,
   SheetHeader,
   SheetTitle,
@@ -101,6 +100,7 @@ export default function WebServiceStartupProgressDrawer({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
+        aria-describedby={undefined}
         className="[&>button]:hidden flex h-full w-[min(900px,92vw)] max-w-none flex-col overflow-hidden border-border/80 p-0 shadow-xl sm:max-w-none"
       >
         <div className="shrink-0 border-b border-border/70 bg-primary/[0.06] px-6 py-5">
@@ -130,13 +130,6 @@ export default function WebServiceStartupProgressDrawer({
                       ? t('webServiceStatus.startupProgress.successTitle')
                       : t('webServiceStatus.startupProgress.title')}
                 </SheetTitle>
-                <SheetDescription className="max-w-[64ch] text-sm leading-6 text-muted-foreground">
-                  {isFailed
-                    ? t('webServiceStatus.startupProgress.failureDescription')
-                    : isSuccessful
-                      ? t('webServiceStatus.startupProgress.successDescription')
-                      : t('webServiceStatus.startupProgress.description')}
-                </SheetDescription>
               </div>
 
               <div className="grid min-w-[220px] gap-2 text-sm text-muted-foreground sm:grid-cols-2">
@@ -170,9 +163,6 @@ export default function WebServiceStartupProgressDrawer({
               <div className="text-right text-sm font-medium text-foreground">{progressValue}%</div>
             </div>
             <Progress value={progressValue} className="mt-4 h-2.5" />
-            {!isFailed && !isSuccessful ? (
-              <p className="mt-3 text-xs text-muted-foreground">{t('webServiceStatus.startupProgress.waitingHint')}</p>
-            ) : null}
           </section>
 
           <section className="space-y-3">

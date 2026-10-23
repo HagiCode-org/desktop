@@ -89,7 +89,7 @@ function SummaryTile({
   icon: LucideIcon;
   label: string;
   value: string;
-  description: string;
+  description?: string;
 }) {
   return (
     <section className="min-w-0 rounded-xl border border-border/70 bg-background/75 p-3.5">
@@ -102,7 +102,7 @@ function SummaryTile({
           <Icon className="h-4 w-4" />
         </div>
       </div>
-      <p className="mt-2 break-words text-sm text-muted-foreground">{description}</p>
+      {description ? <p className="mt-2 break-words text-sm text-muted-foreground">{description}</p> : null}
     </section>
   );
 }
@@ -522,7 +522,6 @@ export default function VersionManagementPage({ distributionState }: VersionMana
         <PageHeader
           icon={Package}
           titleKey="versionManagement.title"
-          descriptionKey="versionManagement.description"
           actions={<Button type="button" variant="outline" onClick={fetchAllData}><RefreshCw className="h-4 w-4" />{t('versionManagement.actions.refresh')}</Button>}
           summaryTiles={(
             <>
@@ -530,25 +529,23 @@ export default function VersionManagementPage({ distributionState }: VersionMana
               icon={Package}
               label={t('common.version', { ns: 'common' })}
               value={activeVersion?.version ?? t('versionManagement.notInstalled')}
-              description={activeVersion ? activeVersion.packageFilename : t('versionManagement.noVersionsInstalled.description')}
+              description={activeVersion?.packageFilename}
               />
               <SummaryTile
               icon={HardDrive}
               label={t('versionManagement.installedVersions')}
               value={installedVersions.length.toString()}
-              description={installedVersions.length > 0 ? t('versionManagement.status.installed') : t('versionManagement.notInstalled')}
               />
               <SummaryTile
               icon={Download}
               label={t('versionManagement.availableVersions')}
               value={availableVersions.length.toString()}
-              description={availableVersions.length > 0 ? t('versionManagement.actions.install') : t('versionManagement.noVersionsAvailable')}
               />
               <SummaryTile
               icon={isInstallingFromState ? Loader2 : RefreshCw}
               label={t('versionManagement.actions.refresh')}
               value={isInstallingFromState ? getInstallProgressText() : t('versionManagement.status.ready')}
-              description={isInstallingFromState ? getInstallStageFlow() : t('versionManagement.info.description')}
+              description={isInstallingFromState ? getInstallStageFlow() : undefined}
               />
             </>
           )}

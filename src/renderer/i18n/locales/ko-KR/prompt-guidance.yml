@@ -2,9 +2,6 @@ loading: 프롬프트 안내 로드 중...
 emptyState: 데스크톱에서는 메시지를 확인하고 해당 메시지의 출처를 표시하며 복사/붙여넣기를 위해 정확한 텍스트를 준비할 수 있습니다.
 availableTools: 사용 가능한 도구
 promptTitle: 프롬프트
-promptDescription: AI CLI에 붙여넣기 전에 표시된 대로 전체 프롬프트를 정확하게 복사하세요.
-tipTitle: 이 프롬프트를 사용하는 방법
-tipDescription: 제안된 디렉터리에서 지원되는 CLI를 열고 프롬프트를 붙여넣은 다음 권장 변경 사항을 적용한 후 다시 돌아오세요.
 actions:
   refresh: 새로고침 안내
   loading: 로드 중

@@ -52,13 +52,11 @@ header:
   runningSuccessfully: 運行成功
   language:
     label: 語言
-    description: 選擇應用程式介面語言
   embeddedWebServicePort: Hagicode 服務端口
 settings:
   title: 設定
   language:
     label: 語言
-    description: 選擇應用程式介面語言
   embeddedWebServicePort: Hagicode 服務端口
 footer:
   copyright: © 2026 Hagicode Desktop
@@ -112,9 +110,7 @@ navigation:
   versionManagement: 版本管理
   webServiceNotRunning: Hagicode 服務未運行，無法存取
   officialWebsite: 官方網站
-  officialWebsiteDesc: 造訪 Hagicode 官方網站以取得最新資訊和文檔
   about:
-    sectionDescription: 首頁使用打包 snapshot，隨後自動刷新最新官方入口。
     snapshotLabel: 打包 snapshot
     runtimeLabel: 最新數據
     updatedAt: 更新於 {{value}}
@@ -156,12 +152,10 @@ sidebar:
   expand: 展開
 dependencyManagement:
   title: 依賴項管理
-  description: 管理 HagiCode 啟動所需與可選的命令列依賴，並查看 Desktop 內建 Node/npm 環境。
   loading: 正在讀取依賴項狀態...
   unavailable: 不可用
   environment:
     title: Node 環境
-    description: Desktop 使用自己的 Node/npm 執行階段來承載託管 CLI 套件。
     managedNotice: 關於 Desktop 的 Node/npm 運行時、PATH 隔離、包位置和排障方式，請閱讀 FAQ 中的最新說明。
     externalNotice: Desktop 目前正在檢查這台機器上已經存在的全域 Node/npm 環境。
     rationaleTitle: Desktop 託管的 Node/npm 環境
@@ -180,19 +174,14 @@ dependencyManagement:
       error: 錯誤
   mirror:
     title: npm 鏡像加速
-    description: 啟用託管 npm 套件同步和安裝作業 npmmirror.com。
     toggleLabel: 使用 npmmirror.com 加速
     registryUrl: Registry 地址
     enabled: 已啟用
     disabled: 未啟用
     saving: 儲存中
-    enabledHelp: 後續同步/安裝操作將使用 npmmirror.com registry 映像。
-    disabledHelp: 後續 npm 操作將使用 npm 預設 registry 行為。
-    readOnlyHelp: 目前處於外部唯讀模式，鏡像設定不會影響依賴管理行為。
     saveFailed: 儲存鏡像設定失敗
   vendoredRuntime:
     title: Desktop 託管執行階段
-    description: Vendored 執行階段由 Desktop 負責預置與託管，不透過 npm 套件管理進行安裝。
     managedByDesktop: 由 Desktop 直接管理
     runtimeState: 運行狀態
     runtimeRoot: 執行階段目錄
@@ -202,7 +191,6 @@ dependencyManagement:
     metadataPath: 中繼資料路徑
     healthUrl: 本機位址
     diagnostics: 診斷資訊
-    reinstallHint: 此 vendored 執行階段隨 Desktop 安裝套件一併發佈。若打包副本損毀，請重新安裝 Desktop 以還原。
     primaryDescriptions:
       installed: 執行階段檔案已安裝，並符合最新的 Desktop 執行階段契約。
       packaged: 打包封存檔已就緒，但可寫入的執行階段尚未啟用。
@@ -256,15 +244,12 @@ dependencyManagement:
     unknown: 未知
   uninstall:
     title: 確認解除安裝
-    description: "要從{{mode}}依賴環境解除安裝{{name}}嗎？已啟用的元件會先停用。"
     cancel: 取消
     confirm: 解除安裝
     success: 元件已成功解除安裝。
     alreadyRemoved: 元件已經移除。
     blocked: 其他元件仍依賴此元件，無法解除安裝。
   packages:
-    hagiscript:
-      description: 為相容舊介面而保留的獨立 CLI 中繼資料。Desktop 現在透過內建 SDK 同步託管工具。
     openspec:
       description: OpenSpec 提案、規格與任務流程 CLI。
     skills:
@@ -299,11 +284,9 @@ dependencyManagement:
   bootstrap:
     title: 舊版 CLI
     selectorLabel: 安裝目標
-    selectorHint: Desktop 已不再安裝獨立 hagiscript CLI。這些文案僅為相容舊介面而保留。
     currentTarget: 舊版目標：{{target}}
     customVersionLabel: 自訂版本
     customVersionPlaceholder: 輸入版本號，例如 0.2.3
-    customVersionDescription: Desktop 託管的依賴流程已不再使用獨立 hagiscript 版本。
     targetOptions:
       latest: 最新穩定版
       dev: 開發版
@@ -314,20 +297,16 @@ dependencyManagement:
     unknown: Desktop 目前無法驗證託管 npm 環境。請先刷新或修復託管依賴，再修改其他工具。
   packageTable:
     title: 命令列依賴項
-    description: 選擇 Agent CLI 與工作流程依賴項，透過 Desktop SDK 的 npm 同步流程安裝。
     groups:
       base:
         title: 基礎相依性
-        description: 在同一處安裝 OpenSpec、Skills 與其他 Desktop 工作流程基礎工具。
       agentCli:
         title: Agent CLI
-        description: 依需求選擇要接入的 Agent CLI，並透過 Desktop SDK 的 npm 同步流程統一安裝。
     tool: 工具
     status: 狀態
     action: 操作
   batchLog:
     title: 批量安裝日誌
-    description: '{{count}} 個已選包的合併輸出。'
     empty: 批量安裝開始後，日誌會顯示在這裡。
     completed: 批量安裝已完成。
     status:
@@ -381,9 +360,7 @@ bootstrap:
     logsFailed: 無法開啟 Desktop 日誌目錄
 systemDiagnostic:
   title: 系統診斷
-  description: 收集當前設備的本地環境信息，並將純文字報告直接發給技術支援。
   reportTitle: 純文字報告
-  reportDescription: 每次重新診斷都會取代舊報告，因此複製結果始終對應最新一次診斷。
   empty: 執行系統診斷後，這裡會顯示作業系統、硬體、Agent CLI 註冊表探測結果與核心工具鏈的環境資訊。
   loading: 正在收集本機環境資訊...
   actions:
@@ -451,11 +428,8 @@ systemDiagnostic:
 system:
   dashboard:
     title: 控制台總覽
-    description: 在同一個工作區中聚焦服務狀態、啟停維護、活動版本、日誌入口與推薦消息。
   commercePanel:
     title: 許可與贊助
-    storeDescription: 在這裡快速查看 TurboEngine 與贊助計畫的目前狀態；需要時再進入詳情頁處理購買、管理或刷新。
-    nonStoreDescription: 目前不是 Microsoft Store 版。這裡保留產品入口與安裝引導，方便你完成購買跳轉與切換到 Store 版。
     sponsorSummary: 您的支持才是我們保持更新的動力
     actions:
       viewDetails: 查看詳情
@@ -475,19 +449,15 @@ system:
         active: 模擬 Store 版已啟用的狀態，方便預覽購買後的頁面。
   logQuickAccess:
     title: 日誌快捷訪問
-    description: 直接開啟 Desktop 與 Web App 的日誌目錄，減少排障時的路徑尋找成本。
     loading: 正在檢查日誌目錄...
-    hint: 按鈕狀態會隨活動版本自動刷新
     status:
       available: 可用
       unavailable: 不可用
     desktop:
       label: Desktop 日誌資料夾
-      description: 開啟目前裝置上的 Desktop 日誌目錄。
       openSuccess: Desktop 日誌資料夾已打開
     webApp:
       label: Web App 日誌資料夾
-      description: 開啟目前活動版本的 Web App 日誌目錄。
       openSuccess: Web App 日誌資料夾已打開
     errors:
       load_failed: 無法取得日誌目錄狀態
@@ -496,11 +466,9 @@ system:
       open_failed: 無法打開日誌資料夾
   noVersionInstalled:
     title: 未安裝任何版本
-    description: 開始使用 Hagicode Desktop 最簡單的方法是透過我們的引導精靈。只需幾個步驟即可完成安裝和配置。
     startWizard: 啟動精靈
   noActiveVersion:
     title: 已安裝執行環境，但尚未選擇活動版本
-    description: 已找到本機執行環境，但活動版本指標遺失或無效。請先開啟版本管理並選擇可用版本。
     manageVersions: 開啟版本管理
   activeVersion:
     actions:
@@ -571,7 +539,6 @@ system:
         description: 如果目前還沒有安裝任何版本，可以從這裡啟動精靈，完成首次下載、依賴安裝與服務啟動。
   services:
     title: 託管服務
-    description: 在同一處監控並控制由 Desktop 託管的各項服務。
     viewDetails: 詳情
     port: 連接埠：{{port}}
     notReady: 未就緒

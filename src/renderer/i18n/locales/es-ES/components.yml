@@ -38,7 +38,6 @@ dependencyWarningBanner:
   fixLater: Reparar más tarde
 packageManagement:
   cardTitle: Gestión de paquetes
-  cardDescription: Gestionar la instalación de paquetes de servicios web.
   platformLabel: Plataforma
   detecting: Detectando...
   installationStatusLabel: Estado de instalación
@@ -75,7 +74,6 @@ packageManagement:
     error: error
 webServiceStatus:
   cardTitle: Servicio web integrado
-  cardDescription: Ver y administrar el estado de ejecución del servicio web
   status:
     running: En ejecución
     stopped: Detenido
@@ -95,7 +93,6 @@ webServiceStatus:
   dependencyReadinessButton: Gestión de dependencia abierta
   managedStartup:
     label: Inicio de servicios administrados
-    description: Elige qué servicios administrados deben iniciarse a la vez cuando inicias Hagicode.
   dependencyReadinessAlert:
     title: Las dependencias no están listas
     message: Instale las dependencias requeridas administradas por el escritorio antes de iniciar Hagicode; las dependencias opcionales no bloquean el inicio del servicio base.
@@ -146,13 +143,9 @@ webServiceStatus:
     copyEmpty: No hay contenido de registro para copiar
   startupProgress:
     title: Iniciando servicio
-    description: Desktop está comprobando la versión activa, validando las dependencias necesarias y esperando a que el servicio local de Hagicode termine de arrancar.
     successTitle: El servicio está listo
-    successDescription: El servicio local completó las comprobaciones de inicio y está listo para abrirse.
     failureTitle: El inicio no se completó
-    failureDescription: Desktop encontró un problema al iniciar el servicio. Revisa el registro de errores o cierra este cuadro de diálogo y sigue solucionando el problema.
     currentStepLabel: Progreso actual
-    waitingHint: El inicio puede tardar varios segundos. Desktop mantiene este cuadro de diálogo actualizado con el paso actual y el estado de ejecución.
     states:
       pending: Pendiente
       active: En progreso
@@ -187,32 +180,25 @@ webServiceStatus:
     openLogsError: No se pudo abrir la carpeta de registros web de la versión activa
   listenAddress:
     label: Dirección de escucha
-    description: Elija cómo Desktop vincula el servicio web integrado mientras está detenido.
     customInputLabel: IPv4 personalizado
     customPlaceholder: 192.168.1.24
     customError: Introduzca una dirección IPv4 válida
     accessUrlPreviewLabel: Acceder a vista previa URL
     wildcardHint: '`0.0.0.0` une todas las interfaces. El escritorio aún abre el cliente local a través de `127.0.0.1`.'
-    localOnlyHint: Los cambios entrarán en vigor la próxima vez que se inicie el servicio local.
     presets:
       localhost:
         label: servidor local
-        description: Lo mejor para el WebView y el navegador integrados en esta máquina.
       loopback:
         label: 127.0.0.1
-        description: Utilice una dirección de bucle invertido IPv4 explícita para acceso solo local.
       wildcard:
         label: 0.0.0.0
-        description: Vincule cada interfaz local para que otros dispositivos en la LAN puedan conectarse.
       custom:
         label: IP personalizada
-        description: Vincule una interfaz IPv4 específica, como un adaptador LAN dedicado.
 languageSelector:
   currentLanguage: Idioma actual
   selectLanguage: Seleccionar idioma
 dependencyManagement:
   title: Dependencias del sistema
-  description: Verifique y administre las dependencias del tiempo de ejecución del sistema requeridas por el servicio web
   batch:
     selectedCount: 'Seleccionados: {{count}}'
     generate: Generar comando por lotes
@@ -249,10 +235,8 @@ dependencyManagement:
     systemSource: Fuente del sistema
   manualHandoff:
     title: Se requiere instalación manual del paquete CLI
-    description: Ejecute el comando sugerido fuera del escritorio. Para obtener detalles actualizados sobre el entorno Node/npm incluido en Desktop y el comportamiento de PATH, lea las preguntas frecuentes.
     faqLinkLabel: Ver preguntas frecuentes sobre el entorno de nodo
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
-    refreshHint: Actualice después de que finalice el comando para volver a verificar las dependencias administradas por el escritorio.
   noDependencies: No se detectaron dependencias
   installToast:
     manualDisabledTitle: La instalación automática está desactivada
@@ -353,17 +337,13 @@ homePromote:
 serviceRegion:
   title: Región del servicio
   resetTitle: Probar de nuevo la selección de región
-  resetDescription: Borra la selección guardada y vuelve a mostrar el aviso la próxima vez que abras Inicio. La fuente de paquetes actual no cambia.
   resetButton: Restablecer selección
   resetSuccess: Selección de región restablecida. El aviso volverá a aparecer la próxima vez que abras Inicio.
   promptTitle: Elige la región del servicio del servidor
   confirmChoice: Usar esta región
   later: Más tarde
   successTitle: Región del servicio guardada
-  successDescription: Puedes cambiarla más adelante en Configuración > Región.
   done: Entendido
-  promptDescription: Esta opción determina los puntos de descarga para las actualizaciones de Hagicode y los paquetes de software relacionados. No cambia el idioma ni los espejos de dependencias.
-  description: Controla el índice oficial de paquetes del servidor y la fuente de descarga preferida. No cambia el idioma ni los espejos de dependencias.
   choiceLabel: Región del servicio
   loading: Cargando región...
   saving: Aplicando región...

@@ -52,13 +52,11 @@ header:
   runningSuccessfully: Running Successfully
   language:
     label: Language
-    description: Select application interface language
   embeddedWebServicePort: Embedded Web Service Port
 settings:
   title: Settings
   language:
     label: Language
-    description: Select application interface language
   embeddedWebServicePort: Embedded Web Service Port
 footer:
   copyright: © 2026 Hagicode Desktop
@@ -112,9 +110,7 @@ navigation:
   versionManagement: Version Management
   webServiceNotRunning: Web service is not running
   officialWebsite: Official Website
-  officialWebsiteDesc: Visit Hagicode official website for latest news and documentation
   about:
-    sectionDescription: Render the bundled snapshot first, then refresh the latest official destinations in place.
     snapshotLabel: Bundled snapshot
     runtimeLabel: Live data
     updatedAt: Updated {{value}}
@@ -156,12 +152,10 @@ sidebar:
   expand: Expand
 dependencyManagement:
   title: Dependency Management
-  description: Manage command-line dependencies through the externally installed Node/npm environment.
   loading: Reading dependency status...
   unavailable: Unavailable
   environment:
     title: Node Environment
-    description: Desktop uses the externally installed Node/npm runtime for managed CLI packages.
     managedNotice: Read the FAQ for current details about external Node/npm setup, package locations, and troubleshooting.
     externalNotice: Desktop is currently inspecting the global Node/npm environment that already exists on this system.
     rationaleTitle: External Node/npm environment
@@ -180,19 +174,14 @@ dependencyManagement:
       error: Error
   mirror:
     title: npm Mirror Acceleration
-    description: Enable npmmirror.com for managed npm package sync and install operations.
     toggleLabel: Use npmmirror.com acceleration
     registryUrl: Registry URL
     enabled: Enabled
     disabled: Disabled
     saving: Saving
-    enabledHelp: Upcoming sync/install operations will use the npmmirror.com registry mirror.
-    disabledHelp: Upcoming npm operations will use the default npm registry behavior.
-    readOnlyHelp: Mirror settings apply to external npm operations.
     saveFailed: Failed to save mirror setting
   vendoredRuntime:
     title: Desktop-managed runtimes
-    description: Vendored runtimes are staged and supervised by Desktop instead of npm package management.
     managedByDesktop: Managed directly by Desktop
     runtimeState: Runtime state
     runtimeRoot: Runtime root
@@ -202,7 +191,6 @@ dependencyManagement:
     metadataPath: Metadata path
     healthUrl: Local URL
     diagnostics: Diagnostics
-    reinstallHint: This vendored runtime ships with Desktop packaging. Reinstall Desktop to restore a damaged packaged copy.
     primaryDescriptions:
       installed: Runtime files are installed and matched the latest Desktop runtime contract.
       packaged: Packaged archive is ready, but the writable runtime has not been enabled yet.
@@ -256,15 +244,12 @@ dependencyManagement:
     unknown: Unknown
   uninstall:
     title: Confirm uninstall
-    description: Uninstall {{name}} from the {{mode}} dependency environment? Active components are deactivated first.
     cancel: Cancel
     confirm: Uninstall
     success: Component uninstalled successfully.
     alreadyRemoved: Component was already removed.
     blocked: Cannot uninstall while other components depend on it.
   packages:
-    hagiscript:
-      description: Legacy standalone CLI metadata retained for compatibility. Desktop now synchronizes managed tools through the embedded SDK.
     openspec:
       description: OpenSpec proposal, spec, and task workflow CLI.
     skills:
@@ -299,11 +284,9 @@ dependencyManagement:
   bootstrap:
     title: Legacy CLI
     selectorLabel: Install target
-    selectorHint: Desktop no longer installs a standalone hagiscript CLI. These labels remain only for compatibility with older surfaces.
     currentTarget: 'Legacy target: {{target}}'
     customVersionLabel: Custom version
     customVersionPlaceholder: Enter a version such as 0.2.3
-    customVersionDescription: Standalone hagiscript versions are no longer used by Desktop-managed dependency flows.
     targetOptions:
       latest: Latest stable
       dev: Development build
@@ -314,20 +297,16 @@ dependencyManagement:
     unknown: Desktop cannot verify the managed npm environment right now. Refresh or repair the managed dependencies before changing other tools.
   packageTable:
     title: Command-line dependencies
-    description: Select Agent CLI and workflow dependencies to install through the Desktop SDK npm sync flow.
     groups:
       base:
         title: Base dependencies
-        description: Install OpenSpec, Skills, and other Desktop workflow foundations in one place.
       agentCli:
         title: Agent CLI
-        description: Choose the Agent CLI tools you want to connect, then install them through the Desktop SDK npm sync flow.
     tool: Tool
     status: Status
     action: Action
   batchLog:
     title: Batch install log
-    description: Combined output for {{count}} selected packages.
     empty: Logs will appear here after the batch install starts.
     completed: Batch install completed.
     status:
@@ -381,9 +360,7 @@ bootstrap:
     logsFailed: Failed to open the Desktop logs folder
 systemDiagnostic:
   title: System Diagnostic
-  description: Collect this device's local environment details and share the plain text report with technical support.
   reportTitle: Plain text report
-  reportDescription: Each rerun replaces the previous report so the copied content always reflects the newest diagnostic snapshot.
   empty: Run a system diagnostic to capture operating system, hardware, Agent CLI registry probes, and core toolchain details.
   loading: Collecting local environment details...
   actions:
@@ -451,11 +428,8 @@ systemDiagnostic:
 system:
   dashboard:
     title: Desktop Control Center
-    description: Keep service health, lifecycle actions, active version, log access, and recommended updates in one focused workspace.
   commercePanel:
     title: Licenses and Sponsorship
-    storeDescription: Review TurboEngine and sponsor-plan status here, then open the detailed workspace only when you need to buy, manage, or refresh.
-    nonStoreDescription: This runtime is not the Microsoft Store edition. Use these links to open the product pages and switch over to the Store build when needed.
     sponsorSummary: Your support is what keeps us shipping updates
     actions:
       viewDetails: View Details
@@ -475,19 +449,15 @@ system:
         active: Simulate the Store edition after activation so you can review the post-purchase layout.
   logQuickAccess:
     title: Log Quick Access
-    description: Open the Desktop and Web App log folders directly to shorten diagnostics time.
     loading: Checking log folders...
-    hint: Button states refresh automatically with the active version
     status:
       available: Available
       unavailable: Unavailable
     desktop:
       label: Desktop Logs Folder
-      description: Open the current Desktop logs directory on this device.
       openSuccess: Desktop logs folder opened
     webApp:
       label: Web App Logs Folder
-      description: Open the Web App logs directory for the active version.
       openSuccess: Web App logs folder opened
     errors:
       load_failed: Failed to load log folder status
@@ -496,11 +466,9 @@ system:
       open_failed: Failed to open logs folder
   noVersionInstalled:
     title: No Versions Installed Yet
-    description: The easiest way to get started with Hagicode Desktop is through our guided setup wizard. Complete installation and configuration in just a few steps.
     startWizard: Launch Wizard
   noActiveVersion:
     title: A runtime is installed, but no active version is selected
-    description: A local runtime was found, but the active-version pointer is missing or invalid. Open version management and select a usable version first.
     manageVersions: Open Version Management
   activeVersion:
     actions:
@@ -571,7 +539,6 @@ system:
         description: When no package is installed yet, use this call to action to launch the setup wizard and complete the first runtime install.
   services:
     title: Managed Services
-    description: Monitor and control Desktop-managed services from one place.
     viewDetails: Details
     port: 'Port: {{port}}'
     notReady: Not ready

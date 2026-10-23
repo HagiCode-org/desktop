@@ -38,7 +38,6 @@ dependencyWarningBanner:
   fixLater: 稍後修復
 packageManagement:
   cardTitle: 套件管理
-  cardDescription: 管理 Web 服務包的安裝
   platformLabel: 平台
   detecting: 檢測中...
   installationStatusLabel: 安裝狀態
@@ -75,7 +74,6 @@ packageManagement:
     error: 錯誤
 webServiceStatus:
   cardTitle: Hagicode 服務
-  cardDescription: 檢視與管理 Hagicode 服務運作狀態
   status:
     running: 運作中
     stopped: 已停止
@@ -95,7 +93,6 @@ webServiceStatus:
   dependencyReadinessButton: 進入依賴項管理
   managedStartup:
     label: 託管服務連動啟動
-    description: 選擇啟動 Hagicode 時需要一併啟動的託管服務。
   dependencyReadinessAlert:
     title: 相依性尚未就緒
     message: 請先安裝 Desktop 託管環境中的必要相依性；選用相依性不會阻塞基礎服務啟動。
@@ -146,13 +143,9 @@ webServiceStatus:
     copyEmpty: 沒有可複製的日誌內容
   startupProgress:
     title: 正在啟動服務
-    description: Desktop 正在依序檢查版本、驗證必需的依賴項，並等待本機 Hagicode 服務完成啟動。
     successTitle: 服務已就緒
-    successDescription: 本機服務已通過啟動檢查，可以開啟。
     failureTitle: 啟動未完成
-    failureDescription: Desktop 在啟動服務時遇到問題。您可以查看失敗日誌，或關閉此對話方塊後繼續排查。
     currentStepLabel: 目前進度
-    waitingHint: 啟動可能需要數秒。Desktop 會持續在此對話方塊中更新目前步驟與執行狀態。
     states:
       pending: 等待中
       active: 進行中
@@ -187,32 +180,25 @@ webServiceStatus:
     openLogsError: 無法開啟活動版本的 Web 日誌資料夾
   listenAddress:
     label: 監聽地址
-    description: 在服務停止時選擇 Desktop 綁定嵌入式 Web 服務的位址。
     customInputLabel: 自訂 IPv4
     customPlaceholder: 192.168.1.24
     customError: 請輸入有效的 IPv4 位址
     accessUrlPreviewLabel: 訪問 URL 預覽
     wildcardHint: '`0.0.0.0` 會綁定所有網路卡；Desktop 仍會透過 `127.0.0.1` 開啟本機用戶端。'
-    localOnlyHint: 變更會在下次啟動本機服務時生效。
     presets:
       localhost:
         label: localhost
-        description: 適合目前裝置上的內建 WebView 和瀏覽器存取。
       loopback:
         label: 127.0.0.1
-        description: 使用明確 IPv4 回環位址，僅允許本機存取。
       wildcard:
         label: 0.0.0.0
-        description: 綁定所有本地網路卡，方便區域網路內其他設備存取。
       custom:
         label: 自訂 IP
-        description: 綁定到某個指定的 IPv4 網路卡位址，例如獨立的區域網路介面。
 languageSelector:
   currentLanguage: 目前語言
   selectLanguage: 選擇語言
 dependencyManagement:
   title: 系統依賴管理
-  description: 檢查與管理 Hagicode 服務所需的系統運作時依賴
   batch:
     selectedCount: '已選擇：{{count}}'
     generate: 產生批次命令
@@ -249,10 +235,8 @@ dependencyManagement:
     systemSource: 系統來源
   manualHandoff:
     title: 需手動安裝 CLI 套件
-    description: 請在 Desktop 外執行建議指令。關於 Desktop 內建 Node/npm 環境和 PATH 行為的最新說明，請閱讀 FAQ。
     faqLinkLabel: 查看 Node 環境 FAQ
     faqUrl: https://docs.hagicode.com/faq/desktop-node-environment/
-    refreshHint: 命令執行完成後刷新一次，以重新偵測 Desktop 託管相依性。
   noDependencies: 未檢測到依賴
   installToast:
     manualDisabledTitle: 已停用自動安裝
@@ -353,17 +337,13 @@ homePromote:
 serviceRegion:
   title: 服務區域
   resetTitle: 重新測試區域選擇提示
-  resetDescription: 清除已儲存的選擇，下次開啟首頁時重新顯示設定提示；不會更改目前的套件來源。
   resetButton: 重設選擇
   resetSuccess: 區域選擇已重設；下次開啟首頁時會再次顯示設定提示。
   promptTitle: 選擇伺服器服務區域
   confirmChoice: 使用此區域
   later: 稍後
   successTitle: 服務區域已儲存
-  successDescription: 之後可以在「設定 > 服務區域」中修改。
   done: 知道了
-  promptDescription: 此選擇會影響 Hagicode 版本更新與相關軟體套件下載時使用的下載節點，不會變更介面語言或相依項目鏡像。
-  description: 控制官方伺服器套件索引與優先下載來源，不會更改介面語言或相依項目鏡像。
   choiceLabel: 服務區域
   loading: 正在載入區域...
   saving: 正在套用區域...

@@ -6,7 +6,6 @@ steps:
   completed: 已完成
 apiKey:
   title: 輸入 Claude API 金鑰
-  description: 若要使用 AI 驅動的安裝功能，您需要提供 Claude API 金鑰。您可以從 Anthropic Console 取得。
   placeholder: sk-ant-...
   show: 顯示
   hide: 隱藏
@@ -21,7 +20,6 @@ status:
   international: 國際
 callingApi:
   message: 正在呼叫 Claude API...
-  hint: Claude 正在分析您的系統並執行安裝指令。
 confirmation:
   title: 確認
   message: Claude 已完成安裝檢查，請確認結果。

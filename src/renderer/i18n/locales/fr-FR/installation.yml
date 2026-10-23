@@ -6,7 +6,6 @@ steps:
   completed: Terminé
 apiKey:
   title: Entrez la touche Claude API
-  description: Pour utiliser la fonction d'installation alimentée par AI, vous devez fournir une clé Claude API. Vous pouvez en obtenir un sur Anthropic Console.
   placeholder: sk-ant-...
   show: Afficher
   hide: Masquer
@@ -21,7 +20,6 @@ status:
   international: Internationale
 callingApi:
   message: Appel au Claude API...
-  hint: Claude analyse votre système et exécute les commandes d'installation.
 confirmation:
   title: Confirmation
   message: Claude a terminé la vérification de l'installation. Veuillez confirmer les résultats.

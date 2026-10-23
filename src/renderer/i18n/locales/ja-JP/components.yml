@@ -38,7 +38,6 @@ dependencyWarningBanner:
   fixLater: 後で修正する
 packageManagement:
   cardTitle: パッケージ管理
-  cardDescription: Web サービス パッケージのインストールを管理する
   platformLabel: プラットフォーム
   detecting: 検出中...
   installationStatusLabel: 設置状況
@@ -75,7 +74,6 @@ packageManagement:
     error: エラー
 webServiceStatus:
   cardTitle: 組み込み Web サービス
-  cardDescription: Webサービスの実行ステータスの表示と管理
   status:
     running: 実行中
     stopped: 停止しました
@@ -95,7 +93,6 @@ webServiceStatus:
   dependencyReadinessButton: オープンな依存関係管理
   managedStartup:
     label: 管理対象サービスの連動起動
-    description: Hagicode の起動時に一緒に起動する管理対象サービスを選択します。
   dependencyReadinessAlert:
     title: 依存関係の準備ができていません
     message: Hagicode を開始する前に、必要なデスクトップ管理の依存関係をインストールしてください。オプションの依存関係によって基本サービスの起動がブロックされることはありません。
@@ -146,13 +143,9 @@ webServiceStatus:
     copyEmpty: コピーするログ内容がありません
   startupProgress:
     title: サービスを起動しています
-    description: Desktop はアクティブなバージョンの確認と必要な依存関係の検証を行い、ローカルの Hagicode サービスの起動が完了するのを待っています。
     successTitle: サービスの準備ができました
-    successDescription: ローカルサービスは起動チェックを完了し、開く準備ができています。
     failureTitle: 起動が完了しませんでした
-    failureDescription: サービスの起動中に Desktop で問題が発生しました。失敗ログを確認するか、このダイアログを閉じてトラブルシューティングを続けてください。
     currentStepLabel: 現在の進行状況
-    waitingHint: 起動には数秒かかることがあります。Desktop は、このダイアログに現在のステップと実行状況を更新し続けます。
     states:
       pending: 待機中
       active: 進行中
@@ -187,32 +180,25 @@ webServiceStatus:
     openLogsError: アクティブなバージョンの Web ログ フォルダーを開けませんでした
   listenAddress:
     label: リスニングアドレス
-    description: Desktop が停止中に埋め込み Web サービスをバインドする方法を選択します。
     customInputLabel: カスタムIPv4
     customPlaceholder: 192.168.1.24
     customError: 有効な IPv4 アドレスを入力してください
     accessUrlPreviewLabel: URL プレビューにアクセスする
     wildcardHint: '`0.0.0.0` はすべてのインターフェイスをバインドします。デスクトップは引き続き `127.0.0.1` を通じてローカル クライアントを開きます。'
-    localOnlyHint: 変更は、次回ローカル サービスが開始されるときに有効になります。
     presets:
       localhost:
         label: ローカルホスト
-        description: このマシンの組み込み WebView およびブラウザに最適です。
       loopback:
         label: 127.0.0.1
-        description: ローカルのみのアクセスには明示的な IPv4 ループバック アドレスを使用します。
       wildcard:
         label: 0.0.0.0
-        description: LAN 上の他のデバイスが接続できるように、すべてのローカル インターフェイスをバインドします。
       custom:
         label: カスタムIP
-        description: 専用の LAN アダプターなど、1 つの特定の IPv4 インターフェイスをバインドします。
 languageSelector:
   currentLanguage: 現在の言語
   selectLanguage: 言語の選択
 dependencyManagement:
   title: システムの依存関係
-  description: Web サービスに必要なシステム実行時の依存関係を確認および管理する
   batch:
     selectedCount: '選択済み: {{count}}'
     generate: 一括コマンドを生成
@@ -249,10 +235,8 @@ dependencyManagement:
     systemSource: システムソース
   manualHandoff:
     title: 手動 CLI パッケージのインストールが必要
-    description: 推奨されたコマンドをデスクトップの外で実行します。 Desktop のバンドルされた Node/npm 環境と PATH の動作の現在の詳細については、FAQ を参照してください。
     faqLinkLabel: ノード環境のよくある質問を見る
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
-    refreshHint: コマンドの終了後に更新して、デスクトップ管理の依存関係を再確認します。
   noDependencies: 依存関係が検出されませんでした
   installToast:
     manualDisabledTitle: 自動インストールは無効です
@@ -353,17 +337,13 @@ homePromote:
 serviceRegion:
   title: サービス地域
   resetTitle: 地域選択の案内を再テスト
-  resetDescription: 保存済みの選択を解除し、次回ホームを開いたときに案内を再表示します。現在のパッケージソースは変更されません。
   resetButton: 選択をリセット
   resetSuccess: 地域選択をリセットしました。次回ホームを開くと案内が再表示されます。
   promptTitle: サーバーのサービス地域を選択
   confirmChoice: この地域を使用
   later: 後で
   successTitle: サービス地域を保存しました
-  successDescription: この設定は後から「設定 > 地域」で変更できます。
   done: 確認
-  promptDescription: Hagicode のバージョン更新や関連ソフトウェアのダウンロード先に影響します。表示言語や依存関係のミラーは変更されません。
-  description: 公式サーバーパッケージインデックスと優先ダウンロード元を設定します。表示言語や依存関係のミラーは変更されません。
   choiceLabel: サービス地域
   loading: 地域を読み込み中...
   saving: 地域を適用中...

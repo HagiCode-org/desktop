@@ -38,7 +38,6 @@ dependencyWarningBanner:
   fixLater: Réparer plus tard
 packageManagement:
   cardTitle: Gestion des paquets
-  cardDescription: Gérer l'installation des packages de services Web
   platformLabel: Plateforme
   detecting: Détection...
   installationStatusLabel: État de l'installation
@@ -75,7 +74,6 @@ packageManagement:
     error: Erreur
 webServiceStatus:
   cardTitle: Service Web intégré
-  cardDescription: Afficher et gérer l'état d'exécution du service Web
   status:
     running: En cours
     stopped: Arrêté
@@ -95,7 +93,6 @@ webServiceStatus:
   dependencyReadinessButton: Gestion ouverte des dépendances
   managedStartup:
     label: Démarrage des services gérés
-    description: Choisissez les services gérés à démarrer en même temps lorsque vous lancez Hagicode.
   dependencyReadinessAlert:
     title: Les dépendances ne sont pas prêtes
     message: Installez les dépendances requises gérées par Desktop avant de démarrer Hagicode; les dépendances facultatives ne bloquent pas le lancement du service de base.
@@ -146,13 +143,9 @@ webServiceStatus:
     copyEmpty: Aucun contenu de journal à copier
   startupProgress:
     title: Démarrage du service
-    description: Desktop vérifie la version active, valide les dépendances requises et attend la fin du démarrage du service Hagicode local.
     successTitle: Le service est prêt
-    successDescription: Le service local a terminé les vérifications de démarrage et est prêt à être ouvert.
     failureTitle: Le démarrage n’a pas abouti
-    failureDescription: Desktop a rencontré un problème au démarrage du service. Consultez le journal des échecs, ou fermez cette boîte de dialogue et poursuivez le dépannage.
     currentStepLabel: Progression actuelle
-    waitingHint: Le démarrage peut prendre plusieurs secondes. Desktop met à jour cette boîte de dialogue avec l’étape en cours et l’état d’exécution.
     states:
       pending: En attente
       active: En cours
@@ -187,32 +180,25 @@ webServiceStatus:
     openLogsError: Échec de l'ouverture du dossier des journaux Web de la version active
   listenAddress:
     label: Adresse d'écoute
-    description: Choisissez la manière dont Desktop lie le service Web intégré lorsqu'il est arrêté.
     customInputLabel: IPv4 personnalisé
     customPlaceholder: 192.168.1.24
     customError: Entrez une adresse IPv4 valide
     accessUrlPreviewLabel: Accéder à l'aperçu URL
     wildcardHint: '`0.0.0.0` lie chaque interface. Desktop ouvre toujours le client local via `127.0.0.1`.'
-    localOnlyHint: Les modifications prendront effet au prochain démarrage du service local.
     presets:
       localhost:
         label: hôte local
-        description: Idéal pour le WebView et le navigateur intégrés sur cette machine.
       loopback:
         label: 127.0.0.1
-        description: Utilisez une adresse de bouclage IPv4 explicite pour un accès local uniquement.
       wildcard:
         label: 0.0.0.0
-        description: Liez chaque interface locale afin que les autres appareils du réseau local puissent se connecter.
       custom:
         label: IP personnalisée
-        description: Liez une interface IPv4 spécifique, telle qu'un adaptateur LAN dédié.
 languageSelector:
   currentLanguage: Langue actuelle
   selectLanguage: Sélectionnez la langue
 dependencyManagement:
   title: Dépendances du système
-  description: Vérifier et gérer les dépendances d'exécution du système requises par le service Web
   batch:
     selectedCount: 'Sélectionnés : {{count}}'
     generate: Générer la commande groupée
@@ -249,10 +235,8 @@ dependencyManagement:
     systemSource: Source système
   manualHandoff:
     title: Installation manuelle du package CLI requise
-    description: Exécutez la commande suggérée en dehors du bureau. Pour plus de détails actuels sur l'environnement Node/npm fourni avec Desktop et le comportement de PATH, lisez la FAQ.
     faqLinkLabel: Afficher la FAQ sur l'environnement de nœud
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
-    refreshHint: Actualisez une fois la commande terminée pour revérifier les dépendances gérées par Desktop.
   noDependencies: Aucune dépendance détectée
   installToast:
     manualDisabledTitle: L’installation automatique est désactivée
@@ -353,17 +337,13 @@ homePromote:
 serviceRegion:
   title: Région de service
   resetTitle: Tester à nouveau le choix de région
-  resetDescription: Efface le choix enregistré et réaffiche l’invite lors de la prochaine ouverture de l’accueil. La source de paquets actuelle ne change pas.
   resetButton: Réinitialiser le choix
   resetSuccess: Choix de région réinitialisé. L’invite réapparaîtra à la prochaine ouverture de l’accueil.
   promptTitle: Choisir la région de service du serveur
   confirmChoice: Utiliser cette région
   later: Plus tard
   successTitle: Région de service enregistrée
-  successDescription: Vous pourrez la modifier plus tard dans Paramètres > Région.
   done: Compris
-  promptDescription: Ce choix détermine les points de téléchargement des mises à jour de Hagicode et des logiciels associés. Il ne modifie ni la langue ni les miroirs des dépendances.
-  description: Définit l’index officiel des paquets serveur et la source de téléchargement prioritaire. La langue et les miroirs des dépendances restent inchangés.
   choiceLabel: Région de service
   loading: Chargement de la région...
   saving: Application de la région...

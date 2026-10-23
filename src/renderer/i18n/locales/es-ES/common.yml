@@ -52,13 +52,11 @@ header:
   runningSuccessfully: Ejecutando con éxito
   language:
     label: Idioma
-    description: Seleccione el idioma de la interfaz de la aplicación
   embeddedWebServicePort: Puerto de servicio web integrado
 settings:
   title: Configuración
   language:
     label: Idioma
-    description: Seleccione el idioma de la interfaz de la aplicación
   embeddedWebServicePort: Puerto de servicio web integrado
 footer:
   copyright: © 2026 Hagicode Desktop
@@ -112,9 +110,7 @@ navigation:
   versionManagement: Gestión de versiones
   webServiceNotRunning: El servicio web no se está ejecutando
   officialWebsite: Sitio web oficial
-  officialWebsiteDesc: Visite el sitio web oficial Hagicode para obtener las últimas noticias y documentación.
   about:
-    sectionDescription: Primero, renderice la instantánea incluida y luego actualice los destinos oficiales más recientes.
     snapshotLabel: Instantánea incluida
     runtimeLabel: datos en vivo
     updatedAt: Actualizado {{value}}
@@ -156,12 +152,10 @@ sidebar:
   expand: Expandir
 dependencyManagement:
   title: Gestión de dependencias
-  description: Administre las dependencias de línea de comandos requeridas y opcionales para la preparación del lanzamiento de HagiCode e inspeccione el entorno integrado Node/npm del escritorio.
   loading: Leyendo el estado de dependencia...
   unavailable: No disponible
   environment:
     title: Entorno de nodo
-    description: Desktop utiliza su propio tiempo de ejecución Node/npm para los paquetes CLI administrados.
     managedNotice: Lea las preguntas frecuentes para obtener detalles actuales sobre el tiempo de ejecución Node/npm de Desktop, el aislamiento de PATH, las ubicaciones de los paquetes y la solución de problemas.
     externalNotice: Desktop está inspeccionando actualmente el entorno global de Node/npm que ya existe en este sistema.
     rationaleTitle: Nodo/entorno npm administrado por escritorio
@@ -180,19 +174,14 @@ dependencyManagement:
       error: error
   mirror:
     title: npm Aceleración del espejo
-    description: Habilite npmmirror.com para las operaciones de instalación y sincronización de paquetes npm administrados.
     toggleLabel: Utilice la aceleración npmmirror.com
     registryUrl: Registro URL
     enabled: Habilitado
     disabled: Discapacitado
     saving: Ahorro
-    enabledHelp: Las próximas operaciones de sincronización/instalación utilizarán el espejo de registro npmmirror.com.
-    disabledHelp: Las próximas operaciones npm utilizarán el comportamiento de registro predeterminado npm.
-    readOnlyHelp: La configuración del espejo no tiene efecto mientras la gestión de dependencias esté en modo externo de solo lectura.
     saveFailed: No se pudo guardar la configuración del espejo
   vendoredRuntime:
     title: Runtimes administrados por Desktop
-    description: Desktop prepara y supervisa los runtimes incluidos en lugar de gestionarlos mediante paquetes npm.
     managedByDesktop: Administrado directamente por Desktop
     runtimeState: Estado del runtime
     runtimeRoot: Raíz del runtime
@@ -202,7 +191,6 @@ dependencyManagement:
     metadataPath: Ruta de metadatos
     healthUrl: URL local
     diagnostics: Diagnósticos
-    reinstallHint: Este runtime incluido se distribuye con el paquete de Desktop. Reinstala Desktop para restaurar una copia empaquetada dañada.
     primaryDescriptions:
       installed: Los archivos del runtime están instalados y cumplen con el contrato de runtime más reciente de Desktop.
       packaged: El archivo empaquetado está listo, pero el runtime con permisos de escritura aún no se ha habilitado.
@@ -256,15 +244,12 @@ dependencyManagement:
     unknown: Desconocido
   uninstall:
     title: Confirmar desinstalación
-    description: "¿Desinstalar {{name}} del entorno {{mode}}? Los componentes activos se desactivan primero."
     cancel: Cancelar
     confirm: Desinstalar
     success: Componente desinstalado correctamente.
     alreadyRemoved: El componente ya se había eliminado.
     blocked: No se puede desinstalar porque otros componentes dependen de él.
   packages:
-    hagiscript:
-      description: Los metadatos del antiguo CLI independiente se conservan por compatibilidad. Desktop ahora sincroniza las herramientas administradas a través del SDK integrado.
     openspec:
       description: OpenSpec propuesta, especificación y flujo de trabajo de tareas CLI.
     skills:
@@ -299,11 +284,9 @@ dependencyManagement:
   bootstrap:
     title: CLI heredado
     selectorLabel: Destino de instalación
-    selectorHint: Desktop ya no instala un CLI independiente de hagiscript. Estas etiquetas se conservan solo por compatibilidad con superficies antiguas.
     currentTarget: 'Objetivo heredado: {{target}}'
     customVersionLabel: Versión personalizada
     customVersionPlaceholder: Introduce una versión, como 0.2.3
-    customVersionDescription: Las versiones independientes de hagiscript ya no se usan en los flujos de dependencias administrados por Desktop.
     targetOptions:
       latest: Última versión estable
       dev: Compilación de desarrollo
@@ -314,20 +297,16 @@ dependencyManagement:
     unknown: Desktop no puede verificar el entorno npm administrado en este momento. Actualiza o repara primero las dependencias administradas antes de cambiar otras herramientas.
   packageTable:
     title: Dependencias de la línea de comandos
-    description: Seleccione el Agente CLI y las dependencias del flujo de trabajo para instalarlas mediante el flujo de sincronización npm del SDK de Desktop.
     groups:
       base:
         title: Dependencias base
-        description: Instala OpenSpec, Skills y otras bases del flujo de trabajo de Desktop en un solo lugar.
       agentCli:
         title: Agent CLI
-        description: Elige las herramientas Agent CLI que quieras conectar e instálalas mediante el flujo de sincronización npm del SDK de Desktop.
     tool: Herramienta
     status: Estado
     action: acción
   batchLog:
     title: Registro de instalación por lotes
-    description: Salida combinada para {{count}} paquetes seleccionados.
     empty: Los registros aparecerán aquí después de que comience la instalación por lotes.
     completed: Instalación por lotes completada.
     status:
@@ -381,9 +360,7 @@ bootstrap:
     logsFailed: No se pudo abrir la carpeta de registros del escritorio
 systemDiagnostic:
   title: Diagnóstico del sistema
-  description: Recopile los detalles del entorno local de este dispositivo y comparta el informe en texto sin formato con el soporte técnico.
   reportTitle: Informe en texto plano
-  reportDescription: Cada repetición reemplaza el informe anterior, por lo que el contenido copiado siempre refleja la instantánea de diagnóstico más reciente.
   empty: Ejecute un diagnóstico del sistema para capturar el sistema operativo, el hardware, las sondas de registro del Agente 0 y los detalles principales de la cadena de herramientas.
   loading: Recopilando detalles del entorno local...
   actions:
@@ -451,11 +428,8 @@ systemDiagnostic:
 system:
   dashboard:
     title: Centro de control de Desktop
-    description: Reúne el estado del servicio, las acciones de inicio y detención, la versión activa, el acceso a registros y las actualizaciones recomendadas en un único espacio de trabajo.
   commercePanel:
     title: Licencias y patrocinio
-    storeDescription: Revise aquí rápidamente el estado actual de TurboEngine y del plan de patrocinio; abra el espacio detallado solo cuando necesite comprar, administrar o actualizar.
-    nonStoreDescription: Este entorno no es la edición de Microsoft Store. Use estos enlaces para abrir las páginas del producto y cambiar a la versión de Store cuando sea necesario.
     sponsorSummary: Su apoyo es lo que nos mantiene publicando actualizaciones
     actions:
       viewDetails: Ver detalles
@@ -475,19 +449,15 @@ system:
         active: Simula la edición de Store tras la activación para poder revisar el diseño posterior a la compra.
   logQuickAccess:
     title: Registrar acceso rápido
-    description: Abra las carpetas de registro de la aplicación web y del escritorio directamente para acortar el tiempo de diagnóstico.
     loading: Comprobando carpetas de registro...
-    hint: Los estados de los botones se actualizan automáticamente con la versión activa.
     status:
       available: Disponible
       unavailable: No disponible
     desktop:
       label: Carpeta de registros de escritorio
-      description: Abra el directorio de registros de escritorio actual en este dispositivo.
       openSuccess: Carpeta de registros de escritorio abierta
     webApp:
       label: Carpeta de registros de aplicaciones web
-      description: Abra el directorio de registros de la aplicación web para la versión activa.
       openSuccess: Se abrió la carpeta de registros de la aplicación web
     errors:
       load_failed: No se pudo cargar el estado de la carpeta de registro
@@ -496,11 +466,9 @@ system:
       open_failed: No se pudo abrir la carpeta de registros
   noVersionInstalled:
     title: Aún no hay versiones instaladas
-    description: La forma más sencilla de comenzar con Hagicode Desktop es a través de nuestro asistente de configuración guiada. Complete la instalación y configuración en solo unos pocos pasos.
     startWizard: Asistente de lanzamiento
   noActiveVersion:
     title: Hay un runtime instalado, pero no hay una versión activa seleccionada
-    description: Se encontró un runtime local, pero la referencia de la versión activa falta o no es válida. Abra primero la administración de versiones y seleccione una versión utilizable.
     manageVersions: Abrir administración de versiones
   activeVersion:
     actions:
@@ -571,7 +539,6 @@ system:
         description: Cuando aún no haya ningún paquete instalado, utilice esta llamada a la acción para iniciar el asistente de instalación y completar la primera instalación en tiempo de ejecución.
   services:
     title: Servicios administrados
-    description: Supervisa y controla desde un solo lugar los servicios administrados por Desktop.
     viewDetails: Detalles
     port: 'Puerto: {{port}}'
     notReady: No está listo

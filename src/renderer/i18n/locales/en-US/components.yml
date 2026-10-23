@@ -38,7 +38,6 @@ dependencyWarningBanner:
   fixLater: Fix Later
 packageManagement:
   cardTitle: Package Management
-  cardDescription: Manage the installation of web service packages
   platformLabel: Platform
   detecting: Detecting...
   installationStatusLabel: Installation Status
@@ -75,7 +74,6 @@ packageManagement:
     error: Error
 webServiceStatus:
   cardTitle: Embedded Web Service
-  cardDescription: View and manage web service running status
   status:
     running: Running
     stopped: Stopped
@@ -95,7 +93,6 @@ webServiceStatus:
   dependencyReadinessButton: Open Dependency Management
   managedStartup:
     label: Managed service startup
-    description: Choose which managed services should start together when you launch Hagicode.
   dependencyReadinessAlert:
     title: Dependencies are not ready
     message: Install required Desktop-managed dependencies before starting Hagicode; optional dependencies do not block base service launch.
@@ -146,13 +143,9 @@ webServiceStatus:
     copyEmpty: No log content to copy
   startupProgress:
     title: Starting service
-    description: Desktop is checking the active version, validating required dependencies, and waiting for the local Hagicode service to finish booting.
     successTitle: Service is ready
-    successDescription: The local service completed startup checks and is ready to open.
     failureTitle: Startup did not finish
-    failureDescription: Desktop hit a problem while starting the service. Review the failure log or close this dialog and continue troubleshooting.
     currentStepLabel: Current progress
-    waitingHint: Startup can take several seconds. Desktop keeps this dialog updated with the current step and execution status.
     states:
       pending: Pending
       active: In progress
@@ -187,32 +180,25 @@ webServiceStatus:
     openLogsError: Failed to open active version Web logs folder
   listenAddress:
     label: Listening Address
-    description: Choose how Desktop binds the embedded web service while it is stopped.
     customInputLabel: Custom IPv4
     customPlaceholder: 192.168.1.24
     customError: Enter a valid IPv4 address
     accessUrlPreviewLabel: Access URL preview
     wildcardHint: '`0.0.0.0` binds every interface. Desktop still opens the local client through `127.0.0.1`.'
-    localOnlyHint: Changes take effect the next time the local service starts.
     presets:
       localhost:
         label: localhost
-        description: Best for the built-in WebView and browser on this machine.
       loopback:
         label: 127.0.0.1
-        description: Use an explicit IPv4 loopback address for local-only access.
       wildcard:
         label: 0.0.0.0
-        description: Bind every local interface so other devices on the LAN can connect.
       custom:
         label: Custom IP
-        description: Bind one specific IPv4 interface, such as a dedicated LAN adapter.
 languageSelector:
   currentLanguage: Current Language
   selectLanguage: Select Language
 dependencyManagement:
   title: System Dependencies
-  description: Check and manage system runtime dependencies required by the web service
   batch:
     selectedCount: 'Selected: {{count}}'
     generate: Generate batch command
@@ -249,10 +235,8 @@ dependencyManagement:
     systemSource: System source
   manualHandoff:
     title: Manual CLI package install required
-    description: Run the suggested command outside Desktop. For current details about the externally installed Node/npm environment and PATH behavior, read the FAQ.
     faqLinkLabel: View Node environment FAQ
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
-    refreshHint: Refresh after the command finishes to re-check Desktop-managed dependencies.
   noDependencies: No dependencies detected
   installToast:
     manualDisabledTitle: Automatic installation is disabled
@@ -356,14 +340,10 @@ serviceRegion:
   confirmChoice: Use this region
   later: Later
   successTitle: Service region saved
-  successDescription: You can change this later in Settings > Region.
   done: Got it
   resetTitle: Test the region prompt again
-  resetDescription: Clear the saved choice and show the setup prompt the next time you open Home. Your current package source stays unchanged.
   resetButton: Reset choice
   resetSuccess: Region choice reset. The setup prompt will appear next time you open Home.
-  promptDescription: This choice affects the download endpoints used for Hagicode version updates and related software packages. It does not change your interface language or dependency mirrors.
-  description: Controls the official server package index and preferred download source. It does not change interface language or dependency mirrors.
   choiceLabel: Service region
   loading: Loading region...
   saving: Applying region...

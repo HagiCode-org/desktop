@@ -1,17 +1,13 @@
 title: Configuração inicial
 welcome:
   title: Bem-vindo ao Hagicode Desktop
-  description: Hagicode Desktop é o lançador local para Hagicode. Concluiremos a configuração inicial e a confirmação de conformidade em {{count}} etapas.
   features:
     manage:
       title: Gerenciamento de versão
-      description: Gerenciar instalação e atualizações Hagicode Server
     monitor:
       title: Monitoramento de serviço
-      description: Iniciar, parar e monitorar o status do serviço
     dependencies:
       title: Gerenciamento de Dependências
-      description: Visualize e gerencie dependências do sistema
   processTitle: 'A configuração inicial tem {{count}} etapas:'
   steps:
     welcome: Revise a configuração e o que acontecerá a seguir
@@ -40,8 +36,6 @@ download:
   pleaseWait: Aguarde enquanto baixamos...
 dependencies:
   title: Instalar dependências do sistema
-  subtitle: Hagicode requer certas dependências do sistema para funcionar corretamente.
-  description: Verifique o status de instalação das dependências do sistema
   installButton: Instalar dependências
   status:
     installed: Instalado
@@ -75,10 +69,8 @@ dependencies:
     message: Algumas dependências não foram instaladas. Instale-os manualmente e continue.
   manualHandoff:
     title: Instalação manual do pacote CLI necessária
-    description: Execute o comando sugerido fora do Desktop. Para obter detalhes atuais sobre o ambiente Node/npm incluído no Desktop e o comportamento do PATH, leia o FAQ.
     faqLinkLabel: Ver perguntas frequentes sobre o ambiente Node
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
-    refreshHint: Atualize após a conclusão do comando para verificar novamente as dependências gerenciadas pelo Desktop.
 depInstallConfirm:
   title: Instalar dependências ausentes
   installingTitle: Instalando Dependências
@@ -105,10 +97,8 @@ launch:
   title: Iniciar serviço
   starting:
     title: Começando Hagicode Server...
-    subtitle: Inicializando componentes de serviço...
   complete:
     title: Configuração concluída!
-    subtitle: Hagicode Desktop foi instalado e iniciado com sucesso.
     success: Parabéns! Hagicode Desktop foi instalado e iniciado com sucesso.
     ready: Agora você pode começar a usar todos os recursos.
     button: Entre na interface principal
@@ -130,8 +120,6 @@ launch:
     issues: Relatar problemas
   failure:
     title: Falha na inicialização
-    subtitle: Hagicode Server não foi possível terminar a inicialização. Revise os diagnósticos e reinstale antes de continuar a configuração.
-    guidance: Abra o log completo, reinstale a versão atual e reinicie o fluxo de configuração.
     viewLog: Ver registro completo
     retryButton: Tentar novamente a inicialização
     reinstallButton: Reinstale e reinicie a configuração
@@ -140,8 +128,6 @@ launch:
     emptySummary: Nenhum resumo de falha de inicialização foi capturado
     emptyLog: Nenhum log de falha de inicialização foi capturado
     meta: 'Porto: {{port}} · Tempo: {{timestamp}}'
-    truncatedHint: O log de inicialização foi truncado para a saída mais recente.
-    recoveryHint: Recomendamos reinstalar a versão atual e redefinir a integração antes de tentar a configuração novamente.
     copyButton: Copiar registro
     copySuccess: Log de falha de inicialização copiado
     copyError: Falha ao copiar o log de falha de inicialização
@@ -161,12 +147,10 @@ skip:
     Depois de pular, você pode:
     • Instale manualmente Hagicode Server através de "Gerenciamento de Pacotes" na interface principal
     • Reative o processo de configuração nas configurações
-  reenableNote: Se esta é a primeira vez que usa Hagicode Desktop, recomendamos concluir o processo de configuração.
   cancel: Cancelar
   confirm: Ignorar configuração
 dependencyManagement:
   title: Gerenciamento de Dependências
-  description: Visualize e gerencie dependências do sistema
   status:
     installed: Instalado
     bundled: Incluído no Desktop
@@ -193,10 +177,8 @@ dependencyManagement:
     systemSource: Fonte do sistema
   manualHandoff:
     title: Instalação manual do pacote CLI necessária
-    description: Execute o comando sugerido fora do Desktop. Para obter detalhes atuais sobre o ambiente Node/npm incluído no Desktop e o comportamento do PATH, leia o FAQ.
     faqLinkLabel: Ver perguntas frequentes sobre o ambiente Node
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
-    refreshHint: Atualize após a conclusão do comando para verificar novamente as dependências gerenciadas pelo Desktop.
   noDependencies: Nenhuma dependência detectada
 dependencyCheck:
   title: Resultados da verificação de dependência
@@ -212,8 +194,6 @@ dependencyCheck:
     requiredVersion: Versão necessária
 legal:
   title: Contrato de licença de usuário final e política de privacidade
-  descriptionFull: Antes de baixar o HagiCode Server, confirme as revisões atuais do EULA e da Política de Privacidade. Os documentos oficiais são abertos no seu navegador padrão.
-  descriptionLegalOnly: As revisões legais atuais ainda não foram aceitas. Revise os documentos oficiais em seu navegador padrão e retorne ao Desktop para confirmar.
   progressFull: 'Configuração completa: {{steps}}'
   progressLegalOnly: 'Modo de compliance: a seleção de idioma aparece antes da etapa legal atual'
   browserInstruction: Abra os documentos oficiais em seu navegador padrão antes de aceitar. Desktop mostra apenas o resumo da revisão, não o texto jurídico completo.
@@ -247,7 +227,6 @@ legal:
     privacy-policy: Política de Privacidade
 languageSelection:
   title: Escolher idioma
-  description: Escolha primeiro o idioma usado pelo Hagicode Desktop. A primeira inicialização do backend embutido também usará um padrão compatível.
   recommended: Recomendado
   selected: Selecionado
   choose: Escolher este idioma

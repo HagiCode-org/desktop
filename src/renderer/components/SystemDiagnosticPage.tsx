@@ -16,7 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PageShell } from '@/components/ui/page-shell';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 type DiagnosticPageStatus = 'idle' | 'loading' | 'ready' | 'error';
@@ -138,7 +138,6 @@ export default function SystemDiagnosticPage() {
                 <Stethoscope className="h-5 w-5 text-primary" />
                 {t('systemDiagnostic.title')}
               </CardTitle>
-              <CardDescription>{t('systemDiagnostic.description')}</CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -302,10 +301,7 @@ export default function SystemDiagnosticPage() {
 
           {showResult && result && (
             <div className="space-y-3">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-foreground">{t('systemDiagnostic.reportTitle')}</p>
-                <p className="text-xs text-muted-foreground">{t('systemDiagnostic.reportDescription')}</p>
-              </div>
+              <p className="text-sm font-medium text-foreground">{t('systemDiagnostic.reportTitle')}</p>
               <ScrollArea className="h-[clamp(14rem,45vh,28rem)] rounded-xl border border-border bg-black/[0.03] p-4">
                 <pre className="font-mono text-sm leading-6 text-foreground whitespace-pre-wrap break-words">
                   {result.report}

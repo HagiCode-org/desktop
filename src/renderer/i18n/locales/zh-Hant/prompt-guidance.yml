@@ -2,9 +2,6 @@ loading: 正在載入提示詞指引...
 emptyState: Desktop 可以解析提示字來源、展示完整內容，並幫你把它準備好用於複製貼上。
 availableTools: 可用工具
 promptTitle: 提示詞
-promptDescription: 請完整複製下方提示詞，再貼上到你的 AI CLI 中執行。
-tipTitle: 使用建議
-tipDescription: 在建議的工作目錄中開啟任意支援的 CLI，貼上提示詞，應用建議後再回到 Desktop。
 actions:
   refresh: 重新加載指引
   loading: 載入中

@@ -1,17 +1,13 @@
 title: 首次使用引导
 welcome:
   title: 欢迎使用 Hagicode Desktop
-  description: Hagicode Desktop 是 Hagicode 的本地启动器，接下来会用 {{count}} 个步骤完成首次安装与合规确认。
   features:
     manage:
       title: 版本管理
-      description: 管理 Hagicode Server 的安装和更新
     monitor:
       title: 服务监控
-      description: 启动、停止和监控服务状态
     dependencies:
       title: 依赖管理
-      description: 查看和管理系统依赖项
   processTitle: 首次安装共分 {{count}} 个步骤：
   steps:
     languageSelection: 先选择引导与界面使用的语言
@@ -25,7 +21,6 @@ claude:
   title: 配置 Claude Code
 languageSelection:
   title: 选择语言
-  description: 先选择 Hagicode Desktop 使用的语言。首次启动内置后端时，也会使用对应的默认语言。
   recommended: 推荐
   selected: 已选择
   choose: 选择此语言
@@ -47,8 +42,6 @@ download:
   pleaseWait: 请稍候，正在下载...
 dependencies:
   title: 安装系统依赖项
-  subtitle: Hagicode 需要某些系统依赖项才能正常运行。
-  description: 检查以下系统依赖项的安装状态
   installButton: 安装依赖项
   status:
     installed: 已安装
@@ -82,10 +75,8 @@ dependencies:
     message: 部分依赖项安装失败，请手动安装后继续。
   manualHandoff:
     title: 需要手动安装 CLI 包
-    description: 请在 Desktop 外执行建议命令。关于外部 Node/npm 环境和 PATH 行为的最新说明，请阅读 FAQ。
     faqLinkLabel: 查看 Node 环境 FAQ
     faqUrl: https://docs.hagicode.com/faq/desktop-node-environment/
-    refreshHint: 命令执行完成后刷新一次，以重新检测 Desktop 托管依赖。
 depInstallConfirm:
   title: 安装缺失依赖
   installingTitle: 正在安装依赖
@@ -112,10 +103,8 @@ launch:
   title: 启动服务
   starting:
     title: 正在启动 Hagicode Server...
-    subtitle: 正在初始化服务组件...
   complete:
     title: 安装完成！
-    subtitle: Hagicode Desktop 已成功安装并启动。
     success: 恭喜！Hagicode Desktop 已成功安装并启动。
     ready: 您现在可以开始使用所有功能。
     button: 打开 Hagicode
@@ -137,8 +126,6 @@ launch:
     issues: 问题反馈
   failure:
     title: 启动失败
-    subtitle: Hagicode Server 未能完成启动。请查看诊断日志并重新安装后再继续初始化。
-    guidance: 您可以先查看完整日志，然后重新安装当前版本并重新开始引导流程。
     viewLog: 查看完整日志
     retryButton: 重试启动
     reinstallButton: 重新安装并重置引导
@@ -147,8 +134,6 @@ launch:
     emptySummary: 未获取到启动失败摘要
     emptyLog: 未获取到启动失败日志
     meta: 端口：{{port}} · 时间：{{timestamp}}
-    truncatedHint: 日志已截断，仅显示最近的输出内容。
-    recoveryHint: 建议先重新安装当前版本并重置引导状态，然后重新完成首次初始化流程。
     copyButton: 复制日志
     copySuccess: 启动失败日志已复制
     copyError: 复制启动失败日志失败
@@ -168,12 +153,10 @@ skip:
     跳过后，您可以：
     • 通过主界面的"包管理"功能手动安装 Hagicode Server
     • 在设置中重新启用引导流程
-  reenableNote: 如果您是第一次使用 Hagicode Desktop，建议完成引导流程。
   cancel: 取消
   confirm: 跳过引导
 dependencyManagement:
   title: 依赖项管理
-  description: 查看和管理系统依赖项
   status:
     installed: 已安装
     bundled: 随 Desktop 内置
@@ -200,10 +183,8 @@ dependencyManagement:
     systemSource: 系统来源
   manualHandoff:
     title: 需要手动安装 CLI 包
-    description: 请在 Desktop 外执行建议命令。关于外部 Node/npm 环境和 PATH 行为的最新说明，请阅读 FAQ。
     faqLinkLabel: 查看 Node 环境 FAQ
     faqUrl: https://docs.hagicode.com/faq/desktop-node-environment/
-    refreshHint: 命令执行完成后刷新一次，以重新检测 Desktop 托管依赖。
   noDependencies: 未检测到依赖
 dependencyCheck:
   title: 依赖检查结果
@@ -219,8 +200,6 @@ dependencyCheck:
     requiredVersion: 要求版本
 legal:
   title: 终端用户许可协议与隐私政策
-  descriptionFull: 在继续下载 HagiCode Server 之前，请先确认当前 EULA 与隐私政策版本。正式文档会在默认浏览器中打开。
-  descriptionLegalOnly: 检测到当前协议版本尚未确认。请先在默认浏览器中查看正式文档，然后返回 Desktop 完成确认。
   progressFull: 完整引导：{{steps}}
   progressLegalOnly: 合规拦截模式：会先显示语言选择，再进入当前协议确认步骤
   browserInstruction: 请先点击下方按钮在默认浏览器中查看正式文档。Desktop 只展示版本摘要，不内嵌协议全文。

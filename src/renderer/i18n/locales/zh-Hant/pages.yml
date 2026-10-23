@@ -14,17 +14,13 @@ settings:
     advanced: 進階設定
   notification:
     title: 通知中心
-    description: 驗證桌面通知流程，並檢視用戶端使用的預設通知參數。
     testSectionTitle: 測試通知
-    testSectionDescription: 傳送一則原生桌面通知，以驗證 IPC 橋接與作業系統通知通道是否運作正常。
     testButton: 傳送測試通知
     sending: 傳送中...
     testSuccess: 測試通知已傳送
-    testSuccessDescription: 若作業系統的通知權限可用，桌面應該已經收到這則通知。
     testError: 傳送測試通知失敗
     testErrorDescription: 錯誤詳情：{{error}}
     previewTitle: 預設參數預覽
-    previewDescription: 執行測試通知時，這些欄位會傳送至主程序。
     testTitle: 測試通知
     testBody: 桌面通知已就緒。點擊此通知會將 Hagicode Desktop 切換到前景。
     eventShown: 最近一次顯示事件
@@ -44,47 +40,36 @@ settings:
       silent: 靜音
   languageSettings:
     title: 語言設定
-    description: 切換 Desktop 目前使用的顯示語言，並立即更新介面文字。
-    helper: 語言變更會立即套用到選單、系統匣標籤與設定頁籤。
   themeSettings:
     title: 主題設定
-    description: 此處預留了主題設定入口，未來將集中管理亮色、暗色模式與視覺偏好。
   advancedSettings:
     title: 進階設定
-    description: 為日誌、實驗功能與進階執行參數預留統一入口。
   placeholders:
     comingSoon: 此設定模組已登錄至新的設定框架，詳細設定將於後續變更中補齊。
   smartConfig:
     title: 智慧配置提示指引
-    description: 查看 Desktop 解析出的提示詞，複製到任意支援的 AI CLI 中，並手動完成設定流程。
   onboarding:
     title: 啟動精靈
-    description: 重新執行首次使用引導流程，下載套件、安裝依賴並啟動服務。
     restartWizard: 重新啟動精靈
-    restartWizardDescription: 重新執行首次使用引導流程，下載套件、安裝依賴並啟動服務。
     restartButton: 重新啟動精靈
     resetting: 重置中...
     resetSuccess: 啟動精靈已重置
     resetError: '重置失敗: {{error}}'
     homepageTour:
       title: 重置首頁導覽
-      description: 清除首頁導覽完成狀態，這樣下次開啟系統管理首頁時會再次自動播放講解。
       resetButton: 重置首頁導覽
       resetting: 重置導覽中...
       resetSuccess: 首頁導覽已重置
       resetError: '重置首頁導覽失敗: {{error}}'
   updates:
     title: 後台更新
-    description: 管理自動檢查、背景預下載與已驗證歸檔保留策略。
     managedInstall:
       title: 自動更新已停用
       description: 應用程式不會自動更新。更新方式取決於您安裝時所使用的管道，例如 Microsoft Store 或 Steam。
     enabled:
       label: 啟用背景自動預先下載
-      description: 偵測到相容新版本時，先在背景下載歸檔並保持目前執行版本不變。
     retainedArchiveCount:
       label: 保留的歷史歸檔數量
-      description: 僅保留已驗證通過的自動下載歸檔，超過上限時會自動清理最舊記錄。
     actions:
       save: 儲存設定
       saving: 儲存中...
@@ -95,12 +80,8 @@ settings:
     errors:
       retainedArchiveCountPositive: 保留數量必須是大於 0 的整數。
       saveErrorDetail: 儲存失敗：{{error}}
-    notes:
-      snapshotModel: 首頁提醒依賴主程序持久化快照，重新啟動 Desktop 後仍會恢復最近一次更新狀態。
-      retentionPolicy: 保留策略只會清理快取歸檔文件，不會刪除已經安裝完成的版本目錄。
   runtimeDataPath:
     title: 執行時資料儲存路徑
-    description: 選擇 Desktop 執行時檔案、日誌和其他執行時資料的儲存根目錄。
     activePreset: 目前生效預設：{{preset}}
     environmentOverrideBadge: 環境變數覆寫已啟用
     lockedByRuntime: 已由 Microsoft Store 鎖定
@@ -111,10 +92,8 @@ settings:
     options:
       userData-runtime-data:
         label: userData/runtime-data（預設）
-        description: 儲存到 Desktop 的 Electron userData 目錄下，適合預設單機安裝場景。
       home-runtime-data:
         label: ~/.hagicode/runtime-data
-        description: 儲存到目前使用者主目錄下，適合需要固定共用路徑的部署方式。
     warnings:
       noMigration: 切換此設定只會修改目標路徑，Desktop 不會自動遷移既有執行時資料。
       restart: 儲存新的預設後，Desktop 會重新啟動受管後端，讓新的執行時資料根目錄立即生效。
@@ -131,23 +110,16 @@ settings:
       saveErrorDetail: 儲存失敗：{{error}}
   debugOptions:
     title: 調試選項
-    description: 控制 Desktop 託管 npm 行為中的調試選項，用於診斷套件安裝問題。
     useIgnoreScriptsForManagedNpm:
       label: npm 使用 `--ignore-scripts`
-      description: 讓 Desktop 託管的 npm 安裝與同步操作跳過 lifecycle scripts，便於排查 postinstall 等腳本導致的問題。
     skipPurchaseSimulateSuccess:
       label: 跳過購買，模擬購買成功
       shortLabel: 模擬打賞成功
-      description: 開啟後，發起打賞購買將跳過 Microsoft Store 支付，按所選檔位視為購買成功，並仍播放隨機答謝動畫。預設關閉。預設不寫入持久化購買計數。
     installDate:
       label: 原始安裝日期（msstoreRatingPrompt.installDate）
-      description: 顯示本機設定中實際持久化儲存的原始安裝日期字串。連續點擊後編輯，即可更新已儲存的值。
       placeholder: e.g. 2024-01-01T00:00:00.000Z
       ageDays: 安裝天數：{{value}}
       ageDaysUnknown: 未知
-    notes:
-      scope: 此設定只影響後續 Desktop 託管的 npm 安裝與同步操作。
-      npm: npm 開關只影響後續 Desktop 託管的 npm 安裝與同步操作，儲存後立即生效，不需要重新啟動受管服務。
     actions:
       save: 儲存變更
       saving: 儲存中...
@@ -162,10 +134,8 @@ footer:
   copyright: © 2026 Hagicode Desktop
 quickStart:
   title: 快速開始
-  description: 安裝 Hagicode 服務包並開始管理您的本機 PCode 執行個體。
 secure:
   title: 安全
-  description: 注重安全建置。您的資料保留在您的機器上。
 header:
   runningSuccessfully: 運行成功
 dependencyManagement:
@@ -174,10 +144,8 @@ dependencyManagement:
     environment: 環境
   title: 依賴項管理
   backToDashboard: 返回儀表板
-  description: 管理 Hagicode 服務包和系統相依性
   tips:
     title: 提示
-    description: 保持依賴項更新以獲得最佳效能和安全性。
   noPackageInstalled: 未安裝任何軟體包
   installedVersion: 已安裝版本
   requiredVersion: 所需版本
@@ -203,17 +171,14 @@ dependencyManagement:
     systemSource: 系統來源
   manualHandoff:
     title: 需手動安裝 CLI 套件
-    description: 請在 Desktop 外執行建議指令。關於 Desktop 內建 Node/npm 環境和 PATH 行為的最新說明，請閱讀 FAQ。
     faqLinkLabel: 查看 Node 環境 FAQ
     faqUrl: https://docs.hagicode.com/faq/desktop-node-environment/
-    refreshHint: 命令執行完成後刷新一次，以重新偵測 Desktop 託管相依性。
 versionManagement:
   tabs:
     newVersions: 新版本
     downloadedVersions: 已下載版本
     sourceManagement: 來源管理
   title: 版本管理
-  description: 安裝、切換與管理 Hagicode Server 版本
   availableVersions: 可用版本
   installedVersions: 已安裝版本
   installed: 已安裝
@@ -232,7 +197,6 @@ versionManagement:
   noVersionsAvailable: 暫無可用版本
   noVersionsInstalled:
     title: 還沒有安裝任何版本
-    description: 開始使用 Hagicode Desktop 最簡單的方法是透過我們的引導精靈。只需幾個步驟即可完成安裝和配置。
     startButton: 啟動引導嚮導
   status:
     active: 目前啟用
@@ -257,7 +221,6 @@ versionManagement:
   progressText: 進度文字
   info:
     title: 關於版本管理
-    description: 版本管理可讓您安裝多個 Hagicode Server 版本、在它們之間切換，並在啟動前查看 Desktop 相容性。
   toast:
     installSuccess: 安裝成功
     installSuccessDescription: 版本已成功安裝，請手動啟動服務。
@@ -331,7 +294,6 @@ installProgressDialog:
 subscription:
   eyebrow: Microsoft Store 贊助者計畫
   title: Hagicode 贊助者計畫
-  description: 查看 Microsoft Store 贊助者計畫的狀態、刷新本機快照，並確認目前這台裝置是否已啟用贊助權益。
   loading: 正在讀取快取中的贊助快照...
   errorTitle: 無法讀取贊助快照
   errorDescription: Desktop 無法載入贊助快照：{{error}}
@@ -359,17 +321,11 @@ subscription:
   hero:
     inactive:
       title: 讓 Hagicode 變得更好
-      description: 贊助者計畫用於支持 Hagicode 的持續維護。
-      note: AI Agent features do not stay useful on their own. They need ongoing tracking, prompt updates, implementation work, and token spend to stay aligned with fast-moving tools.
     active:
       title: 感謝你的支持
-      description: 目前這台裝置已啟用贊助權益。你可以在這裡確認狀態、重新打開購買流程，或手動刷新快照。
-      note: Your purchase is more than a receipt. It directly supports the ongoing maintenance, iteration, and follow-up work that keeps the feature reliable after launch.
   message:
     ongoingTitle: 持續演進需要投入
-    ongoingDescription: Hagicode is not a one-and-done product. Keeping it useful means continued author time and recurring token spend for updates, validation, and tracking change.
     perksTitle: 贊助者也會獲得回饋
-    perksDescription: 我們也會適時推出合適的配套權益，為贊助者提供更精美的主題與其他權益內容。
     unlockNoticeTitle: 目前不提供功能解鎖
     unlockNoticeDescription: 贊助者計畫本身不會解鎖其他產品功能；其他獨立能力仍需另外購買授權。
     inactivePrompt: 如果你認同這件事，可以透過贊助者計畫支持它持續發展。
@@ -385,21 +341,13 @@ subscription:
     subscribeViaStore: 前往 Microsoft Store 訂閱
     installStoreApp: 安裝 Microsoft Store 版
     processing: 處理中...
-    buyHint: Start the Microsoft Store flow to support continued AI Agent iteration and attach sponsor entitlements to this device.
-    manageHint: Open the Microsoft Store purchase flow again if you want to confirm the sponsoring account or manage the current plan.
-    activeHint: 這台裝置已啟用贊助權益。如需重新確認最新的 Microsoft Store 狀態，可以手動刷新一次。
-    unsupportedHint: 購買與管理僅適用於 Microsoft Store 版的 Hagicode Desktop。
-    installHint: Open the sponsor plan in Microsoft Store first, then install or launch the Store edition of Hagicode Desktop to complete subscription and sync entitlements.
     secondaryLabel: Before you decide
-    secondaryHint: Refresh first if you want Desktop to re-check Microsoft Store and confirm the latest local snapshot before you purchase or review the plan.
   summary:
     planLabel: 計畫
     planName: Hagicode 贊助者計畫
     renewalLabel: 續訂 / 到期
     lastSyncLabel: 最近一次成功同步
     entitlementsLabel: 已啟用權益
-    activeDetail: Sponsor entitlements are already available on this device.
-    inactiveDetail: Purchasing here is what turns future sponsor benefits on for this device.
     source: 來源：{{value}}
   sourceValue:
     initial: 目前工作階段初始狀態
@@ -408,49 +356,36 @@ subscription:
   mission:
     eyebrow: 為什麼需要贊助
     title: 你的購買會幫助支持後續維護與更新。
-    description: 這樣我們才能繼續跟進模型、CLI 和工作流程的變化。
     points:
       evolution:
         title: 持續維護 Hagicode
-        description: 跟進模型、CLI 和工作流程的變化。
       investment:
         title: 支持驗證與更新
-        description: 讓修正、驗證與迭代可以持續推進。
       rewards:
         title: 啟用贊助者權益
-        description: 購買後，這台裝置會顯示並保留對應權益。
   gratitude:
     eyebrow: 給贊助者的話
     title: Your support is already carrying real work
-    description: The sponsor plan is designed as a practical way to keep ongoing product work funded while giving supporters clear recognition inside Desktop.
     points:
       continuity:
         title: Continued iteration stays possible
-        description: Active sponsorship gives us room to keep tracking AI Agent changes, respond to tool shifts, and ship follow-up improvements instead of freezing the feature after launch.
       benefits:
         title: Sponsor-facing polish can grow next
-        description: We can now keep shaping tasteful sponsor experiences, including more refined themes and other benefits that feel aligned with the product.
       roadmap:
         title: Future perks already have a delivery path
-        description: The entitlement model is in place, so later sponsor-only additions can land cleanly without rebuilding the purchase foundation.
   benefits:
     eyebrow: 這個計畫會逐步帶來什麼
     title: 先支持創作，再把回饋做得更好
-    description: 贊助者計畫目前刻意保持簡單，是為了先把支持持續創作這件事做紮實，同時為後續更精緻、更合適的權益預留空間。
     items:
       recognition:
         title: Desktop 內的贊助者身分表達
-        description: 贊助狀態可在應用程式內提供明確但不喧賓奪主的身分標示，而不必依賴零散的臨時判斷。
       theme:
         title: 更精美的主題與視覺打磨
-        description: 有了贊助支持，我們能把更多心力投入高品質主題與視覺細節，而不是只維持最低可用狀態。
       future:
         title: 後續贊助者專屬權益
-        description: 現有的權益模型已為未來的贊助者專屬功能預留穩定入口，待內容成熟後即可順利上線。
   snapshot:
     eyebrow: 目前裝置狀態
     title: Store 狀態與本機權益詳情
-    description: 此處保留了目前裝置上的運作資訊，方便你確認贊助狀態實際同步到了什麼程度。
     fields:
       status: 目前狀態
       planStoreId: Store ID
@@ -461,8 +396,6 @@ subscription:
       source: 快照來源
   entitlements:
     title: 權益摘要
-    activeDescription: These are the sponsor capability flags currently available on this device.
-    inactiveDescription: These capability flags are reserved for sponsor-only Desktop experiences and become available after purchase.
     enabled: 已啟用
     disabled: Disabled
     names:
@@ -474,7 +407,6 @@ subscription:
   diagnostics:
     eyebrow: 技術追蹤
     title: Diagnostics
-    description: Cached-state recovery details stay visible so refresh failures do not look like entitlement loss.
     lastSuccessfulSync: 最近一次成功同步
     source: 快照來源
     empty: 暫無診斷資訊。
@@ -483,8 +415,6 @@ subscription:
     description: Microsoft Store 沒有完成最近一次刷新，所以 Desktop 保留了這次工作階段裡最後一次成功確認的贊助狀態，而不是直接清空。
   unsupported:
     title: 需要 Microsoft Store 版本
-    description: 購買與管理操作僅適用於 Microsoft Store 版的 Hagicode Desktop。
-    nonStoreDescription: 目前執行的不是 Microsoft Store 版。請使用下方按鈕前往 Microsoft Store 開啟贊助者計畫，再安裝或啟動 Microsoft Store 版 Hagicode Desktop，以完成訂閱與權益同步。
   purchaseOutcome:
     title: 購買結果
     succeeded: 購買已完成，Desktop 也已刷新贊助快照。
@@ -507,11 +437,8 @@ turboEngine:
   errorDescription: Desktop 無法載入 TurboEngine 快照：{{error}}
   hero:
     title: TurboEngine 工作區
-    activeDescription: TurboEngine is already licensed on this device. You can confirm the current Microsoft Store state, review diagnostics, and refresh whenever needed.
-    inactiveDescription: TurboEngine uses a separate perpetual Microsoft Store license. This workspace lets you verify the current state, buy the license, and confirm the latest runtime diagnostics.
   article:
     unlockTitle: 一次購買，永久解鎖
-    unlockLead: TurboEngine DLC 將高並發提案、品牌自訂、主題擴充與自訂頭像上傳整合成一個永久解鎖包。買斷後不需要訂閱，功能會直接作用在你目前這套工作台體驗上。
     featuresTitle: 主要解鎖特性
     purchaseNoticeTitle: 購買須知
     purchaseNoticeItems:
@@ -521,19 +448,14 @@ turboEngine:
     features:
       proposalConcurrency:
         title: 提案並發上限從 3 提升到 32
-        description: 這仍然是 TurboEngine DLC 最核心、最有感的升級。生成、執行、歸檔中的提案會共同占用並發位，所以高上限會直接改變你能不能穩定並行推進多條任務線。
       documentThemes:
         title: 擴充文件主題
-        description: 可以在 Agent 管理相關介面切換擴充的 Document Theme，並即時預覽工作台、歷史區和兜底分組在不同主題下的術語與文案表現。
       composeCommitCoAuthor:
         title: AI Compose Commit 的 Co-Authored-By 自訂
-        description: 在 Git 設定裡，你可以保存預設的 Co-Authored-By 模式；在單次 AI Compose 執行裡，也可以臨時改成自訂協作者名稱與信箱，或這一輪完全不追加尾註。
       branding:
         title: 品牌自訂
-        description: TurboEngine DLC 生效後，可以上傳頂部 Logo，設定應用標題、瀏覽器標題，以及品牌點擊跳轉連結。它不只是改左上角圖示，而是把工作台頂部整塊品牌區域開放給你自訂。
       avatarUpload:
         title: 自訂頭像上傳與共享復用
-        description: 現在已支援上傳目前 Agent 的自訂頭像，也支援把共享自訂頭像庫復用到新建、編輯與批次建立流程裡。
   messages:
     refreshSuccess: TurboEngine 狀態已刷新。
     refreshStale: Desktop kept the cached TurboEngine snapshot because the Microsoft Store refresh did not complete.
@@ -570,10 +492,6 @@ turboEngine:
     refreshing: 刷新中...
     openStoreProduct: 在 Microsoft Store 中開啟 TurboEngine
     installStoreApp: 安裝 Microsoft Store 版
-    manageHint: Open Microsoft Store again if you need to confirm ownership or revisit the current TurboEngine license on this device.
-    buyHint: Start the Microsoft Store flow for `9NSD809W18Z6`, then Desktop will refresh the TurboEngine entitlement state in the same session.
-    activeHint: 這台裝置已擁有 TurboEngine 授權。如需重新確認最新的 Microsoft Store 狀態，可以手動刷新一次。
-    handoffHint: In-app purchase and verification work only in the Microsoft Store edition. Use the Store handoff below when this runtime cannot complete the license flow itself.
   runtime:
     sectionTitle: 執行階段契約
     supported: This runtime can query Microsoft Store directly and run the packaged TurboEngine purchase path for Store ID `9NSD809W18Z6`.
@@ -594,8 +512,6 @@ turboEngine:
     description: Microsoft Store 沒有完成最近一次刷新，所以 Desktop 保留了這次工作階段裡最後一次成功確認的 TurboEngine 狀態，而不是直接清空。
   unsupported:
     title: 需要 Microsoft Store 版本
-    description: 購買與即時驗證僅適用於 Microsoft Store 版的 Hagicode Desktop。
-    nonStoreDescription: 目前執行的不是 Microsoft Store 版。請使用下方按鈕前往 TurboEngine 的 Microsoft Store 頁面，再安裝或啟動 Microsoft Store 版 Hagicode Desktop，以完成購買與驗證。
   purchaseOutcome:
     title: 購買結果
     succeeded: 購買已完成，Desktop 也已刷新 TurboEngine 授權快照。

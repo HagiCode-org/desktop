@@ -14,17 +14,13 @@ settings:
     advanced: Paramètres avancés
   notification:
     title: Centre de notifications
-    description: Validez le pipeline de notifications du bureau et consultez la charge utile de notification par défaut utilisée par le client.
     testSectionTitle: Notification de test
-    testSectionDescription: Envoyez une notification de bureau native pour vérifier que le pont IPC et le transport de notifications du système fonctionnent.
     testButton: Envoyer une notification de test
     sending: Envoi...
     testSuccess: Notification de test envoyée
-    testSuccessDescription: Si les autorisations de notification du système sont disponibles, le bureau devrait déjà l’avoir reçue.
     testError: Échec de l’envoi de la notification de test
     testErrorDescription: 'Détail de l’erreur : {{error}}'
     previewTitle: Aperçu de la charge utile par défaut
-    previewDescription: Ces champs sont envoyés au processus principal lors de l’exécution de la notification de test.
     testTitle: Notification de test
     testBody: Les notifications de bureau sont prêtes. Cliquer sur cette notification place Hagicode Desktop au premier plan.
     eventShown: Dernier événement d’affichage
@@ -44,47 +40,36 @@ settings:
       silent: Silencieux
   languageSettings:
     title: Paramètres de langue
-    description: Changez la langue d’affichage active de Desktop et actualisez immédiatement les libellés.
-    helper: Les changements de langue sont appliqués immédiatement aux menus, aux libellés de la zone de notification et aux onglets des paramètres.
   themeSettings:
     title: Paramètres du thème
-    description: Un espace dédié au thème est réservé ici pour de futurs contrôles du mode clair, du mode sombre et des préférences visuelles.
   advancedSettings:
     title: Paramètres avancés
-    description: Un emplacement unique réservé aux journaux, aux expérimentations et aux contrôles avancés du runtime.
   placeholders:
     comingSoon: Ce module de paramètres est enregistré dans le nouveau cadre des paramètres. Les contrôles détaillés arriveront dans une prochaine modification.
   smartConfig:
     title: Conseils d’invite Smart Config
-    description: Examinez l'invite résolue, copiez-la dans n'importe quel AI CLI pris en charge et terminez le flux de configuration manuellement.
   onboarding:
     title: Intégration
-    description: Réexécutez l'assistant de configuration initiale pour télécharger les packages, installer les dépendances et démarrer le service.
     restartWizard: Assistant de redémarrage
-    restartWizardDescription: Réexécutez l'assistant de configuration initiale pour télécharger les packages, installer les dépendances et démarrer le service.
     restartButton: Assistant de redémarrage
     resetting: Réinitialisation...
     resetSuccess: L'assistant a été réinitialisé
     resetError: 'Échec de la réinitialisation: {{error}}'
     homepageTour:
       title: Réinitialiser la visite guidée de la page d'accueil
-      description: Effacez l’état d’achèvement de la visite guidée de la page d’accueil afin que la visite guidée puisse être relue automatiquement la prochaine fois que vous ouvrirez la gestion du système.
       resetButton: Réinitialiser la visite guidée de la page d'accueil
       resetting: Réinitialisation de la visite...
       resetSuccess: La visite de la page d'accueil a été réinitialisée
       resetError: 'Échec de la réinitialisation de la visite guidée de la page d''accueil: {{error}}'
   updates:
     title: Mises à jour en arrière-plan
-    description: Gérez les vérifications automatiques, les prétéléchargements en arrière-plan et la conservation vérifiée des archives.
     managedInstall:
       title: Les mises à jour automatiques sont désactivées
       description: L’application ne se met pas à jour automatiquement. Le mode de livraison des mises à jour dépend du canal utilisé pour l’installer, par exemple Microsoft Store ou Steam.
     enabled:
       label: Activer les prétéléchargements en arrière-plan
-      description: Lorsqu'une version plus récente compatible est trouvée, téléchargez l'archive en arrière-plan sans changer le runtime actuel.
     retainedArchiveCount:
       label: Nombre d'archives conservées
-      description: Seules les archives vérifiées téléchargées automatiquement sont conservées. Les entrées plus anciennes sont supprimées lorsque la limite est dépassée.
     actions:
       save: Enregistrer les paramètres
       saving: Sauvegarde...
@@ -95,12 +80,8 @@ settings:
     errors:
       retainedArchiveCountPositive: Le nombre d’archives conservées doit être un entier positif.
       saveErrorDetail: 'Échec de l''enregistrement: {{error}}'
-    notes:
-      snapshotModel: Le rappel du tableau de bord est piloté par un instantané persistant du processus principal, de sorte que le dernier état de mise à jour connu survit aux rechargements du bureau.
-      retentionPolicy: Le nettoyage de rétention supprime uniquement les archives et les métadonnées mises en cache. Les répertoires des versions installées restent intacts.
   runtimeDataPath:
     title: Chemin de stockage des données du runtime
-    description: Choisissez où Desktop stocke les fichiers gérés par le runtime, les journaux et les autres données du runtime.
     activePreset: 'Préréglage effectif actuel : {{preset}}'
     environmentOverrideBadge: Remplacement par variable d’environnement actif
     lockedByRuntime: Verrouillé par Microsoft Store
@@ -111,10 +92,8 @@ settings:
     options:
       userData-runtime-data:
         label: userData/runtime-data (par défaut)
-        description: Stocke les données du runtime dans le répertoire userData d’Electron de Desktop. Idéal pour la configuration par défaut sur une seule machine.
       home-runtime-data:
         label: ~/.hagicode/runtime-data
-        description: Stocke les données du runtime dans le répertoire personnel de l’utilisateur actuel. Idéal pour les déploiements nécessitant un chemin partagé stable.
     warnings:
       noMigration: Modifier ce paramètre met uniquement à jour le chemin cible. Desktop ne migre pas automatiquement les données du runtime existantes.
       restart: L’enregistrement d’un préréglage modifié redémarre le backend géré afin que la nouvelle racine des données du runtime prenne effet immédiatement.
@@ -131,23 +110,16 @@ settings:
       saveErrorDetail: 'Échec de l’enregistrement : {{error}}'
   debugOptions:
     title: Options de débogage
-    description: Contrôlez les comportements npm gérés par Desktop pour diagnostiquer les problèmes d’installation de packages.
     useIgnoreScriptsForManagedNpm:
       label: npm utilise `--ignore-scripts`
-      description: Fait ignorer les scripts de cycle de vie aux installations et synchronisations npm gérées par Desktop, afin d’isoler plus facilement les échecs liés à postinstall.
     skipPurchaseSimulateSuccess:
       label: Ignorer l’achat, simuler le succès
       shortLabel: Simuler le succès du pourboire
-      description: Lorsque cette option est activée, le lancement d’un achat de pourboire ignore le paiement Microsoft Store, considère le parcours comme un achat réussi pour le palier sélectionné et joue tout de même une animation de remerciement aléatoire. Désactivée par défaut. N’enregistre pas de compteurs d’achats durables.
     installDate:
       label: Date d’installation brute (msstoreRatingPrompt.installDate)
-      description: Affiche la chaîne exacte de la date d’installation brute persistée dans la configuration locale. Cliquez plusieurs fois, puis modifiez pour mettre à jour la valeur enregistrée.
       placeholder: e.g. 2024-01-01T00:00:00.000Z
       ageDays: 'Ancienneté de l’installation (jours) : {{value}}'
       ageDaysUnknown: inconnue
-    notes:
-      scope: Ce paramètre n’affecte que les futures installations et synchronisations npm gérées par Desktop.
-      npm: Le commutateur npm n’affecte que les futures installations et synchronisations npm gérées par Desktop. L’enregistrement prend effet immédiatement et ne redémarre pas le service géré.
     actions:
       save: Enregistrer les modifications
       saving: Enregistrement...
@@ -162,10 +134,8 @@ footer:
   copyright: © 2026 Hagicode Desktop
 quickStart:
   title: Démarrage rapide
-  description: Installez le package de services Web intégré et commencez à gérer votre instance PCode locale.
 secure:
   title: Sécurisé
-  description: Construit dans un souci de sécurité. Vos données restent sur votre machine.
 header:
   runningSuccessfully: Exécution réussie
 dependencyManagement:
@@ -174,10 +144,8 @@ dependencyManagement:
     environment: Environnement
   title: Gestion des dépendances
   backToDashboard: Retour au tableau de bord
-  description: Gérer les packages de services Web intégrés et les dépendances du système
   tips:
     title: Conseils
-    description: Gardez vos dépendances à jour pour des performances et une sécurité optimales.
   noPackageInstalled: Aucun paquet installé
   installedVersion: Version installée
   requiredVersion: Version requise
@@ -203,17 +171,14 @@ dependencyManagement:
     systemSource: Source système
   manualHandoff:
     title: Installation manuelle du package CLI requise
-    description: Exécutez la commande suggérée en dehors du bureau. Pour plus de détails actuels sur l'environnement Node/npm fourni avec Desktop et le comportement de PATH, lisez la FAQ.
     faqLinkLabel: Afficher la FAQ sur l'environnement de nœud
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
-    refreshHint: Actualisez une fois la commande terminée pour revérifier les dépendances gérées par Desktop.
 versionManagement:
   tabs:
     newVersions: Nouvelles versions
     downloadedVersions: Versions téléchargées
     sourceManagement: Gestion des sources
   title: Gestion des versions
-  description: Installer, changer et gérer Hagicode Server versions
   availableVersions: Versions disponibles
   installedVersions: Versions installées
   installed: Installé
@@ -232,7 +197,6 @@ versionManagement:
   noVersionsAvailable: Aucune version disponible
   noVersionsInstalled:
     title: Aucune version installée pour le moment
-    description: La manière la plus simple de démarrer avec Hagicode Desktop consiste à utiliser notre assistant de configuration guidée. Installation et configuration complètes en quelques étapes seulement.
     startButton: Démarrer l'assistant d'installation
   status:
     active: Actif
@@ -257,7 +221,6 @@ versionManagement:
   progressText: Texte de progression
   info:
     title: À propos de la gestion des versions
-    description: La gestion des versions vous permet d'installer plusieurs versions Hagicode Server, de basculer entre elles et de vérifier la compatibilité du bureau avant l'activation.
   toast:
     installSuccess: Installation réussie
     installSuccessDescription: La version a été installée avec succès. Démarrez le service manuellement lorsque vous êtes prêt.
@@ -331,7 +294,6 @@ installProgressDialog:
 subscription:
   eyebrow: Programme de soutien Microsoft Store
   title: Programme de soutien Hagicode
-  description: Consultez l'état du programme de soutien Microsoft Store, actualisez l'instantané local et confirmez si les droits de soutien sont déjà actifs sur cet appareil.
   loading: Lecture de l'instantané de soutien en cache...
   errorTitle: Instantané de soutien indisponible
   errorDescription: 'Desktop n''a pas pu charger l''instantané de soutien : {{error}}'
@@ -359,17 +321,11 @@ subscription:
   hero:
     inactive:
       title: Faire avancer Hagicode
-      description: Le programme de soutien sert à soutenir la maintenance continue de Hagicode.
-      note: AI Agent features do not stay useful on their own. They need ongoing tracking, prompt updates, implementation work, and token spend to stay aligned with fast-moving tools.
     active:
       title: Merci pour votre soutien
-      description: Les droits de soutien sont déjà actifs sur cet appareil. Vous pouvez confirmer l'état, rouvrir l'achat ou actualiser l'instantané manuellement.
-      note: Your purchase is more than a receipt. It directly supports the ongoing maintenance, iteration, and follow-up work that keeps the feature reliable after launch.
   message:
     ongoingTitle: Une évolution continue demande un véritable investissement
-    ongoingDescription: Hagicode is not a one-and-done product. Keeping it useful means continued author time and recurring token spend for updates, validation, and tracking change.
     perksTitle: Les sponsors méritent des avantages bien pensés
-    perksDescription: Nous prévoyons également d’introduire progressivement des avantages adaptés pour les sponsors, notamment des thèmes plus raffinés et d’autres bonus au fur et à mesure qu’ils seront prêts.
     unlockNoticeTitle: Aucun déverrouillage de fonctionnalité pour le moment
     unlockNoticeDescription: Le programme de soutien ne déverrouille pas d'autres fonctionnalités du produit. Les autres capacités indépendantes nécessitent toujours un achat séparé.
     inactivePrompt: Si cette orientation compte pour vous, le programme de soutien est le moyen direct de la soutenir.
@@ -385,21 +341,13 @@ subscription:
     subscribeViaStore: S’abonner sur Microsoft Store
     installStoreApp: Installer l'édition Store
     processing: Traitement...
-    buyHint: Start the Microsoft Store flow to support continued AI Agent iteration and attach sponsor entitlements to this device.
-    manageHint: Open the Microsoft Store purchase flow again if you want to confirm the sponsoring account or manage the current plan.
-    activeHint: Les droits de soutien sont déjà actifs sur cet appareil. Actualisez une fois si vous souhaitez confirmer le dernier état de Microsoft Store.
-    unsupportedHint: L’achat et la gestion ne fonctionnent que dans l’édition Microsoft Store de Hagicode Desktop.
-    installHint: Open the sponsor plan in Microsoft Store first, then install or launch the Store edition of Hagicode Desktop to complete subscription and sync entitlements.
     secondaryLabel: Before you decide
-    secondaryHint: Refresh first if you want Desktop to re-check Microsoft Store and confirm the latest local snapshot before you purchase or review the plan.
   summary:
     planLabel: Programme
     planName: Programme de soutien Hagicode
     renewalLabel: Renouvellement ou expiration
     lastSyncLabel: Dernière synchronisation réussie
     entitlementsLabel: Droits activés
-    activeDetail: Sponsor entitlements are already available on this device.
-    inactiveDetail: Purchasing here is what turns future sponsor benefits on for this device.
     source: 'Source : {{value}}'
   sourceValue:
     initial: État par défaut de la session actuelle
@@ -408,49 +356,36 @@ subscription:
   mission:
     eyebrow: Pourquoi le soutien compte
     title: Votre achat aide à financer la maintenance et les mises à jour.
-    description: Nous pouvons ainsi continuer à suivre les changements des modèles, du CLI et des flux de travail.
     points:
       evolution:
         title: Maintenir Hagicode à jour
-        description: Suivre les changements des modèles, du CLI et des flux de travail.
       investment:
         title: Soutenir validation et mises à jour
-        description: Permettre aux correctifs, à la validation et à l'itération de continuer à avancer.
       rewards:
         title: Activer les droits de soutien
-        description: Après l'achat, cet appareil affichera et conservera les droits correspondants.
   gratitude:
     eyebrow: Message aux sponsors
     title: Your support is already carrying real work
-    description: The sponsor plan is designed as a practical way to keep ongoing product work funded while giving supporters clear recognition inside Desktop.
     points:
       continuity:
         title: Continued iteration stays possible
-        description: Active sponsorship gives us room to keep tracking AI Agent changes, respond to tool shifts, and ship follow-up improvements instead of freezing the feature after launch.
       benefits:
         title: Sponsor-facing polish can grow next
-        description: We can now keep shaping tasteful sponsor experiences, including more refined themes and other benefits that feel aligned with the product.
       roadmap:
         title: Future perks already have a delivery path
-        description: The entitlement model is in place, so later sponsor-only additions can land cleanly without rebuilding the purchase foundation.
   benefits:
     eyebrow: Ce que ce programme débloque
     title: Conçu pour soutenir d’abord la création, puis bien récompenser ceux qui nous soutiennent
-    description: Le programme de soutien est volontairement simple aujourd’hui. Il garde la mission principale claire tout en laissant de la place à des avantages soignés et adaptés à mesure que le produit grandit.
     items:
       recognition:
         title: Identité de sponsor dans Desktop
-        description: Le statut de sponsor peut alimenter une reconnaissance visible dans l’application sans dépendre de vérifications ponctuelles fragiles.
       theme:
         title: Thèmes plus raffinés et finitions visuelles
-        description: Le soutien nous donne les moyens d’investir dans des thèmes mieux conçus et d’autres détails de qualité, faciles à ressentir mais coûteux à maintenir.
       future:
         title: Futurs avantages réservés aux sponsors
-        description: Le modèle de droits actuel réserve une voie claire pour les futurs avantages réservés aux sponsors lorsqu’ils seront prêts à être livrés.
   snapshot:
     eyebrow: État actuel de l’appareil
     title: État du Store et détails des droits locaux
-    description: Les détails opérationnels restent visibles ici afin que le programme de soutien reste vérifiable sur l’appareil actuel.
     fields:
       status: Statut actuel
       planStoreId: Store ID
@@ -461,8 +396,6 @@ subscription:
       source: Source de l’instantané
   entitlements:
     title: Résumé des droits
-    activeDescription: These are the sponsor capability flags currently available on this device.
-    inactiveDescription: These capability flags are reserved for sponsor-only Desktop experiences and become available after purchase.
     enabled: Activé
     disabled: Disabled
     names:
@@ -474,7 +407,6 @@ subscription:
   diagnostics:
     eyebrow: Trace technique
     title: Diagnostics
-    description: Cached-state recovery details stay visible so refresh failures do not look like entitlement loss.
     lastSuccessfulSync: Dernière synchronisation réussie
     source: Source de l’instantané
     empty: Aucun diagnostic enregistré.
@@ -483,8 +415,6 @@ subscription:
     description: Microsoft Store n'a pas terminé la dernière actualisation. Desktop conserve donc le dernier état de soutien confirmé pendant cette session au lieu de l'effacer.
   unsupported:
     title: Version Microsoft Store requise
-    description: Les actions d’achat et de gestion ne fonctionnent que dans l’édition Microsoft Store de Hagicode Desktop.
-    nonStoreDescription: Ce runtime n’est pas l’édition Microsoft Store. Utilisez les boutons ci-dessous pour ouvrir le programme de soutien dans Microsoft Store, puis installez ou lancez l’édition Store de Hagicode Desktop afin de finaliser l’abonnement et la synchronisation des droits.
   purchaseOutcome:
     title: Résultat de l'achat
     succeeded: L'achat est terminé et Desktop a actualisé l'instantané de soutien.
@@ -507,11 +437,8 @@ turboEngine:
   errorDescription: 'Desktop n''a pas pu charger l''instantané TurboEngine : {{error}}'
   hero:
     title: Espace de travail TurboEngine
-    activeDescription: TurboEngine is already licensed on this device. You can confirm the current Microsoft Store state, review diagnostics, and refresh whenever needed.
-    inactiveDescription: TurboEngine uses a separate perpetual Microsoft Store license. This workspace lets you verify the current state, buy the license, and confirm the latest runtime diagnostics.
   article:
     unlockTitle: Un achat, déverrouillage permanent
-    unlockLead: Le DLC TurboEngine regroupe la forte concurrence des propositions, la personnalisation de la marque, les thèmes étendus et le téléchargement d'avatars personnalisés dans un seul pack permanent. Après achat, aucun abonnement n'est requis et les fonctions s'appliquent directement à votre espace de travail actuel.
     featuresTitle: Principales fonctions débloquées
     purchaseNoticeTitle: Informations d'achat
     purchaseNoticeItems:
@@ -521,19 +448,14 @@ turboEngine:
     features:
       proposalConcurrency:
         title: La limite de concurrence des propositions passe de 3 à 32
-        description: Cela reste l'amélioration la plus importante et la plus sensible du DLC TurboEngine. Les propositions en génération, exécution et archivage partagent les mêmes emplacements de concurrence ; ce plafond plus élevé change donc directement la possibilité d'avancer sur plusieurs lignes de travail en parallèle.
       documentThemes:
         title: Thèmes de document étendus
-        description: Dans les écrans de gestion des agents, vous pouvez passer d'un Document Theme étendu à l'autre et prévisualiser en temps réel le rendu de l'atelier, de l'historique et des regroupements de secours avec une autre terminologie et d'autres formulations.
       composeCommitCoAuthor:
         title: Co-Authored-By personnalisé pour AI Compose Commit
-        description: Dans les paramètres Git, vous pouvez enregistrer un mode Co-Authored-By par défaut. Lors d'une exécution AI Compose, vous pouvez aussi passer temporairement à un collaborateur personnalisé avec nom et e-mail, ou ne pas ajouter ce suffixe pour cette fois.
       branding:
         title: Personnalisation de la marque
-        description: Une fois le DLC TurboEngine actif, vous pouvez téléverser un logo d'en-tête et configurer le titre de l'application, le titre du navigateur et le lien de la marque. Il ne s'agit pas seulement de changer l'icône en haut à gauche, mais d'ouvrir toute la zone de marque de l'en-tête du workbench à la personnalisation.
       avatarUpload:
         title: Téléversement d'avatars personnalisés et réutilisation partagée
-        description: Vous pouvez désormais téléverser un avatar personnalisé pour l'agent actuel, et la bibliothèque partagée d'avatars personnalisés peut aussi être réutilisée dans les flux de création, d'édition et de création en lot.
   messages:
     refreshSuccess: État de TurboEngine actualisé.
     refreshStale: Desktop kept the cached TurboEngine snapshot because the Microsoft Store refresh did not complete.
@@ -570,10 +492,6 @@ turboEngine:
     refreshing: Actualisation...
     openStoreProduct: Ouvrir TurboEngine dans le Store
     installStoreApp: Installer l'édition Store
-    manageHint: Open Microsoft Store again if you need to confirm ownership or revisit the current TurboEngine license on this device.
-    buyHint: Start the Microsoft Store flow for `9NSD809W18Z6`, then Desktop will refresh the TurboEngine entitlement state in the same session.
-    activeHint: TurboEngine est déjà sous licence sur cet appareil. Actualisez une fois si vous souhaitez confirmer le dernier état de Microsoft Store.
-    handoffHint: In-app purchase and verification work only in the Microsoft Store edition. Use the Store handoff below when this runtime cannot complete the license flow itself.
   runtime:
     sectionTitle: Contrat du runtime
     supported: This runtime can query Microsoft Store directly and run the packaged TurboEngine purchase path for Store ID `9NSD809W18Z6`.
@@ -594,8 +512,6 @@ turboEngine:
     description: Microsoft Store n'a pas terminé la dernière actualisation. Desktop conserve donc le dernier état TurboEngine confirmé pendant cette session au lieu de l'effacer.
   unsupported:
     title: Version Microsoft Store requise
-    description: L’achat et la vérification en direct ne fonctionnent que dans l’édition Microsoft Store de Hagicode Desktop.
-    nonStoreDescription: Ce runtime n’est pas l’édition Microsoft Store. Utilisez les boutons ci-dessous pour ouvrir la page Store de TurboEngine, puis installez ou lancez l’édition Store de Hagicode Desktop afin de finaliser l’achat et la vérification.
   purchaseOutcome:
     title: Résultat de l'achat
     succeeded: L'achat est terminé et Desktop a actualisé l'instantané de licence TurboEngine.

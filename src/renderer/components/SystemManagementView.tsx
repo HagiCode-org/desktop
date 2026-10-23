@@ -316,14 +316,8 @@ export default function SystemManagementView({
     };
   }, [clearPendingHomepageTourStartup, destroyHomepageTourSession]);
 
-  const getLogTargetDescription = useCallback((target: LogDirectoryTarget, status: LogDirectoryTargetStatus) => {
-    if (status.reason) {
-      return t(`system.logQuickAccess.errors.${status.reason}`);
-    }
-
-    return target === 'desktop'
-      ? t('system.logQuickAccess.desktop.description')
-      : t('system.logQuickAccess.webApp.description');
+  const getLogTargetDescription = useCallback((status: LogDirectoryTargetStatus) => {
+    return status.reason ? t(`system.logQuickAccess.errors.${status.reason}`) : null;
   }, [t]);
 
   const getOpenSuccessMessage = useCallback((target: LogDirectoryTarget) => {
@@ -699,7 +693,6 @@ export default function SystemManagementView({
                 </div>
                 <div className="min-w-0 flex-1 basis-56">
                   <h2 className="text-base font-semibold text-foreground">{t('system.noActiveVersion.title')}</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">{t('system.noActiveVersion.description')}</p>
                 </div>
                 <Button type="button" onClick={handleOpenVersionManagement}>
                   {t('system.noActiveVersion.manageVersions')}
@@ -738,9 +731,9 @@ export default function SystemManagementView({
                 <FolderOpen className="h-5 w-5 text-primary" />
                 {t('system.logQuickAccess.title')}
               </h2>
-              <span className="text-xs text-muted-foreground">
-                {isLogTargetsLoading ? t('system.logQuickAccess.loading') : t('system.logQuickAccess.hint')}
-              </span>
+              {isLogTargetsLoading ? (
+                <span className="text-xs text-muted-foreground">{t('system.logQuickAccess.loading')}</span>
+              ) : null}
             </div>
 
             <ul className="mt-4 divide-y divide-border/60">
@@ -774,9 +767,11 @@ export default function SystemManagementView({
                             : t('system.logQuickAccess.status.unavailable')}
                         </span>
                       </div>
-                      <p className="mt-0.5 text-sm text-muted-foreground">
-                        {getLogTargetDescription(target, status)}
-                      </p>
+                      {status.reason ? (
+                        <p className="mt-0.5 text-sm text-muted-foreground">
+                          {getLogTargetDescription(status)}
+                        </p>
+                      ) : null}
                     </div>
                     <Button
                       id={buttonId}

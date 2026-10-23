@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import type {
@@ -117,7 +117,6 @@ export function RuntimeDataPathSettings() {
           <HardDrive className="h-5 w-5" />
           <CardTitle>{t('settings.runtimeDataPath.title')}</CardTitle>
         </div>
-        <CardDescription>{t('settings.runtimeDataPath.description')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="flex flex-wrap gap-2">
@@ -158,12 +157,7 @@ export function RuntimeDataPathSettings() {
               className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-muted/20 p-4"
             >
               <RadioGroupItem value={preset} id={`runtime-data-path-${preset}`} className="mt-1" />
-              <div className="space-y-1">
-                <div className="font-medium">{t(`settings.runtimeDataPath.options.${preset}.label`)}</div>
-                <p className="text-sm text-muted-foreground">
-                  {t(`settings.runtimeDataPath.options.${preset}.description`)}
-                </p>
-              </div>
+              <div className="font-medium">{t(`settings.runtimeDataPath.options.${preset}.label`)}</div>
             </Label>
           ))}
         </RadioGroup>

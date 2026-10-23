@@ -6,7 +6,6 @@ steps:
   completed: Concluído
 apiKey:
   title: Digite a tecla Claude API
-  description: Para usar o recurso de instalação alimentado por AI, você precisa fornecer uma chave Claude API. Você pode obter um no Anthropic Console.
   placeholder: sk-formiga-...
   show: Mostrar
   hide: Esconder
@@ -21,7 +20,6 @@ status:
   international: Internacional
 callingApi:
   message: Chamando Claude API...
-  hint: Claude está analisando seu sistema e executando comandos de instalação.
 confirmation:
   title: Confirmação
   message: Claude concluiu a verificação da instalação. Por favor, confirme os resultados.

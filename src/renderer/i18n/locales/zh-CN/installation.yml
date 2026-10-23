@@ -6,7 +6,6 @@ steps:
   completed: 已完成
 apiKey:
   title: 输入 Claude API 密钥
-  description: 要使用 AI 驱动的安装功能，您需要提供 Claude API 密钥。您可以从 Anthropic Console 获取。
   placeholder: sk-ant-...
   show: 显示
   hide: 隐藏
@@ -21,7 +20,6 @@ status:
   international: 国际
 callingApi:
   message: 正在调用 Claude API...
-  hint: Claude 正在分析您的系统并执行安装命令。
 confirmation:
   title: 确认
   message: Claude 已完成安装检查，请确认结果。

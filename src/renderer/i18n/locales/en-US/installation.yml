@@ -6,7 +6,6 @@ steps:
   completed: Completed
 apiKey:
   title: Enter Claude API Key
-  description: To use the AI-powered installation feature, you need to provide a Claude API key. You can get one from Anthropic Console.
   placeholder: sk-ant-...
   show: Show
   hide: Hide
@@ -21,7 +20,6 @@ status:
   international: International
 callingApi:
   message: Calling Claude API...
-  hint: Claude is analyzing your system and executing installation commands.
 confirmation:
   title: Confirmation
   message: Claude has completed the installation check. Please confirm the results.

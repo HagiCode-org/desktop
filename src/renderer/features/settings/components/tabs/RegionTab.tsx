@@ -29,10 +29,7 @@ export function RegionTab({ distributionState }: SettingsTabComponentProps) {
         <ServiceRegionSelector disabled={distributionState.steamMode} />
       </div>
       <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border/70 pt-4">
-        <div className="space-y-1">
-          <h3 className="font-medium text-foreground">{t('serviceRegion.resetTitle')}</h3>
-          <p className="text-sm text-muted-foreground">{t('serviceRegion.resetDescription')}</p>
-        </div>
+        <h3 className="font-medium text-foreground">{t('serviceRegion.resetTitle')}</h3>
         <Button
           type="button"
           variant="outline"

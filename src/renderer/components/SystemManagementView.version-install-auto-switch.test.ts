@@ -25,7 +25,7 @@ describe('homepage latest-version install auto-switch integration', () => {
     assert.match(source, /const hasInstalledVersions = installedVersions\.length > 0;/);
     assert.match(source, /\) : hasInstalledVersions \? \(/);
     assert.match(source, /system\.noActiveVersion\.title/);
-    assert.match(source, /system\.noActiveVersion\.description/);
+    assert.doesNotMatch(source, /system\.noActiveVersion\.description/);
     assert.match(source, /system\.noActiveVersion\.manageVersions/);
   });
 

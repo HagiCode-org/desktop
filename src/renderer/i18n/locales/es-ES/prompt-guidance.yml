@@ -2,9 +2,6 @@ loading: Cargando guía rápida...
 emptyState: Desktop puede resolver el mensaje, mostrarle de dónde viene y mantener el texto exacto listo para copiar y pegar.
 availableTools: Herramientas disponibles
 promptTitle: rápido
-promptDescription: Copie el mensaje completo exactamente como se muestra antes de pegarlo en su AI CLI.
-tipTitle: Cómo utilizar este mensaje
-tipDescription: Abra cualquier CLI compatible en el directorio sugerido, pegue el mensaje y regrese después de aplicar los cambios recomendados.
 actions:
   refresh: Recargar guía
   loading: Cargando

@@ -33,12 +33,9 @@ export function ServiceRegionSelector({ disabled = false, compact = false }: Ser
   return (
     <div className={compact ? 'space-y-3' : 'space-y-4'} aria-busy={isLoading || isSaving}>
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-primary" aria-hidden="true" />
-            <h3 className="font-medium text-foreground">{t('serviceRegion.title')}</h3>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">{t('serviceRegion.description')}</p>
+        <div className="flex items-center gap-2">
+          <MapPin className="h-4 w-4 text-primary" aria-hidden="true" />
+          <h3 className="font-medium text-foreground">{t('serviceRegion.title')}</h3>
         </div>
         <span className="inline-flex items-center rounded-full border border-border/70 bg-muted/30 px-2.5 py-1 text-xs text-muted-foreground" role="status">
           {isLoading

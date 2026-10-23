@@ -52,13 +52,11 @@ header:
   runningSuccessfully: 运行成功
   language:
     label: 语言
-    description: 选择应用程序界面语言
   embeddedWebServicePort: Hagicode 服务端口
 settings:
   title: 设置
   language:
     label: 语言
-    description: 选择应用程序界面语言
   embeddedWebServicePort: Hagicode 服务端口
 footer:
   copyright: © 2026 Hagicode Desktop
@@ -112,9 +110,7 @@ navigation:
   versionManagement: 版本管理
   webServiceNotRunning: Hagicode 服务未运行，无法访问
   officialWebsite: 官方网站
-  officialWebsiteDesc: 访问 Hagicode 官方网站获取最新资讯和文档
   about:
-    sectionDescription: 首屏使用打包 snapshot，随后自动刷新最新官方入口。
     snapshotLabel: 打包 snapshot
     runtimeLabel: 最新数据
     updatedAt: 更新于 {{value}}
@@ -156,12 +152,10 @@ sidebar:
   expand: 展开
 dependencyManagement:
   title: 依赖项管理
-  description: 管理 HagiCode 启动所需与可选的命令行依赖，并使用系统已安装的外部 Node/npm 环境。
   loading: 正在读取依赖项状态...
   unavailable: 不可用
   environment:
     title: Node 环境
-    description: Desktop 使用系统已安装的外部 Node/npm 环境来管理 CLI 包。
     managedNotice: 关于 Desktop 的 Node/npm 运行时、PATH 隔离、包位置和排障方式，请阅读 FAQ 中的最新说明。
     externalNotice: Desktop 当前正在检查这台机器上已经存在的全局 Node/npm 环境。
     rationaleTitle: 外部 Node/npm 环境
@@ -180,19 +174,14 @@ dependencyManagement:
       error: 错误
   mirror:
     title: npm 镜像加速
-    description: 为托管 npm 包同步和安装操作启用 npmmirror.com。
     toggleLabel: 使用 npmmirror.com 加速
     registryUrl: Registry 地址
     enabled: 已启用
     disabled: 未启用
     saving: 保存中
-    enabledHelp: 后续同步/安装操作将使用 npmmirror.com registry 镜像。
-    disabledHelp: 后续 npm 操作将使用 npm 默认 registry 行为。
-    readOnlyHelp: 当前处于外部只读模式，镜像设置不会影响依赖管理行为。
     saveFailed: 保存镜像设置失败
   vendoredRuntime:
     title: Desktop 托管运行时
-    description: Vendored 运行时由 Desktop 负责预置与托管，不通过 npm 包管理进行安装。
     managedByDesktop: 由 Desktop 直接管理
     runtimeState: 运行状态
     runtimeRoot: 运行时目录
@@ -202,7 +191,6 @@ dependencyManagement:
     metadataPath: 元数据路径
     healthUrl: 本地地址
     diagnostics: 诊断信息
-    reinstallHint: 该 vendored 运行时随 Desktop 安装包分发。若打包副本损坏，请重新安装 Desktop 以恢复。
     primaryDescriptions:
       installed: 运行时文件已安装，并且符合最新的 Desktop 运行时契约。
       packaged: 打包归档已就绪，但可写运行时尚未启用。
@@ -256,15 +244,12 @@ dependencyManagement:
     unknown: 未知
   uninstall:
     title: 确认卸载
-    description: 要从{{mode}}依赖环境卸载{{name}}吗？已激活的组件会先停用。
     cancel: 取消
     confirm: 卸载
     success: 组件已成功卸载。
     alreadyRemoved: 组件已经移除。
     blocked: 其他组件仍依赖此组件，无法卸载。
   packages:
-    hagiscript:
-      description: 为兼容旧界面而保留的独立 CLI 元数据。Desktop 现在通过内置 SDK 同步托管工具。
     openspec:
       description: OpenSpec 提案、规范和任务流 CLI。
     skills:
@@ -299,11 +284,9 @@ dependencyManagement:
   bootstrap:
     title: 旧版 CLI
     selectorLabel: 安装目标
-    selectorHint: Desktop 已不再安装独立 hagiscript CLI。这些文案仅为兼容旧界面而保留。
     currentTarget: 旧版目标：{{target}}
     customVersionLabel: 自定义版本
     customVersionPlaceholder: 输入版本号，例如 0.2.3
-    customVersionDescription: Desktop 托管的依赖流程已不再使用独立 hagiscript 版本。
     targetOptions:
       latest: 最新稳定版
       dev: 开发版
@@ -314,20 +297,16 @@ dependencyManagement:
     unknown: Desktop 当前无法验证托管 npm 环境。请先刷新或修复托管依赖，再修改其他工具。
   packageTable:
     title: 命令行依赖项
-    description: 选择 Agent CLI 与工作流依赖项，通过 Desktop SDK 的 npm 同步流程安装。
     groups:
       base:
         title: 基础依赖
-        description: 安装 OpenSpec、Skills 与 Impeccable 等 Desktop 工作流基础工具。
       agentCli:
         title: Agent CLI
-        description: 按需选择要接入的 Agent CLI，并通过 Desktop SDK 的 npm 同步流程统一安装。
     tool: 工具
     status: 状态
     action: 操作
   batchLog:
     title: 批量安装日志
-    description: '{{count}} 个已选包的合并输出。'
     empty: 批量安装开始后，日志会显示在这里。
     completed: 批量安装已完成。
     status:
@@ -381,9 +360,7 @@ bootstrap:
     logsFailed: 无法打开 Desktop 日志目录
 systemDiagnostic:
   title: 系统诊断
-  description: 收集当前设备的本地环境信息，并将纯文本报告直接发给技术支持。
   reportTitle: 纯文本报告
-  reportDescription: 每次重新诊断都会替换旧报告，因此复制结果始终对应最新一次诊断。
   empty: 运行系统诊断后，这里会显示操作系统、硬件、Agent CLI 注册表探测结果与核心工具链的环境信息。
   loading: 正在收集本机环境信息...
   actions:
@@ -451,11 +428,8 @@ systemDiagnostic:
 system:
   dashboard:
     title: 控制台总览
-    description: 在一个页面内聚焦服务状态、启停维护、活动版本、日志入口以及推荐消息。
   commercePanel:
     title: 许可与赞助
-    storeDescription: 在这里快速查看 TurboEngine 与赞助计划的当前状态；需要时再进入详情页处理购买、管理或刷新。
-    nonStoreDescription: 当前不是 Microsoft Store 版。这里保留产品入口和安装引导，方便你完成购买跳转与 Store 版切换。
     sponsorSummary: 您的支持才是我们保持更新的动力
     actions:
       viewDetails: 查看详情
@@ -475,19 +449,15 @@ system:
         active: 模拟 Store 版且已激活的状态，方便预览购买后页面。
   logQuickAccess:
     title: 日志快捷访问
-    description: 直接打开 Desktop 与 Web App 的日志目录，减少排障时的路径查找成本。
     loading: 正在检查日志目录...
-    hint: 按钮状态会随活动版本自动刷新
     status:
       available: 可用
       unavailable: 不可用
     desktop:
       label: Desktop 日志文件夹
-      description: 打开当前设备上的 Desktop 日志目录。
       openSuccess: Desktop 日志文件夹已打开
     webApp:
       label: Web App 日志文件夹
-      description: 打开当前活动版本的 Web App 日志目录。
       openSuccess: Web App 日志文件夹已打开
     errors:
       load_failed: 无法获取日志目录状态
@@ -496,11 +466,9 @@ system:
       open_failed: 无法打开日志文件夹
   noVersionInstalled:
     title: 未安装任何版本
-    description: 开始使用 Hagicode Desktop 的最简单方法是通过我们的引导向导。只需几步即可完成安装和配置。
     startWizard: 启动向导
   noActiveVersion:
     title: 已安装版本，但当前没有活动版本
-    description: 检测到本地已经存在运行时，但当前活动版本指针无效或已丢失。请先进入版本管理页，重新选择一个可用版本。
     manageVersions: 打开版本管理
   activeVersion:
     actions:
@@ -571,7 +539,6 @@ system:
         description: 如果当前还没有安装任何版本，可以从这里启动向导，完成首次下载、依赖安装与服务启动。
   services:
     title: 托管服务
-    description: 在一处监控和控制 Desktop 托管的各项服务。
     viewDetails: 详情
     port: '端口: {{port}}'
     notReady: 未就绪

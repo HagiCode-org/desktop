@@ -52,13 +52,11 @@ header:
   runningSuccessfully: 正常に実行されました
   language:
     label: 言語
-    description: アプリケーションインターフェース言語の選択
   embeddedWebServicePort: 組み込み Web サービス ポート
 settings:
   title: 設定
   language:
     label: 言語
-    description: アプリケーションインターフェース言語の選択
   embeddedWebServicePort: 組み込み Web サービス ポート
 footer:
   copyright: © 2026 Hagicode Desktop
@@ -112,9 +110,7 @@ navigation:
   versionManagement: バージョン管理
   webServiceNotRunning: Webサービスが実行されていません
   officialWebsite: 公式ウェブサイト
-  officialWebsiteDesc: 最新ニュースとドキュメントについては、Hagicode 公式 Web サイトにアクセスしてください。
   about:
-    sectionDescription: まずバンドルされたスナップショットをレンダリングしてから、最新の公式デスティネーションを適切な場所に更新します。
     snapshotLabel: バンドルされたスナップショット
     runtimeLabel: ライブデータ
     updatedAt: '{{value}}を更新しました'
@@ -156,12 +152,10 @@ sidebar:
   expand: 展開する
 dependencyManagement:
   title: 依存関係の管理
-  description: HagiCode の起動準備のために必須およびオプションのコマンドライン依存関係を管理し、デスクトップの組み込み Node/npm 環境を検査します。
   loading: 依存関係ステータスを読み取り中...
   unavailable: 利用不可
   environment:
     title: ノード環境
-    description: Desktop は、管理対象 CLI パッケージに独自の Node/npm ランタイムを使用します。
     managedNotice: Desktop の Node/npm ランタイム、PATH 分離、パッケージの場所、トラブルシューティングに関する最新の詳細については、FAQ を参照してください。
     externalNotice: Desktop は現在、このシステムに既に存在するグローバル Node/npm 環境を確認しています。
     rationaleTitle: デスクトップ管理型ノード/npm環境
@@ -180,19 +174,14 @@ dependencyManagement:
       error: エラー
   mirror:
     title: npm ミラー加速度
-    description: 管理対象 npm パッケージの同期およびインストール操作に対して npmmirror.com を有効にします。
     toggleLabel: npmmirror.com アクセラレーションを使用する
     registryUrl: レジストリ URL
     enabled: 有効
     disabled: 無効
     saving: 保存
-    enabledHelp: 今後の同期/インストール操作では、npmmirror.com レジストリ ミラーが使用されます。
-    disabledHelp: 今後の npm 操作では、デフォルトの npm レジストリ動作が使用されます。
-    readOnlyHelp: 依存関係管理が外部の読み取り専用モードの間は、ミラー設定は効果を持ちません。
     saveFailed: ミラー設定の保存に失敗しました
   vendoredRuntime:
     title: Desktop 管理のランタイム
-    description: 同梱ランタイムは、npm パッケージ管理ではなく Desktop がステージングして管理します。
     managedByDesktop: Desktop が直接管理
     runtimeState: ランタイム状態
     runtimeRoot: ランタイムのルート
@@ -202,7 +191,6 @@ dependencyManagement:
     metadataPath: メタデータのパス
     healthUrl: ローカル URL
     diagnostics: 診断情報
-    reinstallHint: この同梱ランタイムは Desktop のパッケージに含まれています。パッケージ化されたコピーが破損している場合は、Desktop を再インストールして復元してください。
     primaryDescriptions:
       installed: ランタイム ファイルはインストール済みで、最新の Desktop ランタイム契約に一致しています。
       packaged: パッケージ化されたアーカイブは準備できていますが、書き込み可能なランタイムはまだ有効化されていません。
@@ -256,15 +244,12 @@ dependencyManagement:
     unknown: 不明
   uninstall:
     title: アンインストールの確認
-    description: "{{name}}を{{mode}}環境からアンインストールしますか？有効なコンポーネントは先に無効化されます。"
     cancel: キャンセル
     confirm: アンインストール
     success: コンポーネントをアンインストールしました。
     alreadyRemoved: コンポーネントはすでに削除されています。
     blocked: 他のコンポーネントが依存しているためアンインストールできません。
   packages:
-    hagiscript:
-      description: 旧来のスタンドアロン CLI メタデータは互換性のために保持されています。Desktop は現在、組み込み SDK を通じて管理ツールを同期します。
     openspec:
       description: OpenSpec 提案書、仕様書、およびタスクのワークフロー CLI。
     skills:
@@ -299,11 +284,9 @@ dependencyManagement:
   bootstrap:
     title: 旧 CLI
     selectorLabel: インストール対象
-    selectorHint: Desktop はスタンドアロンの hagiscript CLI をもうインストールしません。これらのラベルは旧 UI 互換のためだけに残されています。
     currentTarget: '旧ターゲット: {{target}}'
     customVersionLabel: カスタムバージョン
     customVersionPlaceholder: 0.2.3 のようなバージョンを入力
-    customVersionDescription: スタンドアロン hagiscript のバージョンは、Desktop 管理の依存関係フローではもう使用されません。
     targetOptions:
       latest: 最新の安定版
       dev: 開発ビルド
@@ -314,20 +297,16 @@ dependencyManagement:
     unknown: Desktop は現在、管理 npm 環境を検証できません。他のツールを変更する前に、まず管理対象の依存関係を更新または修復してください。
   packageTable:
     title: コマンドラインの依存関係
-    description: Desktop SDK の npm 同期フローでインストールする Agent CLI とワークフロー依存関係を選択します。
     groups:
       base:
         title: 基本依存関係
-        description: OpenSpec、Skills など、Desktop ワークフローの基盤ツールをまとめてインストールします。
       agentCli:
         title: Agent CLI
-        description: 接続したい Agent CLI を選択し、Desktop SDK の npm 同期フローでまとめてインストールします。
     tool: ツール
     status: ステータス
     action: アクション
   batchLog:
     title: バッチインストールログ
-    description: '{{count}} 選択したパッケージの結合出力。'
     empty: バッチインストールが開始されると、ここにログが表示されます。
     completed: 一括インストールが完了しました。
     status:
@@ -381,9 +360,7 @@ bootstrap:
     logsFailed: デスクトップ ログ フォルダーを開けませんでした
 systemDiagnostic:
   title: システム診断
-  description: このデバイスのローカル環境の詳細を収集し、プレーン テキストのレポートをテクニカル サポートと共有します。
   reportTitle: プレーンテキストレポート
-  reportDescription: 再実行するたびに前のレポートが置き換えられるため、コピーされたコンテンツには常に最新の診断スナップショットが反映されます。
   empty: システム診断を実行して、オペレーティング システム、ハードウェア、エージェント CLI レジストリ プローブ、およびコア ツールチェーンの詳細をキャプチャします。
   loading: ローカル環境の詳細を収集しています...
   actions:
@@ -451,11 +428,8 @@ systemDiagnostic:
 system:
   dashboard:
     title: デスクトップ制御センター
-    description: サービス状態、開始と停止、アクティブなバージョン、ログ導線、推奨アップデートを 1 つの作業面にまとめます。
   commercePanel:
     title: ライセンスとスポンサー支援
-    storeDescription: ここで TurboEngine とスポンサー プランの現在の状態をすばやく確認し、購入、管理、更新が必要なときだけ詳細画面を開きます。
-    nonStoreDescription: このランタイムは Microsoft Store 版ではありません。必要に応じて製品ページを開き、Store 版に切り替えるためのリンクをここに残しています。
     sponsorSummary: 皆さまの支援こそが、更新を続けるための原動力です
     actions:
       viewDetails: 詳細を表示
@@ -475,19 +449,15 @@ system:
         active: 有効化後の Store 版をシミュレートし、購入後のレイアウトを確認できます。
   logQuickAccess:
     title: ログのクイックアクセス
-    description: 診断時間を短縮するには、デスクトップおよび Web アプリのログ フォルダーを直接開きます。
     loading: ログフォルダーを確認しています...
-    hint: ボタンの状態はアクティブなバージョンで自動的に更新されます
     status:
       available: 利用可能
       unavailable: 利用不可
     desktop:
       label: デスクトップログフォルダー
-      description: このデバイス上の現在のデスクトップ ログ ディレクトリを開きます。
       openSuccess: デスクトップログフォルダーが開かれました
     webApp:
       label: Web アプリのログ フォルダー
-      description: アクティブなバージョンの Web アプリ ログ ディレクトリを開きます。
       openSuccess: Web アプリのログ フォルダーが開かれました
     errors:
       load_failed: ログフォルダーのステータスの読み込みに失敗しました
@@ -496,11 +466,9 @@ system:
       open_failed: ログフォルダーを開けませんでした
   noVersionInstalled:
     title: まだバージョンがインストールされていません
-    description: Hagicode Desktop を開始する最も簡単な方法は、ガイド付きセットアップ ウィザードを使用することです。わずか数ステップでインストールと構成を完了します。
     startWizard: 起動ウィザード
   noActiveVersion:
     title: ランタイムはインストールされていますが、アクティブなバージョンが選択されていません
-    description: ローカル ランタイムは見つかりましたが、アクティブ バージョンの参照が見つからないか無効です。先にバージョン管理を開いて使用できるバージョンを選択してください。
     manageVersions: バージョン管理を開く
   activeVersion:
     actions:
@@ -571,7 +539,6 @@ system:
         description: パッケージがまだインストールされていない場合は、このアクション呼び出しを使用してセットアップ ウィザードを起動し、最初のランタイム インストールを完了します。
   services:
     title: 管理対象サービス
-    description: Desktop が管理する各サービスを 1 か所で監視・操作できます。
     viewDetails: 詳細
     port: 'ポート: {{port}}'
     notReady: 準備できていません

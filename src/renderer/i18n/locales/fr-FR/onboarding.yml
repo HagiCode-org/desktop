@@ -1,17 +1,13 @@
 title: Configuration initiale
 welcome:
   title: Bienvenue à Hagicode Desktop
-  description: Hagicode Desktop est le lanceur local pour Hagicode. Nous terminerons la première configuration et la confirmation de conformité en {{count}} étapes.
   features:
     manage:
       title: Gestion des versions
-      description: Gérer l'installation et les mises à jour de Hagicode Server
     monitor:
       title: Surveillance des services
-      description: Démarrer, arrêter et surveiller l'état du service
     dependencies:
       title: Gestion des dépendances
-      description: Afficher et gérer les dépendances du système
   processTitle: 'La première configuration comporte {{count}} étapes:'
   steps:
     welcome: Passez en revue la configuration et ce qui va se passer ensuite
@@ -40,8 +36,6 @@ download:
   pleaseWait: Veuillez patienter pendant que nous téléchargeons...
 dependencies:
   title: Installer les dépendances du système
-  subtitle: Hagicode nécessite certaines dépendances du système pour fonctionner correctement.
-  description: Vérifier l'état d'installation des dépendances du système
   installButton: Installer les dépendances
   status:
     installed: Installé
@@ -75,10 +69,8 @@ dependencies:
     message: Certaines dépendances n'ont pas pu être installées. Veuillez les installer manuellement et continuer.
   manualHandoff:
     title: Installation manuelle du package CLI requise
-    description: Exécutez la commande suggérée en dehors du bureau. Pour plus de détails actuels sur l'environnement Node/npm fourni avec Desktop et le comportement de PATH, lisez la FAQ.
     faqLinkLabel: Afficher la FAQ sur l'environnement de nœud
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
-    refreshHint: Actualisez une fois la commande terminée pour revérifier les dépendances gérées par Desktop.
 depInstallConfirm:
   title: Installer les dépendances manquantes
   installingTitle: Installation des dépendances
@@ -105,10 +97,8 @@ launch:
   title: Démarrer le service
   starting:
     title: À partir de Hagicode Server...
-    subtitle: Initialisation des composants de service...
   complete:
     title: Configuration terminée!
-    subtitle: Hagicode Desktop a été installé et démarré avec succès.
     success: Félicitations! Hagicode Desktop a été installé et démarré avec succès.
     ready: Vous pouvez maintenant commencer à utiliser toutes les fonctionnalités.
     button: Entrez dans l'interface principale
@@ -130,8 +120,6 @@ launch:
     issues: Signaler des problèmes
   failure:
     title: Échec du démarrage
-    subtitle: Hagicode Server n'a pas pu terminer le démarrage. Passez en revue les diagnostics et réinstallez avant de poursuivre l'installation.
-    guidance: Ouvrez le journal complet, puis réinstallez la version actuelle et redémarrez le flux d'installation.
     viewLog: Afficher le journal complet
     retryButton: Réessayer le démarrage
     reinstallButton: Réinstaller et redémarrer l'installation
@@ -140,8 +128,6 @@ launch:
     emptySummary: Aucun résumé d'échec de démarrage n'a été capturé
     emptyLog: Aucun journal d'échec de démarrage n'a été capturé
     meta: 'Port: {{port}} · Heure: {{timestamp}}'
-    truncatedHint: Le journal de démarrage a été tronqué à la sortie la plus récente.
-    recoveryHint: Nous vous recommandons de réinstaller la version actuelle et de réinitialiser l'intégration avant de réessayer la configuration.
     copyButton: Copier le journal
     copySuccess: Journal d'échec de démarrage copié
     copyError: Échec de la copie du journal des échecs de démarrage
@@ -158,12 +144,10 @@ skip:
   title: Confirmer la configuration ignorée
   description: Êtes-vous sûr de vouloir ignorer la première configuration?
   manualInstallNote: "Après avoir sauté, vous pouvez:\n• Installez manuellement Hagicode Server via «\_Gestion des packages\_» dans l'interface principale.\n•\_Réactivez le processus de configuration dans les paramètres."
-  reenableNote: Si c'est la première fois que vous utilisez Hagicode Desktop, nous vous recommandons de terminer le processus de configuration.
   cancel: Annuler
   confirm: Ignorer la configuration
 dependencyManagement:
   title: Gestion des dépendances
-  description: Afficher et gérer les dépendances du système
   status:
     installed: Installé
     bundled: Livré avec le bureau
@@ -190,10 +174,8 @@ dependencyManagement:
     systemSource: Source système
   manualHandoff:
     title: Installation manuelle du package CLI requise
-    description: Exécutez la commande suggérée en dehors du bureau. Pour plus de détails actuels sur l'environnement Node/npm fourni avec Desktop et le comportement de PATH, lisez la FAQ.
     faqLinkLabel: Afficher la FAQ sur l'environnement de nœud
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
-    refreshHint: Actualisez une fois la commande terminée pour revérifier les dépendances gérées par Desktop.
   noDependencies: Aucune dépendance détectée
 dependencyCheck:
   title: Résultats de la vérification des dépendances
@@ -209,8 +191,6 @@ dependencyCheck:
     requiredVersion: Version requise
 legal:
   title: Contrat de licence utilisateur final et politique de confidentialité
-  descriptionFull: Avant de télécharger HagiCode Server, confirmez les révisions actuelles du CLUF et de la politique de confidentialité. Les documents officiels s'ouvrent dans votre navigateur par défaut.
-  descriptionLegalOnly: Les révisions juridiques actuelles n’ont pas encore été acceptées. Consultez les documents officiels dans votre navigateur par défaut, puis revenez au bureau pour confirmer.
   progressFull: 'Configuration complète: {{steps}}'
   progressLegalOnly: 'Mode Compliance Gate: la sélection de langue apparaît avant l''étape actuelle de consentement légal'
   browserInstruction: Ouvrez les documents officiels dans votre navigateur par défaut avant d'accepter. Desktop affiche uniquement le résumé de la révision, pas le texte juridique complet.
@@ -244,7 +224,6 @@ legal:
     privacy-policy: Politique de confidentialité
 languageSelection:
   title: Choisir la langue
-  description: Choisissez d'abord la langue utilisée par Hagicode Desktop. Le premier démarrage du backend embarqué utilisera une valeur par défaut correspondante.
   recommended: Recommandé
   selected: Sélectionné
   choose: Choisir cette langue

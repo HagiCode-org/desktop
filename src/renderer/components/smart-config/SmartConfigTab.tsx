@@ -42,7 +42,6 @@ export function SmartConfigTab({ defaultPromptPath }: SmartConfigTabProps) {
   return (
     <PromptGuidancePanel
       title={t('settings.smartConfig.title')}
-      description={t('settings.smartConfig.description')}
       guidance={guidance}
       status={status}
       onRefresh={loadGuidance}

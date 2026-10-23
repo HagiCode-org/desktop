@@ -14,17 +14,13 @@ settings:
     advanced: 詳細設定
   notification:
     title: 通知センター
-    description: デスクトップ通知の経路を検証し、クライアントが使用する既定の通知ペイロードを確認します。
     testSectionTitle: テスト通知
-    testSectionDescription: ネイティブのデスクトップ通知を送信して、IPC ブリッジと OS の通知トランスポートが動作していることを確認します。
     testButton: テスト通知を送信
     sending: 送信中...
     testSuccess: テスト通知を送信しました
-    testSuccessDescription: OS の通知権限が利用可能であれば、デスクトップにはすでに通知が届いているはずです。
     testError: テスト通知を送信できませんでした
     testErrorDescription: 'エラーの詳細: {{error}}'
     previewTitle: 既定のペイロードのプレビュー
-    previewDescription: テスト通知の実行時に、これらのフィールドがメインプロセスへ送信されます。
     testTitle: テスト通知
     testBody: デスクトップ通知の準備ができました。この通知をクリックすると、Hagicode Desktop が前面に表示されます。
     eventShown: 最後に表示されたイベント
@@ -44,47 +40,36 @@ settings:
       silent: サイレント
   languageSettings:
     title: 言語設定
-    description: Desktop の表示言語を切り替え、ラベルをすぐに更新します。
-    helper: 言語の変更は、メニュー、トレイのラベル、設定タブにすぐに反映されます。
   themeSettings:
     title: テーマ設定
-    description: 将来のライト、ダーク、その他の外観設定のために、テーマ専用のエリアをここに確保しています。
   advancedSettings:
     title: 詳細設定
-    description: ログ、実験的機能、高度なランタイム制御をまとめる場所を確保しています。
   placeholders:
     comingSoon: この設定モジュールは新しい設定フレームワークに登録されています。詳細なコントロールは今後の変更で追加されます。
   smartConfig:
     title: Smart Config プロンプト ガイダンス
-    description: 解決されたプロンプトを確認し、それをサポートされている AI CLI にコピーし、構成フローを手動で完了します。
   onboarding:
     title: オンボーディング
-    description: 初回セットアップ ウィザードを再実行して、パッケージをダウンロードし、依存関係をインストールし、サービスを開始します。
     restartWizard: 再起動ウィザード
-    restartWizardDescription: 初回セットアップ ウィザードを再実行して、パッケージをダウンロードし、依存関係をインストールし、サービスを開始します。
     restartButton: 再起動ウィザード
     resetting: リセット中...
     resetSuccess: ウィザードがリセットされました
     resetError: 'リセット失敗: {{error}}'
     homepageTour:
       title: ホームページ ツアーをリセット
-      description: ホームページ ツアーの完了状態をクリアすると、次回システム管理を開いたときにガイド付きウォークスルーが再び自動再生されるようになります。
       resetButton: ホームページ ツアーをリセット
       resetting: ツアーをリセット中...
       resetSuccess: ホームページツアーがリセットされました
       resetError: 'ホームページツアーをリセットできませんでした: {{error}}'
   updates:
     title: バックグラウンドアップデート
-    description: 自動チェック、バックグラウンドでの事前ダウンロード、検証されたアーカイブの保存を管理します。
     managedInstall:
       title: 自動更新は無効です
       description: アプリケーションは自動的には更新されません。更新の提供方法は、Microsoft Store や Steam など、インストールに使用したチャネルによって異なります。
     enabled:
       label: バックグラウンドでのプリダウンロードを有効にする
-      description: 互換性のある新しいバージョンが見つかった場合は、現在のランタイムを切り替えることなく、バックグラウンドでアーカイブをダウンロードします。
     retainedArchiveCount:
       label: 保存されたアーカイブ数
-      description: 検証済みの自動ダウンロードされたアーカイブのみが保持されます。制限を超えると、古いエントリは削除されます。
     actions:
       save: 設定の保存
       saving: 保存中...
@@ -95,12 +80,8 @@ settings:
     errors:
       retainedArchiveCountPositive: 保持されるアーカイブ数は正の整数である必要があります。
       saveErrorDetail: '保存に失敗しました: {{error}}'
-    notes:
-      snapshotModel: ダッシュボードのリマインダーは、永続化されたメインプロセスのスナップショットによって駆動されるため、デスクトップのリロード後も、最後に知られた更新状態が残ります。
-      retentionPolicy: 保持クリーンアップでは、キャッシュされたアーカイブとメタデータのみが削除されます。インストールされたバージョンのディレクトリはそのまま残ります。
   runtimeDataPath:
     title: ランタイムデータの保存パス
-    description: Desktop がランタイム管理ファイル、ログ、その他のランタイムデータを保存する場所を選択します。
     activePreset: '現在有効なプリセット: {{preset}}'
     environmentOverrideBadge: 環境変数による上書きが有効
     lockedByRuntime: Microsoft Store によりロックされています
@@ -111,10 +92,8 @@ settings:
     options:
       userData-runtime-data:
         label: userData/runtime-data（既定）
-        description: ランタイムデータを Desktop の Electron userData ディレクトリ配下に保存します。既定の単一マシン構成に最適です。
       home-runtime-data:
         label: ~/.hagicode/runtime-data
-        description: ランタイムデータを現在のユーザーのホームディレクトリ配下に保存します。固定の共有パスが必要な構成に最適です。
     warnings:
       noMigration: この設定を変更しても、対象パスが更新されるだけです。Desktop は既存のランタイムデータを自動的には移行しません。
       restart: 変更したプリセットを保存すると、管理対象のバックエンドが再起動され、新しいランタイムデータのルートがすぐに有効になります。
@@ -131,23 +110,16 @@ settings:
       saveErrorDetail: '保存に失敗しました: {{error}}'
   debugOptions:
     title: デバッグオプション
-    description: パッケージのインストール問題を診断するため、Desktop が管理する npm の動作を制御します。
     useIgnoreScriptsForManagedNpm:
       label: npm で `--ignore-scripts` を使用
-      description: Desktop が管理する npm のインストールと同期でライフサイクルスクリプトをスキップし、postinstall などに起因する失敗を切り分けやすくします。
     skipPurchaseSimulateSuccess:
       label: 購入をスキップして成功をシミュレート
       shortLabel: チップの成功をシミュレート
-      description: 有効にすると、チップの購入を開始しても Microsoft Store のチェックアウトをスキップし、選択したティアの購入が成功したものとして扱い、ランダムなお礼アニメーションも再生します。既定ではオフです。永続的な購入回数は書き込まれません。
     installDate:
       label: インストール日の生の値（msstoreRatingPrompt.installDate）
-      description: ローカル設定に保存されているインストール日の文字列を、そのままの形で表示します。繰り返しクリックして編集すると、保存値を更新できます。
       placeholder: e.g. 2024-01-01T00:00:00.000Z
       ageDays: 'インストール経過日数: {{value}}'
       ageDaysUnknown: 不明
-    notes:
-      scope: この設定は、今後の Desktop 管理の npm のインストールと同期にのみ影響します。
-      npm: npm のスイッチは、今後の Desktop 管理の npm のインストールと同期にのみ影響します。保存するとすぐに有効になり、管理対象サービスは再起動されません。
     actions:
       save: 変更を保存
       saving: 保存中...
@@ -162,10 +134,8 @@ footer:
   copyright: © 2026 Hagicode Desktop
 quickStart:
   title: クイックスタート
-  description: 組み込み Web サービス パッケージをインストールし、ローカル PCode インスタンスの管理を開始します。
 secure:
   title: 安全
-  description: セキュリティを念頭に置いて構築されています。データはマシン上に残ります。
 header:
   runningSuccessfully: 正常に実行されました
 dependencyManagement:
@@ -174,10 +144,8 @@ dependencyManagement:
     environment: 環境
   title: 依存関係の管理
   backToDashboard: ダッシュボードに戻る
-  description: 埋め込み Web サービス パッケージとシステムの依存関係を管理する
   tips:
     title: ヒント
-    description: 最高のパフォーマンスとセキュリティを実現するために、依存関係を最新の状態に保ちます。
   noPackageInstalled: パッケージがインストールされていません
   installedVersion: インストールされているバージョン
   requiredVersion: 必要なバージョン
@@ -203,17 +171,14 @@ dependencyManagement:
     systemSource: システムソース
   manualHandoff:
     title: 手動 CLI パッケージのインストールが必要
-    description: 推奨されたコマンドをデスクトップの外で実行します。 Desktop のバンドルされた Node/npm 環境と PATH の動作の現在の詳細については、FAQ を参照してください。
     faqLinkLabel: ノード環境のよくある質問を見る
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
-    refreshHint: コマンドの終了後に更新して、デスクトップ管理の依存関係を再確認します。
 versionManagement:
   tabs:
     newVersions: 新しいバージョン
     downloadedVersions: ダウンロード済みバージョン
     sourceManagement: ソース管理
   title: バージョン管理
-  description: Hagicode Server バージョンのインストール、切り替え、管理
   availableVersions: 利用可能なバージョン
   installedVersions: インストールされているバージョン
   installed: インストール済み
@@ -232,7 +197,6 @@ versionManagement:
   noVersionsAvailable: 利用可能なバージョンはありません
   noVersionsInstalled:
     title: まだバージョンがインストールされていません
-    description: Hagicode Desktop を開始する最も簡単な方法は、ガイド付きセットアップ ウィザードを使用することです。わずか数ステップでインストールと構成を完了します。
     startButton: セットアップウィザードの開始
   status:
     active: アクティブ
@@ -257,7 +221,6 @@ versionManagement:
   progressText: 進行状況テキスト
   info:
     title: バージョン管理について
-    description: バージョン管理を使用すると、複数の Hagicode Server バージョンをインストールし、それらを切り替えて、アクティベーション前にデスクトップの互換性を確認できます。
   toast:
     installSuccess: インストール成功
     installSuccessDescription: バージョンは正常にインストールされました。準備ができたら、サービスを手動で開始します。
@@ -331,7 +294,6 @@ installProgressDialog:
 subscription:
   eyebrow: Microsoft Store スポンサープラン
   title: Hagicode スポンサープラン
-  description: Microsoft Store のスポンサープランの状態を確認し、ローカルスナップショットを更新し、この端末でスポンサー権限が有効かを確認します。
   loading: キャッシュされたスポンサー スナップショットを読み込んでいます...
   errorTitle: スポンサー スナップショットを取得できません
   errorDescription: 'Desktop はスポンサー スナップショットを読み込めませんでした: {{error}}'
@@ -359,17 +321,11 @@ subscription:
   hero:
     inactive:
       title: Hagicode をもっと良くする
-      description: スポンサープランは Hagicode の継続的な保守を支えるためのものです。
-      note: AI Agent features do not stay useful on their own. They need ongoing tracking, prompt updates, implementation work, and token spend to stay aligned with fast-moving tools.
     active:
       title: ご支援ありがとうございます
-      description: この端末ではすでにスポンサー権限が有効です。ここで状態確認、購入フローの再表示、スナップショットの手動更新ができます。
-      note: Your purchase is more than a receipt. It directly supports the ongoing maintenance, iteration, and follow-up work that keeps the feature reliable after launch.
   message:
     ongoingTitle: 継続的な進化には、実際の投資が必要です
-    ongoingDescription: Hagicode is not a one-and-done product. Keeping it useful means continued author time and recurring token spend for updates, validation, and tracking change.
     perksTitle: スポンサーには心のこもった特典を
-    perksDescription: 今後、より洗練されたテーマなど、スポンサーにふさわしい特典も、準備が整い次第、順次導入していく予定です。
     unlockNoticeTitle: 現時点では機能解放はありません
     unlockNoticeDescription: スポンサープラン自体は他の製品機能を解放しません。別の独立機能を使うには、それぞれ別途購入が必要です。
     inactivePrompt: この取り組みに価値を感じていただけたなら、スポンサープランが最も直接的な支援方法です。
@@ -385,21 +341,13 @@ subscription:
     subscribeViaStore: Microsoft Store で購読
     installStoreApp: Store 版をインストール
     processing: 処理中...
-    buyHint: Start the Microsoft Store flow to support continued AI Agent iteration and attach sponsor entitlements to this device.
-    manageHint: Open the Microsoft Store purchase flow again if you want to confirm the sponsoring account or manage the current plan.
-    activeHint: この端末ではすでにスポンサー権限が有効です。Microsoft Store の最新の状態を確認したい場合は、一度更新してください。
-    unsupportedHint: 購入と管理は、Hagicode Desktop の Microsoft Store 版でのみ利用できます。
-    installHint: Open the sponsor plan in Microsoft Store first, then install or launch the Store edition of Hagicode Desktop to complete subscription and sync entitlements.
     secondaryLabel: Before you decide
-    secondaryHint: Refresh first if you want Desktop to re-check Microsoft Store and confirm the latest local snapshot before you purchase or review the plan.
   summary:
     planLabel: プラン
     planName: Hagicode スポンサープラン
     renewalLabel: 更新日または有効期限
     lastSyncLabel: 最後に同期に成功した日時
     entitlementsLabel: 有効な権限
-    activeDetail: Sponsor entitlements are already available on this device.
-    inactiveDetail: Purchasing here is what turns future sponsor benefits on for this device.
     source: 'ソース: {{value}}'
   sourceValue:
     initial: 現在のセッションの既定の状態
@@ -408,49 +356,36 @@ subscription:
   mission:
     eyebrow: スポンサーシップが大切な理由
     title: ご購入は保守と更新の支援につながります。
-    description: これにより、モデル、CLI、ワークフローの変化を追い続けられます。
     points:
       evolution:
         title: Hagicode を継続的に保守する
-        description: モデル、CLI、ワークフローの変化を追跡します。
       investment:
         title: 検証と更新を支える
-        description: 修正、検証、反復改善を継続できるようにします。
       rewards:
         title: スポンサー権限を有効にする
-        description: 購入後、この端末に対応する権限が表示され、そのまま保持されます。
   gratitude:
     eyebrow: スポンサーの皆さまへ
     title: Your support is already carrying real work
-    description: The sponsor plan is designed as a practical way to keep ongoing product work funded while giving supporters clear recognition inside Desktop.
     points:
       continuity:
         title: Continued iteration stays possible
-        description: Active sponsorship gives us room to keep tracking AI Agent changes, respond to tool shifts, and ship follow-up improvements instead of freezing the feature after launch.
       benefits:
         title: Sponsor-facing polish can grow next
-        description: We can now keep shaping tasteful sponsor experiences, including more refined themes and other benefits that feel aligned with the product.
       roadmap:
         title: Future perks already have a delivery path
-        description: The entitlement model is in place, so later sponsor-only additions can land cleanly without rebuilding the purchase foundation.
   benefits:
     eyebrow: このプランで解放されるもの
     title: まず創作を支え、そのうえで支援者にしっかり応える
-    description: スポンサープランは、現時点では意図的にシンプルにしています。中核となる使命を明確に保ちつつ、製品の成長に合わせて洗練された適切な特典を加える余地を残しています。
     items:
       recognition:
         title: Desktop 内でのスポンサー表示
-        description: スポンサー状態を使えば、壊れやすい場当たり的なチェックに頼ることなく、アプリ内でスポンサーを分かりやすく表示できます。
       theme:
         title: より洗練されたテーマと見た目の磨き込み
-        description: ご支援により、作り込まれたテーマや、感じ取りやすい反面、維持にコストのかかる品質面の細部に投資できます。
       future:
         title: 今後のスポンサー限定特典
-        description: 現在の権限モデルは、今後のスポンサー特典を提供できるようになったときに備えて、整った受け皿を確保しています。
   snapshot:
     eyebrow: 現在の端末の状態
     title: Store の状態とローカルの権限の詳細
-    description: 現在の端末でスポンサープランを確認できるよう、運用上の詳細をここに表示しています。
     fields:
       status: 現在の状態
       planStoreId: Store ID
@@ -461,8 +396,6 @@ subscription:
       source: スナップショットのソース
   entitlements:
     title: 権限の概要
-    activeDescription: These are the sponsor capability flags currently available on this device.
-    inactiveDescription: These capability flags are reserved for sponsor-only Desktop experiences and become available after purchase.
     enabled: 有効
     disabled: Disabled
     names:
@@ -474,7 +407,6 @@ subscription:
   diagnostics:
     eyebrow: 技術的なトレース
     title: Diagnostics
-    description: Cached-state recovery details stay visible so refresh failures do not look like entitlement loss.
     lastSuccessfulSync: 最後に同期に成功した日時
     source: スナップショットのソース
     empty: 診断情報は記録されていません。
@@ -483,8 +415,6 @@ subscription:
     description: Microsoft Store が直近の更新を完了できなかったため、Desktop はこのセッションで最後に確認できたスポンサー状態を消さずに保持しています。
   unsupported:
     title: Microsoft Store 版が必要です
-    description: 購入と管理の操作は、Hagicode Desktop の Microsoft Store 版でのみ利用できます。
-    nonStoreDescription: このランタイムは Microsoft Store 版ではありません。下のボタンから Microsoft Store でスポンサープランを開き、Hagicode Desktop の Store 版をインストールまたは起動して、購読と権限の同期を完了してください。
   purchaseOutcome:
     title: 購入結果
     succeeded: 購入が完了し、Desktop はスポンサー スナップショットを更新しました。
@@ -507,11 +437,8 @@ turboEngine:
   errorDescription: 'Desktop は TurboEngine スナップショットを読み込めませんでした: {{error}}'
   hero:
     title: TurboEngine ワークスペース
-    activeDescription: TurboEngine is already licensed on this device. You can confirm the current Microsoft Store state, review diagnostics, and refresh whenever needed.
-    inactiveDescription: TurboEngine uses a separate perpetual Microsoft Store license. This workspace lets you verify the current state, buy the license, and confirm the latest runtime diagnostics.
   article:
     unlockTitle: 一度購入すれば永続的に解放
-    unlockLead: TurboEngine DLC は、高い提案同時実行数、ブランドのカスタマイズ、拡張テーマ、カスタムアバターアップロードを 1 つの恒久的な解放パックにまとめたものです。購入後はサブスクリプション不要で、機能はそのまま現在のワークベンチ体験に反映されます。
     featuresTitle: 主な解放内容
     purchaseNoticeTitle: 購入に関する注意
     purchaseNoticeItems:
@@ -521,19 +448,14 @@ turboEngine:
     features:
       proposalConcurrency:
         title: 提案の同時実行上限が 3 から 32 に拡張
-        description: これは今でも TurboEngine DLC の中核であり、日常的な体感差が最も大きいアップグレードです。生成、実行、アーカイブ中の提案は同じ同時実行枠を共有するため、上限が高いほど複数の作業ラインを安定して並行進行できるかが大きく変わります。
       documentThemes:
         title: 拡張ドキュメントテーマ
-        description: Agent 管理画面では拡張された Document Theme を切り替えられ、ワークベンチ、履歴エリア、フォールバック分類が異なる用語や文言でどう見えるかをリアルタイムで確認できます。
       composeCommitCoAuthor:
         title: AI Compose Commit の Co-Authored-By をカスタマイズ
-        description: Git 設定では既定の Co-Authored-By モードを保存できます。単発の AI Compose 実行では、その回だけ共同執筆者名とメールアドレスをカスタマイズしたり、末尾自体を付けないこともできます。
       branding:
         title: ブランドのカスタマイズ
-        description: TurboEngine DLC が有効になると、ヘッダーロゴをアップロードし、アプリタイトル、ブラウザータイトル、ブランドクリック先リンクを設定できます。左上のアイコンを変えるだけではなく、ワークベンチ上部のブランド領域全体をカスタマイズできます。
       avatarUpload:
         title: カスタムアバターのアップロードと共有再利用
-        description: 現在の Agent 用にカスタムアバターをアップロードできるようになり、共有カスタムアバターライブラリも作成、編集、一括作成の各フローで再利用できます。
   messages:
     refreshSuccess: TurboEngine の状態を更新しました。
     refreshStale: Desktop kept the cached TurboEngine snapshot because the Microsoft Store refresh did not complete.
@@ -570,10 +492,6 @@ turboEngine:
     refreshing: 更新中...
     openStoreProduct: Store で TurboEngine を開く
     installStoreApp: Store 版をインストール
-    manageHint: Open Microsoft Store again if you need to confirm ownership or revisit the current TurboEngine license on this device.
-    buyHint: Start the Microsoft Store flow for `9NSD809W18Z6`, then Desktop will refresh the TurboEngine entitlement state in the same session.
-    activeHint: この端末ではすでに TurboEngine のライセンスが有効です。Microsoft Store の最新の状態を確認したい場合は、一度更新してください。
-    handoffHint: In-app purchase and verification work only in the Microsoft Store edition. Use the Store handoff below when this runtime cannot complete the license flow itself.
   runtime:
     sectionTitle: ランタイム契約
     supported: This runtime can query Microsoft Store directly and run the packaged TurboEngine purchase path for Store ID `9NSD809W18Z6`.
@@ -594,8 +512,6 @@ turboEngine:
     description: Microsoft Store が直近の更新を完了できなかったため、Desktop はこのセッションで最後に確認できた TurboEngine 状態を消さずに保持しています。
   unsupported:
     title: Microsoft Store 版が必要です
-    description: 購入とライブ検証は、Hagicode Desktop の Microsoft Store 版でのみ利用できます。
-    nonStoreDescription: このランタイムは Microsoft Store 版ではありません。下のボタンから TurboEngine の Store ページを開き、Hagicode Desktop の Store 版をインストールまたは起動して、購入と検証を完了してください。
   purchaseOutcome:
     title: 購入結果
     succeeded: 購入が完了し、Desktop は TurboEngine ライセンスのスナップショットを更新しました。

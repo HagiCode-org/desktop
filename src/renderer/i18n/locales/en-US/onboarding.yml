@@ -1,17 +1,13 @@
 title: First-Time Setup
 welcome:
   title: Welcome to Hagicode Desktop
-  description: Hagicode Desktop is the local launcher for Hagicode. We will finish first-time setup and compliance confirmation in {{count}} steps.
   features:
     manage:
       title: Version Management
-      description: Manage Hagicode Server installation and updates
     monitor:
       title: Service Monitoring
-      description: Start, stop, and monitor service status
     dependencies:
       title: Dependency Management
-      description: View and manage system dependencies
   processTitle: 'The first-time setup has {{count}} steps:'
   steps:
     languageSelection: Choose the Desktop language used during setup
@@ -25,7 +21,6 @@ claude:
   title: Configure Claude Code
 languageSelection:
   title: Choose Your Language
-  description: Select the language used by Hagicode Desktop now. The first embedded backend startup will use a matching default.
   recommended: Recommended
   selected: Selected
   choose: Choose
@@ -47,8 +42,6 @@ download:
   pleaseWait: Please wait while we download...
 dependencies:
   title: Install System Dependencies
-  subtitle: Hagicode requires certain system dependencies to function properly.
-  description: Check the installation status of system dependencies
   installButton: Install Dependencies
   status:
     installed: Installed
@@ -82,10 +75,8 @@ dependencies:
     message: Some dependencies failed to install. Please install them manually and continue.
   manualHandoff:
     title: Manual CLI package install required
-    description: Run the suggested command outside Desktop. For current details about the externally installed Node/npm environment and PATH behavior, read the FAQ.
     faqLinkLabel: View Node environment FAQ
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
-    refreshHint: Refresh after the command finishes to re-check Desktop-managed dependencies.
 depInstallConfirm:
   title: Install Missing Dependencies
   installingTitle: Installing Dependencies
@@ -112,10 +103,8 @@ launch:
   title: Start Service
   starting:
     title: Starting Hagicode Server...
-    subtitle: Initializing service components...
   complete:
     title: Setup Complete!
-    subtitle: Hagicode Desktop has been successfully installed and started.
     success: Congratulations! Hagicode Desktop has been successfully installed and started.
     ready: You can now start using all features.
     button: Enter Main Interface
@@ -137,8 +126,6 @@ launch:
     issues: Report Issues
   failure:
     title: Startup Failed
-    subtitle: Hagicode Server could not finish starting. Review the diagnostics and reinstall before continuing setup.
-    guidance: Open the full log, then reinstall the current version and restart the setup flow.
     viewLog: View Full Log
     retryButton: Retry Startup
     reinstallButton: Reinstall and Restart Setup
@@ -147,8 +134,6 @@ launch:
     emptySummary: No startup failure summary was captured
     emptyLog: No startup failure log was captured
     meta: 'Port: {{port}} · Time: {{timestamp}}'
-    truncatedHint: The startup log was truncated to the most recent output.
-    recoveryHint: We recommend reinstalling the current version and resetting onboarding before trying setup again.
     copyButton: Copy Log
     copySuccess: Startup failure log copied
     copyError: Failed to copy startup failure log
@@ -168,12 +153,10 @@ skip:
     After skipping, you can:
     • Manually install Hagicode Server through "Package Management" in the main interface
     • Re-enable the setup process in settings
-  reenableNote: If this is your first time using Hagicode Desktop, we recommend completing the setup process.
   cancel: Cancel
   confirm: Skip Setup
 dependencyManagement:
   title: Dependency Management
-  description: View and manage system dependencies
   status:
     installed: Installed
     bundled: Bundled with Desktop
@@ -200,10 +183,8 @@ dependencyManagement:
     systemSource: System source
   manualHandoff:
     title: Manual CLI package install required
-    description: Run the suggested command outside Desktop. For current details about the externally installed Node/npm environment and PATH behavior, read the FAQ.
     faqLinkLabel: View Node environment FAQ
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
-    refreshHint: Refresh after the command finishes to re-check Desktop-managed dependencies.
   noDependencies: No dependencies detected
 dependencyCheck:
   title: Dependency Check Results
@@ -219,8 +200,6 @@ dependencyCheck:
     requiredVersion: Required Version
 legal:
   title: End User License Agreement and Privacy Policy
-  descriptionFull: Before downloading HagiCode Server, confirm the current EULA and Privacy Policy revisions. The official documents open in your default browser.
-  descriptionLegalOnly: The current legal revisions have not been accepted yet. Review the official documents in your default browser, then return to Desktop to confirm.
   progressFull: 'Full setup: {{steps}}'
   progressLegalOnly: 'Compliance gate mode: language selection appears before the current legal consent step'
   browserInstruction: Open the official documents in your default browser before you accept. Desktop only shows the revision summary, not the full legal text.

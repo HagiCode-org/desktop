@@ -38,7 +38,6 @@ dependencyWarningBanner:
   fixLater: Corrigir mais tarde
 packageManagement:
   cardTitle: Gerenciamento de Pacotes
-  cardDescription: Gerenciar a instalação de pacotes de serviços da web
   platformLabel: Plataforma
   detecting: Detectando...
   installationStatusLabel: Status de instalação
@@ -75,7 +74,6 @@ packageManagement:
     error: Erro
 webServiceStatus:
   cardTitle: Serviço Web incorporado
-  cardDescription: Visualize e gerencie o status de execução do serviço web
   status:
     running: Em execução
     stopped: Parado
@@ -95,7 +93,6 @@ webServiceStatus:
   dependencyReadinessButton: Gerenciamento de Dependências Abertas
   managedStartup:
     label: Inicialização dos serviços gerenciados
-    description: Escolha quais serviços gerenciados devem iniciar junto quando você abrir o Hagicode.
   dependencyReadinessAlert:
     title: As dependências não estão prontas
     message: Instale as dependências gerenciadas pela área de trabalho necessárias antes de iniciar Hagicode; dependências opcionais não bloqueiam a inicialização do serviço base.
@@ -146,13 +143,9 @@ webServiceStatus:
     copyEmpty: Nenhum conteúdo de registro para copiar
   startupProgress:
     title: Iniciando o serviço
-    description: O Desktop está verificando a versão ativa, validando as dependências obrigatórias e aguardando o serviço local do Hagicode terminar de iniciar.
     successTitle: O serviço está pronto
-    successDescription: O serviço local concluiu as verificações de inicialização e está pronto para ser aberto.
     failureTitle: A inicialização não foi concluída
-    failureDescription: O Desktop encontrou um problema ao iniciar o serviço. Revise o registro de falhas ou feche esta caixa de diálogo e continue a solução de problemas.
     currentStepLabel: Progresso atual
-    waitingHint: A inicialização pode levar alguns segundos. O Desktop mantém esta caixa de diálogo atualizada com a etapa atual e o status de execução.
     states:
       pending: Pendente
       active: Em andamento
@@ -187,32 +180,25 @@ webServiceStatus:
     openLogsError: Falha ao abrir a pasta de logs da Web da versão ativa
   listenAddress:
     label: Endereço de escuta
-    description: Escolha como o Desktop vincula o serviço da Web incorporado enquanto ele está interrompido.
     customInputLabel: IPv4 personalizado
     customPlaceholder: 192.168.1.24
     customError: Insira um endereço IPv4 válido
     accessUrlPreviewLabel: Acesse a visualização URL
     wildcardHint: '`0.0.0.0` vincula todas as interfaces. Desktop ainda abre o cliente local através de `127.0.0.1`.'
-    localOnlyHint: As alterações entrarão em vigor na próxima vez que o serviço local for iniciado.
     presets:
       localhost:
         label: host local
-        description: Melhor para o WebView e navegador integrados nesta máquina.
       loopback:
         label: 127.0.0.1
-        description: Use um endereço de loopback IPv4 explícito para acesso somente local.
       wildcard:
         label: 0.0.0.0
-        description: Vincule todas as interfaces locais para que outros dispositivos na LAN possam se conectar.
       custom:
         label: IP personalizado
-        description: Vincule uma interface IPv4 específica, como um adaptador LAN dedicado.
 languageSelector:
   currentLanguage: Idioma atual
   selectLanguage: Selecione o idioma
 dependencyManagement:
   title: Dependências do sistema
-  description: Verifique e gerencie as dependências de tempo de execução do sistema exigidas pelo serviço web
   batch:
     selectedCount: 'Selecionados: {{count}}'
     generate: Gerar comando em lote
@@ -249,10 +235,8 @@ dependencyManagement:
     systemSource: Fonte do sistema
   manualHandoff:
     title: Instalação manual do pacote CLI necessária
-    description: Execute o comando sugerido fora do Desktop. Para obter detalhes atuais sobre o ambiente Node/npm incluído no Desktop e o comportamento do PATH, leia o FAQ.
     faqLinkLabel: Ver perguntas frequentes sobre o ambiente Node
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
-    refreshHint: Atualize após a conclusão do comando para verificar novamente as dependências gerenciadas pelo Desktop.
   noDependencies: Nenhuma dependência detectada
   installToast:
     manualDisabledTitle: A instalação automática está desativada
@@ -353,17 +337,13 @@ homePromote:
 serviceRegion:
   title: Região do serviço
   resetTitle: Testar novamente a seleção de região
-  resetDescription: Limpa a escolha salva e mostra o aviso novamente na próxima vez que você abrir a página inicial. A fonte de pacotes atual não será alterada.
   resetButton: Redefinir escolha
   resetSuccess: Seleção de região redefinida. O aviso aparecerá novamente na próxima vez que você abrir a página inicial.
   promptTitle: Escolha a região de serviço do servidor
   confirmChoice: Usar esta região
   later: Mais tarde
   successTitle: Região do serviço salva
-  successDescription: Você poderá alterá-la depois em Configurações > Região.
   done: Entendi
-  promptDescription: Esta escolha define os pontos de download das atualizações do Hagicode e dos pacotes de software relacionados. Ela não altera o idioma da interface nem os espelhos de dependências.
-  description: Controla o índice oficial de pacotes do servidor e a fonte de download preferencial. Não altera o idioma da interface nem os espelhos de dependências.
   choiceLabel: Região do serviço
   loading: Carregando região...
   saving: Aplicando região...

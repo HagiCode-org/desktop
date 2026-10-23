@@ -28,14 +28,9 @@ function SkipConfirmDialog({ open, onConfirm, onCancel }: SkipConfirmDialogProps
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-4 space-y-2">
-          <p className="text-sm text-muted-foreground">
-            {t('skip.manualInstallNote')}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            {t('skip.reenableNote')}
-          </p>
-        </div>
+        <p className="py-4 text-sm text-muted-foreground">
+          {t('skip.manualInstallNote')}
+        </p>
 
         <DialogFooter>
           <Button variant="ghost" onClick={onCancel}>

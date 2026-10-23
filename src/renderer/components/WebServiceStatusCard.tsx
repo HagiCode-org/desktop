@@ -755,10 +755,6 @@ const WebServiceStatusCard: React.FC = () => {
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <div className="space-y-4 border-t border-border/60 p-4">
-                  <p className="text-xs text-muted-foreground">
-                    {t('webServiceStatus.listenAddress.description')}
-                  </p>
-
                   <RadioGroup
                     value={selectedListenPreset}
                     onValueChange={(value) => {
@@ -846,11 +842,11 @@ const WebServiceStatusCard: React.FC = () => {
                       {t('webServiceStatus.listenAddress.accessUrlPreviewLabel')}
                     </div>
                     <div className="break-all font-mono text-sm text-primary">{accessUrlPreview}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {normalizedPendingHost === '0.0.0.0'
-                        ? t('webServiceStatus.listenAddress.wildcardHint')
-                        : t('webServiceStatus.listenAddress.localOnlyHint')}
-                    </div>
+                    {normalizedPendingHost === '0.0.0.0' ? (
+                      <div className="text-xs text-muted-foreground">
+                        {t('webServiceStatus.listenAddress.wildcardHint')}
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="flex flex-wrap gap-2">

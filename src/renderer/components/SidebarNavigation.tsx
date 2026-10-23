@@ -50,7 +50,6 @@ type NavigationEmphasis = 'default' | 'sponsor' | 'turboengine';
 interface NavigationItem {
   id: ViewType | 'official-website';
   labelKey: string;
-  descriptionKey?: string;
   icon: ComponentType<{ className?: string }>;
   url?: string;
   emphasis: NavigationEmphasis;
@@ -73,7 +72,6 @@ const settingsNavigationItem: NavigationItem = {
 const officialWebsiteItem: NavigationItem = {
   id: 'official-website',
   labelKey: 'navigation.officialWebsite',
-  descriptionKey: 'navigation.officialWebsiteDesc',
   icon: GlobeIcon,
   url: 'https://hagicode.com/',
   emphasis: 'default',
@@ -653,7 +651,6 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
                   <motion.button
                     type="button"
                     onClick={() => void handleNavClick(officialWebsiteItem)}
-                    title={collapsed ? undefined : t(officialWebsiteItem.descriptionKey ?? '')}
                     aria-label={collapsed ? t(officialWebsiteItem.labelKey) : undefined}
                     whileTap={{ scale: 0.98 }}
                     className={collapsed
@@ -675,9 +672,6 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
                             </p>
                             <ExternalLink className="mt-[3px] h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-70 group-hover:opacity-100" />
                           </div>
-                          <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                            {t(officialWebsiteItem.descriptionKey ?? '')}
-                          </p>
                         </div>
                       ) : null}
                     </div>

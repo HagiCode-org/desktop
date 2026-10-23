@@ -179,9 +179,6 @@ export default function SubscriptionPage() {
   const articleTitle = isActive
     ? t('subscription.hero.active.title')
     : t('subscription.hero.inactive.title');
-  const articleDescription = isActive
-    ? t('subscription.hero.active.description')
-    : t('subscription.hero.inactive.description');
   const statusSummary = effectiveIsLoading && !effectiveSnapshot
     ? t('subscription.status.loading')
     : (effectiveBridgeAvailable && effectiveSnapshot?.availability === 'supported'
@@ -225,9 +222,6 @@ export default function SubscriptionPage() {
                 <h2 className="commerce-premium-heading text-3xl font-semibold tracking-[-0.02em] [text-wrap:balance] sm:text-4xl">
                   {articleTitle}
                 </h2>
-                <p className="commerce-premium-copy mt-4 text-sm leading-7 sm:text-base">
-                  {articleDescription}
-                </p>
               </div>
 
               <div className="mt-8">
@@ -245,9 +239,6 @@ export default function SubscriptionPage() {
                           {index + 1}
                         </span>
                         <span>{t(`subscription.mission.points.${pointKey}.title`)}</span>
-                      </p>
-                      <p className="commerce-premium-copy mt-3 max-w-[72ch] pl-10 text-sm leading-7 sm:text-base">
-                        {t(`subscription.mission.points.${pointKey}.description`)}
                       </p>
                     </li>
                   ))}

@@ -14,7 +14,6 @@ describe('onboarding locale coverage', () => {
       const data = load(raw) as Record<string, any>;
 
       assert.equal(typeof data.languageSelection?.title, 'string', `${locale} missing languageSelection.title`);
-      assert.equal(typeof data.languageSelection?.description, 'string', `${locale} missing languageSelection.description`);
       assert.equal(typeof data.languageSelection?.recommended, 'string', `${locale} missing languageSelection.recommended`);
       assert.equal(typeof data.languageSelection?.selected, 'string', `${locale} missing languageSelection.selected`);
       assert.equal(typeof data.languageSelection?.choose, 'string', `${locale} missing languageSelection.choose`);

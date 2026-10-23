@@ -14,17 +14,13 @@ settings:
     advanced: Advanced Settings
   notification:
     title: Notification Center
-    description: Validate the desktop notification pipeline and review the default notification payload used by the client.
     testSectionTitle: Test Notification
-    testSectionDescription: Send a native desktop notification to verify the IPC bridge and OS notification transport are working.
     testButton: Send Test Notification
     sending: Sending...
     testSuccess: Test notification sent
-    testSuccessDescription: If OS notification permissions are available, the desktop should already have received it.
     testError: Failed to send test notification
     testErrorDescription: 'Error detail: {{error}}'
     previewTitle: Default Payload Preview
-    previewDescription: These fields are sent to the main process when the test notification runs.
     testTitle: Test Notification
     testBody: Desktop notifications are ready. Clicking this notification focuses Hagicode Desktop.
     eventShown: Latest shown event
@@ -44,47 +40,36 @@ settings:
       silent: Silent
   languageSettings:
     title: Language Settings
-    description: Switch the active Desktop language and refresh labels immediately.
-    helper: Language changes are applied to menus, tray labels, and settings tabs right away.
   themeSettings:
     title: Theme Settings
-    description: A dedicated theme surface is reserved here for future light, dark, and visual preference controls.
   advancedSettings:
     title: Advanced Settings
-    description: Reserve one place for logs, experiments, and advanced runtime controls.
   placeholders:
     comingSoon: This settings module is registered in the new settings framework. Detailed controls will arrive in a follow-up change.
   smartConfig:
     title: Smart Config prompt guidance
-    description: Review the resolved prompt, copy it into any supported AI CLI, and complete the configuration flow manually.
   onboarding:
     title: Onboarding
-    description: Re-run first-time setup wizard to download packages, install dependencies, and start service.
     restartWizard: Restart Wizard
-    restartWizardDescription: Re-run first-time setup wizard to download packages, install dependencies, and start service.
     restartButton: Restart Wizard
     resetting: Resetting...
     resetSuccess: Wizard has been reset
     resetError: 'Reset failed: {{error}}'
     homepageTour:
       title: Reset Homepage Tour
-      description: Clear the homepage tour completion state so the guided walkthrough can auto-play again the next time you open System Management.
       resetButton: Reset Homepage Tour
       resetting: Resetting Tour...
       resetSuccess: Homepage tour has been reset
       resetError: 'Failed to reset homepage tour: {{error}}'
   updates:
     title: Background Updates
-    description: Manage automatic checks, background predownloads, and verified archive retention.
     managedInstall:
       title: Auto-updates are disabled
       description: The application does not update itself automatically. How updates are delivered depends on the channel you used to install it, such as Microsoft Store or Steam.
     enabled:
       label: Enable background predownloads
-      description: When a compatible newer version is found, download the archive in the background without switching the current runtime.
     retainedArchiveCount:
       label: Retained archive count
-      description: Only verified auto-downloaded archives are kept. Older entries are removed when the limit is exceeded.
     actions:
       save: Save Settings
       saving: Saving...
@@ -95,12 +80,8 @@ settings:
     errors:
       retainedArchiveCountPositive: Retained archive count must be a positive integer.
       saveErrorDetail: 'Save failed: {{error}}'
-    notes:
-      snapshotModel: The dashboard reminder is driven by a persisted main-process snapshot, so the last known update state survives Desktop reloads.
-      retentionPolicy: Retention cleanup only removes cached archives and metadata. Installed version directories stay untouched.
   runtimeDataPath:
     title: Runtime data storage path
-    description: Choose where Desktop stores runtime-managed files, logs, and other runtime data.
     activePreset: 'Current effective preset: {{preset}}'
     environmentOverrideBadge: Environment override active
     lockedByRuntime: Locked by Microsoft Store
@@ -111,10 +92,8 @@ settings:
     options:
       userData-runtime-data:
         label: userData/runtime-data (default)
-        description: Stores runtime data under the Desktop Electron userData directory. Best for the default single-machine setup.
       home-runtime-data:
         label: ~/.hagicode/runtime-data
-        description: Stores runtime data under the current user home directory. Best for deployments that need a stable shared path.
     warnings:
       noMigration: Changing this setting only updates the target path. Desktop does not migrate existing runtime data automatically.
       restart: Saving a changed preset restarts the managed backend so the new runtime data root takes effect immediately.
@@ -131,23 +110,16 @@ settings:
       saveErrorDetail: 'Save failed: {{error}}'
   debugOptions:
     title: Debug Options
-    description: Control Desktop-managed npm behaviors for diagnosing package installation issues.
     useIgnoreScriptsForManagedNpm:
       label: npm uses `--ignore-scripts`
-      description: Make Desktop-managed npm installs and sync operations skip lifecycle scripts so postinstall-related failures are easier to isolate.
     skipPurchaseSimulateSuccess:
       label: Skip purchase, simulate success
       shortLabel: Simulate tip success
-      description: When enabled, starting a tip purchase skips the Microsoft Store checkout, treats the path as purchase success for the selected tier, and still plays a random thank-you animation. Default is off. Does not write durable purchase counts.
     installDate:
       label: Raw install date (msstoreRatingPrompt.installDate)
-      description: Shows the exact persisted raw install date string in local config. Click repeatedly and edit to update saved value.
       placeholder: e.g. 2024-01-01T00:00:00.000Z
       ageDays: 'Install age (days): {{value}}'
       ageDaysUnknown: unknown
-    notes:
-      scope: This setting only affects future Desktop-managed npm installs and sync operations.
-      npm: The npm switch only affects future Desktop-managed npm installs and sync operations. Saving it takes effect immediately and does not restart the managed service.
     actions:
       save: Save Changes
       saving: Saving...
@@ -162,10 +134,8 @@ footer:
   copyright: © 2026 Hagicode Desktop
 quickStart:
   title: Quick Start
-  description: Install embedded web service package and start managing your local PCode instance.
 secure:
   title: Secure
-  description: Built with security in mind. Your data stays on your machine.
 header:
   runningSuccessfully: Running Successfully
 dependencyManagement:
@@ -174,10 +144,8 @@ dependencyManagement:
     environment: Environment
   title: Dependency Management
   backToDashboard: Back to Dashboard
-  description: Manage embedded web service packages and system dependencies
   tips:
     title: Tips
-    description: Keep your dependencies up to date for best performance and security.
   noPackageInstalled: No package installed
   installedVersion: Installed Version
   requiredVersion: Required Version
@@ -203,17 +171,14 @@ dependencyManagement:
     systemSource: System source
   manualHandoff:
     title: Manual CLI package install required
-    description: Run the suggested command outside Desktop. For current details about the externally installed Node/npm environment and PATH behavior, read the FAQ.
     faqLinkLabel: View Node environment FAQ
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
-    refreshHint: Refresh after the command finishes to re-check Desktop-managed dependencies.
 versionManagement:
   tabs:
     newVersions: New Versions
     downloadedVersions: Downloaded Versions
     sourceManagement: Source Management
   title: Version Management
-  description: Install, switch, and manage Hagicode Server versions
   availableVersions: Available Versions
   installedVersions: Installed Versions
   installed: Installed
@@ -232,7 +197,6 @@ versionManagement:
   noVersionsAvailable: No versions available
   noVersionsInstalled:
     title: No Versions Installed Yet
-    description: The easiest way to get started with Hagicode Desktop is through our guided setup wizard. Complete installation and configuration in just a few steps.
     startButton: Start Setup Wizard
   status:
     active: Active
@@ -257,7 +221,6 @@ versionManagement:
   progressText: Progress text
   info:
     title: About Version Management
-    description: Version management lets you install multiple Hagicode Server versions, switch between them, and review desktop compatibility before activation.
   toast:
     installSuccess: Installation successful
     installSuccessDescription: The version was installed successfully. Start the service manually when you are ready.
@@ -331,7 +294,6 @@ installProgressDialog:
 subscription:
   eyebrow: Microsoft Store sponsor plan
   title: Hagicode Sponsor Plan
-  description: Review sponsor status, refresh the local snapshot, and confirm whether this device already has sponsor entitlements.
   loading: Preparing sponsor status...
   errorTitle: Sponsor snapshot unavailable
   errorDescription: 'Desktop could not load the sponsor snapshot: {{error}}'
@@ -359,17 +321,11 @@ subscription:
   hero:
     inactive:
       title: Make Hagicode better
-      description: The sponsor plan supports ongoing Hagicode maintenance. This page keeps the current state, purchase entry point, and device outcome visible in one place.
-      note: If you want to support this work, the sponsor plan helps keep iteration moving.
     active:
       title: Thank you for your support
-      description: Sponsor entitlements are already active on this device. Use this page to confirm status, reopen the Store flow, or refresh the snapshot.
-      note: This support is already helping the next round of iteration continue.
   message:
     ongoingTitle: Ongoing evolution needs real investment
-    ongoingDescription: The sponsor plan helps fund follow-up maintenance and updates, while keeping status, purchase result, and sync state visible on this device.
     perksTitle: Sponsors should receive thoughtful perks
-    perksDescription: We also plan to introduce fitting sponsor benefits over time, including more refined themes and other perks as they become ready.
     unlockNoticeTitle: No feature unlocks included
     unlockNoticeDescription: The sponsor plan does not unlock other product features. Separate licensed capabilities still require their own purchase.
     inactivePrompt: If this direction matters to you, the sponsor plan is the direct way to support it.
@@ -385,21 +341,13 @@ subscription:
     subscribeViaStore: Subscribe in Microsoft Store
     installStoreApp: Install Store edition
     processing: Processing...
-    buyHint: After purchase, this device syncs and shows the matching sponsor entitlements.
-    manageHint: Reopen Microsoft Store if you need to confirm account ownership or re-check the current plan.
-    activeHint: Sponsor entitlements are already active on this device. Refresh once if you want to confirm the latest Microsoft Store state.
-    unsupportedHint: Purchase and management work only in the Microsoft Store edition of Hagicode Desktop.
-    installHint: Open the sponsor plan in Microsoft Store first, then install or launch the Store edition of Desktop to complete subscription and sync.
     secondaryLabel: Need to confirm first?
-    secondaryHint: Refresh once before you decide to buy.
   summary:
     planLabel: Plan
     planName: Hagicode Sponsor Plan
     renewalLabel: Renewal or expiry
     lastSyncLabel: Last successful sync
     entitlementsLabel: Enabled entitlements
-    activeDetail: Sponsor entitlements are already active on this device.
-    inactiveDetail: Purchase enables them on this device.
     source: 'Source: {{value}}'
   sourceValue:
     initial: Current session default state
@@ -408,49 +356,36 @@ subscription:
   mission:
     eyebrow: Why sponsorship matters
     title: Your purchase helps
-    description: Support ongoing maintenance and updates.
     points:
       evolution:
         title: Keep Hagicode maintained
-        description: Track changes in models, CLI behavior, and workflows.
       investment:
         title: Support validation and updates
-        description: Keep fixes, validation, and iteration moving.
       rewards:
         title: Enable sponsor entitlements
-        description: After purchase, this device keeps the matching sponsor access.
   gratitude:
     eyebrow: Sponsor message
     title: Thank you for supporting this work
-    description: Your support is already helping maintenance and updates continue.
     points:
       continuity:
         title: Maintenance can continue
-        description: Follow-up fixes and updates can keep shipping.
       benefits:
         title: The thanks can be visible in product
-        description: Sponsor entitlements are already active on this device.
       roadmap:
         title: Future perks are prepared
-        description: New sponsor additions can plug in when they are ready.
   benefits:
     eyebrow: What this plan unlocks
     title: Built to support creation first, then reward supporters well
-    description: The sponsor plan is intentionally simple today. It keeps the core mission clear while leaving room for polished, appropriate benefits as the product grows.
     items:
       recognition:
         title: Sponsor identity in Desktop
-        description: Sponsor status can power visible recognition inside the app without depending on brittle one-off checks.
       theme:
         title: More refined themes and visual polish
-        description: Support gives us room to invest in better-crafted themes and other quality details that are easy to feel but expensive to maintain.
       future:
         title: Future sponsor-only benefits
-        description: The current entitlement model reserves a clean path for later sponsor perks when they are ready to ship.
   snapshot:
     eyebrow: Current device state
     title: Store status and local entitlement details
-    description: Operational details stay visible here so the sponsor plan remains auditable on the current device.
     fields:
       status: Current status
       planStoreId: Store ID
@@ -461,8 +396,6 @@ subscription:
       source: Snapshot source
   entitlements:
     title: Entitlement summary
-    activeDescription: Sponsor entitlements currently active on this device.
-    inactiveDescription: Sponsor entitlements that become active after purchase.
     enabled: Enabled
     disabled: Not enabled
     names:
@@ -474,7 +407,6 @@ subscription:
   diagnostics:
     eyebrow: Technical trace
     title: Diagnostics and recovery notes
-    description: This panel stays technical on purpose, so refresh failures do not look like entitlement loss and you can still verify the last known state.
     lastSuccessfulSync: Last successful sync
     source: Snapshot source
     empty: No diagnostics recorded.
@@ -483,8 +415,6 @@ subscription:
     description: Microsoft Store did not complete the latest refresh, so Desktop kept the most recent sponsor state confirmed in this session instead of clearing it.
   unsupported:
     title: Microsoft Store edition required
-    description: Purchase and management actions only work in the Microsoft Store edition of Hagicode Desktop.
-    nonStoreDescription: This runtime is not the Microsoft Store edition. Use the buttons below to open the sponsor plan in Microsoft Store, then install or launch the Store edition of Hagicode Desktop to complete subscription and entitlement sync.
   purchaseOutcome:
     title: Purchase result
     succeeded: Purchase completed and Desktop refreshed the sponsor snapshot.
@@ -507,11 +437,8 @@ turboEngine:
   errorDescription: 'Desktop could not load the TurboEngine snapshot: {{error}}'
   hero:
     title: TurboEngine workspace
-    activeDescription: TurboEngine is already licensed on this device. Use this page to confirm store state, recent sync timestamps, and diagnostics.
-    inactiveDescription: TurboEngine uses a separate perpetual license. This page keeps the purchase, refresh, and diagnostic controls focused in one place.
   article:
     unlockTitle: Buy once, unlock permanently
-    unlockLead: TurboEngine DLC packages the upgrades that most directly change how much parallel work, presentation control, and visual customization you can unlock inside Hagicode Desktop.
     featuresTitle: Key unlocks
     purchaseNoticeTitle: Purchase notes
     purchaseNoticeItems:
@@ -521,19 +448,14 @@ turboEngine:
     features:
       proposalConcurrency:
         title: Proposal concurrency limit increases from 3 to 32
-        description: This is still the core TurboEngine DLC upgrade with the strongest day-to-day impact. Proposals in generation, execution, and archive all occupy concurrency slots together, so the higher ceiling directly changes whether you can keep multiple workstreams moving in parallel.
       documentThemes:
         title: Extended document themes
-        description: Adventure-party management screens can switch between extended Document Theme options and preview how the workbench, history area, and fallback groupings read under different terminology and copy styles in real time.
       composeCommitCoAuthor:
         title: Custom Co-Authored-By for AI Compose Commit
-        description: In Git settings, you can save a default Co-Authored-By mode. During a single AI Compose run, you can also temporarily switch to a custom collaborator name and email, or omit the footer entirely for that round.
       branding:
         title: Brand customization
-        description: Once TurboEngine DLC is active, you can upload a header logo and configure the app title, browser title, and brand click-through link. It is not just a new top-left icon, it opens the whole workbench brand header for customization.
       avatarUpload:
         title: Custom avatar upload and shared reuse
-        description: You can now upload a custom avatar for the current agent, and the shared custom avatar library can also be reused across create, edit, and batch-create flows.
   messages:
     refreshSuccess: TurboEngine status refreshed.
     refreshStale: Desktop kept the last known TurboEngine state because the Microsoft Store refresh did not complete.
@@ -570,10 +492,6 @@ turboEngine:
     refreshing: Refreshing...
     openStoreProduct: Open TurboEngine in Store
     installStoreApp: Install Store edition
-    manageHint: Reopen Microsoft Store if you need to confirm ownership or re-check the current TurboEngine license on this device.
-    buyHint: Start the purchase flow for `9NSD809W18Z6`, then Desktop refreshes the license state in the same session.
-    activeHint: TurboEngine is already licensed on this device. Refresh once if you want to confirm the latest Microsoft Store state.
-    handoffHint: In-app purchase and verification only work in the Store edition, so this runtime falls back to direct Store handoff.
   runtime:
     sectionTitle: Runtime contract
     supported: This runtime can query Microsoft Store directly and complete license verification or purchase in-app.
@@ -594,8 +512,6 @@ turboEngine:
     description: Microsoft Store did not complete the latest refresh, so Desktop kept the most recent TurboEngine state confirmed in this session instead of clearing it.
   unsupported:
     title: Microsoft Store edition required
-    description: Purchase and live verification only work in the Microsoft Store edition of Hagicode Desktop.
-    nonStoreDescription: This runtime is not the Microsoft Store edition. Use the buttons below to open the TurboEngine Store page, then install or launch the Store edition of Hagicode Desktop to complete purchase and verification.
   purchaseOutcome:
     title: Purchase result
     succeeded: Purchase completed and Desktop refreshed the TurboEngine license snapshot.

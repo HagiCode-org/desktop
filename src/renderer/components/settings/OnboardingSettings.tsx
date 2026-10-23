@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { resetHomepageTourState } from '@/lib/homepageInteractiveTour';
 import { toast } from 'sonner';
 
@@ -46,20 +46,12 @@ export function OnboardingSettings() {
     <Card className="max-w-2xl">
       <CardHeader>
         <CardTitle>{t('settings.onboarding.title')}</CardTitle>
-        <CardDescription>
-          {t('settings.onboarding.description')}
-        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
         <div className="flex items-start gap-4">
-          <div className="flex-1 space-y-2">
-            <h3 className="font-medium text-foreground">
-              {t('settings.onboarding.restartWizard')}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {t('settings.onboarding.restartWizardDescription')}
-            </p>
-          </div>
+          <h3 className="flex-1 font-medium text-foreground">
+            {t('settings.onboarding.restartWizard')}
+          </h3>
           <Button
             onClick={handleResetOnboarding}
             disabled={isResettingOnboarding}
@@ -71,14 +63,9 @@ export function OnboardingSettings() {
 
         <div className="border-t border-border pt-5">
           <div className="flex items-start gap-4">
-            <div className="flex-1 space-y-2">
-              <h3 className="font-medium text-foreground">
-                {t('settings.onboarding.homepageTour.title')}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                {t('settings.onboarding.homepageTour.description')}
-              </p>
-            </div>
+            <h3 className="flex-1 font-medium text-foreground">
+              {t('settings.onboarding.homepageTour.title')}
+            </h3>
             <Button
               onClick={() => void handleResetHomepageTour()}
               disabled={isResettingHomepageTour}

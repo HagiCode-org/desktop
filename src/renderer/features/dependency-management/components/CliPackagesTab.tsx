@@ -36,8 +36,8 @@ export default function CliPackagesTab({
         </div>
         {mirrorSaveError ? <p className="basis-full text-sm text-destructive">{mirrorSaveError}</p> : null}
       </CardContent></Card>
-      <NpmPackageTable titleKey="dependencyManagement.packageTable.groups.base.title" descriptionKey="dependencyManagement.packageTable.groups.base.description" packages={basePackages} highlightedPackageIds={baseHighlightedPackageIds} selectedIds={[...selectedPackageIds].filter((id) => baseIds.has(id))} onSelectionChange={(ids) => onSelectionChange(ids, 'base')} />
-      <NpmPackageTable titleKey="dependencyManagement.packageTable.groups.agentCli.title" descriptionKey="dependencyManagement.packageTable.groups.agentCli.description" packages={agentCliPackages} highlightedPackageIds={agentCliHighlightedPackageIds} selectedIds={[...selectedPackageIds].filter((id) => agentIds.has(id))} onSelectionChange={(ids) => onSelectionChange(ids, 'agent-cli')} />
+      <NpmPackageTable titleKey="dependencyManagement.packageTable.groups.base.title" packages={basePackages} highlightedPackageIds={baseHighlightedPackageIds} selectedIds={[...selectedPackageIds].filter((id) => baseIds.has(id))} onSelectionChange={(ids) => onSelectionChange(ids, 'base')} />
+      <NpmPackageTable titleKey="dependencyManagement.packageTable.groups.agentCli.title" packages={agentCliPackages} highlightedPackageIds={agentCliHighlightedPackageIds} selectedIds={[...selectedPackageIds].filter((id) => agentIds.has(id))} onSelectionChange={(ids) => onSelectionChange(ids, 'agent-cli')} />
     </div>
   );
 }

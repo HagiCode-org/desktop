@@ -1,14 +1,13 @@
 import { LayoutTemplate } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { SettingsTabComponentProps } from '../../types';
 
 interface SettingsPlaceholderTabProps extends SettingsTabComponentProps {
   titleKey: string;
-  descriptionKey: string;
 }
 
-function SettingsPlaceholderTab({ titleKey, descriptionKey }: SettingsPlaceholderTabProps) {
+function SettingsPlaceholderTab({ titleKey }: SettingsPlaceholderTabProps) {
   const { t } = useTranslation('pages');
 
   return (
@@ -18,7 +17,6 @@ function SettingsPlaceholderTab({ titleKey, descriptionKey }: SettingsPlaceholde
           <LayoutTemplate className="h-5 w-5" />
           <CardTitle>{t(titleKey)}</CardTitle>
         </div>
-        <CardDescription>{t(descriptionKey)}</CardDescription>
       </CardHeader>
       <CardContent className="text-sm text-muted-foreground">
         {t('settings.placeholders.comingSoon')}
@@ -32,7 +30,6 @@ export function ThemeSettingsPlaceholderTab({ distributionState }: SettingsTabCo
     <SettingsPlaceholderTab
       distributionState={distributionState}
       titleKey="settings.themeSettings.title"
-      descriptionKey="settings.themeSettings.description"
     />
   );
 }
@@ -42,7 +39,6 @@ export function AdvancedSettingsPlaceholderTab({ distributionState }: SettingsTa
     <SettingsPlaceholderTab
       distributionState={distributionState}
       titleKey="settings.advancedSettings.title"
-      descriptionKey="settings.advancedSettings.description"
     />
   );
 }
