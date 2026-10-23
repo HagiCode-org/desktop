@@ -1,4 +1,5 @@
-import { CheckCircle2, Globe2, Languages } from 'lucide-react';
+import { CheckCircle2, Globe2 } from 'lucide-react';
+import { ONBOARDING_IMAGES } from '@/assets/illustrations';
 import { useTranslation } from 'react-i18next';
 import {
   DEFAULT_DESKTOP_LANGUAGE,
@@ -25,9 +26,15 @@ function LanguageSelectionStep({
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <div className="space-y-3 text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-          <Languages className="h-7 w-7" />
-        </div>
+        <img
+          src={ONBOARDING_IMAGES.language}
+          alt=""
+          aria-hidden="true"
+          width={800}
+          height={450}
+          decoding="async"
+          className="mx-auto h-36 w-full max-w-xl rounded-2xl object-cover sm:h-44"
+        />
         <div className="space-y-2">
           <h2 className="text-3xl font-semibold">{t('languageSelection.title')}</h2>
           <p className="mx-auto max-w-2xl text-sm text-muted-foreground md:text-base">

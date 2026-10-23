@@ -1,5 +1,6 @@
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
+import { TriangleAlert } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -45,7 +46,7 @@ export default function InstallConfirmDialog() {
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <span className="text-xl">⚠️</span>
+            <TriangleAlert aria-hidden="true" className="h-5 w-5 text-warning" />
             {t('installConfirm.title')}
           </DialogTitle>
           <DialogDescription>

@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { Rocket, CheckCircle2, Download, Zap } from 'lucide-react';
+import { CheckCircle2, Download, Zap } from 'lucide-react';
+import { ONBOARDING_IMAGES } from '@/assets/illustrations';
 import { OnboardingStep } from '../../../../types/onboarding';
 
 interface WelcomeIntroProps {
@@ -50,11 +51,17 @@ function WelcomeIntro({ stepSequence }: WelcomeIntroProps) {
   return (
     <div className="mx-auto w-full max-w-5xl space-y-8">
       <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-        <div className="rounded-2xl border bg-muted/20 p-6 sm:p-7">
-          <div className="flex items-start gap-4">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <Rocket className="h-7 w-7" />
-            </div>
+        <div className="overflow-hidden rounded-2xl border bg-muted/20">
+          <img
+            src={ONBOARDING_IMAGES.welcome}
+            alt=""
+            aria-hidden="true"
+            width={800}
+            height={450}
+            decoding="async"
+            className="h-44 w-full object-cover sm:h-52"
+          />
+          <div className="p-6 sm:p-7">
             <div className="space-y-3">
               <h2 className="text-3xl font-semibold tracking-tight">{t('welcome.title')}</h2>
               <p className="max-w-2xl text-sm text-muted-foreground md:text-base">

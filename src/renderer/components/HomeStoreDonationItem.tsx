@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'sonner';
 import { ArrowRight, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { DONATION_TIER_IMAGES } from '@/assets/illustrations';
 import type { AppDispatch, RootState } from '@/store';
 import {
   dismissMsstoreDonationItem,
@@ -305,10 +306,16 @@ export default function HomeStoreDonationItem({ isWindowsStoreRuntime }: HomeSto
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-base font-semibold text-foreground">
-                    <span aria-hidden="true" className="mr-1.5">
-                      {tierMeta.emoji}
-                    </span>
+                  <p className="flex items-center gap-3 text-base font-semibold text-foreground">
+                    <img
+                      src={DONATION_TIER_IMAGES[tierMeta.tier]}
+                      alt=""
+                      aria-hidden="true"
+                      width={40}
+                      height={40}
+                      decoding="async"
+                      className="h-10 w-10 shrink-0 rounded-xl object-cover"
+                    />
                     {shortName}
                   </p>
                 </div>

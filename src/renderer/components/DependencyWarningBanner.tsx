@@ -2,7 +2,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { Button } from './ui/button';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { X } from 'lucide-react';
+import { TriangleAlert, X } from 'lucide-react';
 import {
   selectShowDependencyWarning,
   selectDependencyWarningDismissed,
@@ -46,7 +46,7 @@ export default function DependencyWarningBanner() {
       </button>
 
       <AlertTitle className="flex items-center gap-2">
-        <span>⚠️</span>
+        <TriangleAlert aria-hidden="true" className="h-4 w-4" />
         {t('dependencyWarningBanner.title')}
       </AlertTitle>
       <AlertDescription className="space-y-3">

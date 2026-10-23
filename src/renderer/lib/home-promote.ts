@@ -15,6 +15,16 @@ export function getNextIndex(index: number, count: number, direction: 1 | -1): n
   return (((index + direction) % count) + count) % count;
 }
 
+/** Stable pick of one of `count` fallback covers for an item id, so a card keeps its cover across refreshes. */
+export function pickFallbackCoverIndex(id: string, count: number): number {
+  if (count <= 0) return 0;
+  let hash = 0;
+  for (const char of id) {
+    hash = (hash * 31 + char.codePointAt(0)!) >>> 0;
+  }
+  return hash % count;
+}
+
 export function shouldAutoRotate(state: HomePromoteRotateState): boolean {
   return state.count > 1
     && !state.hovered

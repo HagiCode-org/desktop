@@ -16,6 +16,7 @@ import {
   StartupPhase,
   type ProcessStatus,
 } from '../store/slices/webServiceSlice';
+import { STATE_IMAGES } from '@/assets/illustrations';
 import { writeTextToClipboard } from '../lib/clipboard.js';
 import { evaluateDependencyReadiness, npmInstallableAgentCliPackages } from '../../shared/npm-managed-packages.js';
 import type { DependencyReadinessSummary } from '../../types/dependency-management.js';
@@ -944,10 +945,23 @@ const WebServiceStatusCard: React.FC = () => {
           }}>
             <DialogContent className="max-w-3xl">
               <DialogHeader>
-                <DialogTitle>{t('webServiceStatus.startupFailureDialog.title')}</DialogTitle>
-                <DialogDescription>
-                  {startupFailure?.summary || t('webServiceStatus.startupFailureDialog.emptySummary')}
-                </DialogDescription>
+                <div className="flex items-center gap-4">
+                  <img
+                    src={STATE_IMAGES.startFailed}
+                    alt=""
+                    aria-hidden="true"
+                    width={96}
+                    height={96}
+                    decoding="async"
+                    className="hidden h-24 w-24 shrink-0 rounded-2xl object-cover sm:block"
+                  />
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    <DialogTitle>{t('webServiceStatus.startupFailureDialog.title')}</DialogTitle>
+                    <DialogDescription>
+                      {startupFailure?.summary || t('webServiceStatus.startupFailureDialog.emptySummary')}
+                    </DialogDescription>
+                  </div>
+                </div>
               </DialogHeader>
 
               <div className="space-y-2">

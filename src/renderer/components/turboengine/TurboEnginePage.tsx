@@ -34,6 +34,7 @@ import {
   verifyTurboEngineLicenseStartup,
 } from '@/store/slices/turboEngineLicenseSlice';
 import { PageShell } from '../ui/page-shell';
+import { BANNER_IMAGES } from '@/assets/illustrations';
 
 function getStatusKey(snapshot: TurboEngineLicenseSnapshot | null): string {
   if (!snapshot) {
@@ -212,6 +213,16 @@ export default function TurboEnginePage() {
           </p>
         ) : null}
       </header>
+
+      <img
+        src={BANNER_IMAGES.turboEngine}
+        alt=""
+        aria-hidden="true"
+        width={960}
+        height={288}
+        decoding="async"
+        className="h-24 w-full rounded-2xl object-cover object-right sm:h-32"
+      />
 
       <section className="commerce-premium-shell rounded-3xl px-5 py-8 sm:px-8 sm:py-10">
         <div className="relative z-10">

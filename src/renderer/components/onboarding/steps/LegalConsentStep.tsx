@@ -1,6 +1,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ExternalLink, FileWarning, RefreshCw, ShieldCheck } from 'lucide-react';
+import { ExternalLink, FileWarning, RefreshCw } from 'lucide-react';
+import { ONBOARDING_IMAGES } from '@/assets/illustrations';
 import { useDispatch, useSelector } from 'react-redux';
 import { Alert, AlertDescription } from '../../ui/alert';
 import { Badge } from '../../ui/badge';
@@ -149,9 +150,15 @@ const LegalConsentStep = forwardRef<LegalConsentStepHandle, LegalConsentStepProp
   return (
     <div className="space-y-8">
       <div className="space-y-3 text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-          <ShieldCheck className="h-7 w-7 text-primary" />
-        </div>
+        <img
+          src={ONBOARDING_IMAGES.legal}
+          alt=""
+          aria-hidden="true"
+          width={800}
+          height={450}
+          decoding="async"
+          className="mx-auto h-36 w-full max-w-xl rounded-2xl object-cover sm:h-44"
+        />
         <div className="space-y-2">
           <h2 className="text-3xl font-semibold">{t('legal.title')}</h2>
           <p className="mx-auto max-w-2xl text-sm text-muted-foreground md:text-base">

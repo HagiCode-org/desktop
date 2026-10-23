@@ -1,5 +1,7 @@
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
+import { CheckCircle2, TriangleAlert, XCircle } from 'lucide-react';
+import { STATE_IMAGES } from '@/assets/illustrations';
 import {
   Dialog,
   DialogContent,
@@ -37,9 +39,9 @@ export default function DependencyStartConfirmDialog() {
   };
 
   const getDependencyIcon = (dep: DependencyItem) => {
-    if (!dep.installed) return '❌';
-    if (dep.versionMismatch) return '⚠️';
-    return '✅';
+    if (!dep.installed) return <XCircle aria-hidden="true" className="h-4 w-4 text-destructive" />;
+    if (dep.versionMismatch) return <TriangleAlert aria-hidden="true" className="h-4 w-4 text-warning" />;
+    return <CheckCircle2 aria-hidden="true" className="h-4 w-4 text-success" />;
   };
 
   return (
@@ -50,8 +52,17 @@ export default function DependencyStartConfirmDialog() {
     }}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
+          <img
+            src={STATE_IMAGES.dependencyMissing}
+            alt=""
+            aria-hidden="true"
+            width={80}
+            height={80}
+            decoding="async"
+            className="mb-1 h-20 w-20 rounded-2xl object-cover"
+          />
           <DialogTitle className="flex items-center gap-2">
-            <span className="text-xl">⚠️</span>
+            <TriangleAlert aria-hidden="true" className="h-5 w-5 text-warning" />
             {t('dependencyStartConfirm.title')}
           </DialogTitle>
           <DialogDescription className="space-y-4">

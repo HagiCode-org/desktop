@@ -10,8 +10,10 @@ import {
   selectHomePromoteItems,
 } from '@/store/slices/homePromoteSlice';
 import { loadHomePromoteItems } from '@/store/thunks/homePromoteThunks';
+import { PROMOTE_FALLBACK_COVERS } from '@/assets/illustrations';
 import {
   getNextIndex,
+  pickFallbackCoverIndex,
   HOME_PROMOTE_REFRESH_INTERVAL_MS,
   HOME_PROMOTE_ROTATE_INTERVAL_MS,
   shouldAutoRotate,
@@ -128,7 +130,20 @@ export default function HomePromotePanel() {
                 onError={() => setBrokenImageKeys((previous) => new Set(previous).add(image.key))}
               />
             </div>
-          ) : null}
+          ) : (
+            <div className="aspect-video w-full shrink-0 overflow-hidden rounded-xl border border-border/60 bg-muted @md:w-[45%]">
+              <img
+                src={PROMOTE_FALLBACK_COVERS[pickFallbackCoverIndex(current.id, PROMOTE_FALLBACK_COVERS.length)]}
+                alt=""
+                aria-hidden="true"
+                width={640}
+                height={360}
+                decoding="async"
+                className="h-full w-full object-cover"
+                data-testid="home-promote-fallback-cover"
+              />
+            </div>
+          )}
           <div className="flex min-h-0 min-w-0 flex-1 flex-col @md:justify-center">
             <h3 className="mt-3 line-clamp-2 text-base font-semibold leading-6 text-foreground @md:mt-0">
               {current.title}

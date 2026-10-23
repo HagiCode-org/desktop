@@ -4,6 +4,7 @@ import {
   getNextIndex,
   HOME_PROMOTE_REFRESH_INTERVAL_MS,
   HOME_PROMOTE_ROTATE_INTERVAL_MS,
+  pickFallbackCoverIndex,
   shouldAutoRotate,
   type HomePromoteRotateState,
 } from './home-promote.js';
@@ -70,5 +71,22 @@ describe('shouldAutoRotate', () => {
 
   it('does not rotate while the document is hidden', () => {
     assert.equal(shouldAutoRotate({ ...rotatable, documentVisible: false }), false);
+  });
+});
+
+describe('pickFallbackCoverIndex', () => {
+  it('is stable for one id and always inside the cover range', () => {
+    const first = pickFallbackCoverIndex('item-1', 3);
+    assert.equal(pickFallbackCoverIndex('item-1', 3), first);
+    for (const id of ['', 'a', 'item-1', 'item-2', '推荐-三', 'https://example.com/post/42']) {
+      const index = pickFallbackCoverIndex(id, 3);
+      assert.ok(Number.isInteger(index) && index >= 0 && index < 3, `${id} -> ${index}`);
+    }
+  });
+
+  it('spreads different ids over the covers and returns 0 when there are none', () => {
+    const used = new Set(Array.from({ length: 30 }, (_, i) => pickFallbackCoverIndex(`item-${i}`, 3)));
+    assert.equal(used.size, 3);
+    assert.equal(pickFallbackCoverIndex('item-1', 0), 0);
   });
 });

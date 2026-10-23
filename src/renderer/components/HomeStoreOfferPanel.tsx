@@ -18,6 +18,7 @@ import {
 } from '../../types/subscription.js';
 import { createDefaultTurboEngineLicenseSnapshot, turboEngineEntitlementNames } from '../../types/turboengine-license.js';
 import { Badge } from '@/components/ui/badge';
+import { BANNER_IMAGES } from '@/assets/illustrations';
 import { Button } from '@/components/ui/button';
 import {
   CommercePreviewDebugDialog,
@@ -259,6 +260,15 @@ export default function HomeStoreOfferPanel({ isWindowsStoreRuntime, compact = f
   return (
     <section className="commerce-premium-shell rounded-3xl p-6 sm:p-7">
       <div className="relative z-10">
+        <img
+          src={BANNER_IMAGES.storeOffer}
+          alt=""
+          aria-hidden="true"
+          width={960}
+          height={288}
+          decoding="async"
+          className="mb-4 h-20 w-full rounded-2xl object-cover object-right sm:h-24"
+        />
         <div className="flex flex-col gap-3">
           <div>
             <div className="flex flex-wrap items-center gap-2">

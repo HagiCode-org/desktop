@@ -48,8 +48,6 @@ export interface MsstoreDonationTierMeta {
   visualLevel: MsstoreDonationTierVisualLevel;
   /** i18n key under pages namespace for short display name (卡布奇诺 / 小青龙 / 嘉年华). */
   shortNameKey: string;
-  /** Optional emoji accent (not a price). */
-  emoji: string;
   /** Tailwind-ish class tokens for progressive card chrome. */
   cardClassName: string;
   buttonClassName: string;
@@ -65,7 +63,6 @@ export const MSSTORE_DONATION_TIER_CATALOG: readonly MsstoreDonationTierMeta[] =
     productId: MSSTORE_DONATION_TIP_PRODUCT_IDS.coffee,
     visualLevel: 1,
     shortNameKey: 'donationItem.tiers.coffee.shortName',
-    emoji: '☕',
     cardClassName:
       'border-primary/25 bg-gradient-to-br from-primary/5 via-card to-card shadow-sm',
     buttonClassName: 'shadow-sm hover:shadow-md hover:shadow-primary/20',
@@ -75,7 +72,6 @@ export const MSSTORE_DONATION_TIER_CATALOG: readonly MsstoreDonationTierMeta[] =
     productId: MSSTORE_DONATION_TIP_PRODUCT_IDS.dinner,
     visualLevel: 2,
     shortNameKey: 'donationItem.tiers.dinner.shortName',
-    emoji: '🦞',
     cardClassName:
       'border-orange-500/40 bg-gradient-to-br from-orange-500/15 via-card to-primary/10 shadow-md ring-1 ring-orange-500/20',
     buttonClassName: 'shadow-md hover:shadow-lg hover:shadow-orange-500/30',
@@ -85,7 +81,6 @@ export const MSSTORE_DONATION_TIER_CATALOG: readonly MsstoreDonationTierMeta[] =
     productId: MSSTORE_DONATION_TIP_PRODUCT_IDS.candy,
     visualLevel: 3,
     shortNameKey: 'donationItem.tiers.candy.shortName',
-    emoji: '🎉',
     cardClassName:
       'border-fuchsia-500/50 bg-gradient-to-br from-fuchsia-500/20 via-orange-500/10 to-primary/15 shadow-lg ring-2 ring-fuchsia-500/30',
     buttonClassName:
