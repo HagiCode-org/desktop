@@ -173,7 +173,7 @@ export function RuntimeDataPathSettings() {
             {settings.readOnlyReason}
           </div>
         ) : (
-          <div className="space-y-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-950 dark:text-amber-100">
+          <div className="space-y-2 rounded-xl border border-warning/40 bg-warning-soft p-4 text-sm text-foreground">
             <div className="flex items-start gap-2">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
               <div className="space-y-1">

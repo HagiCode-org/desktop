@@ -700,7 +700,7 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
                     ) : null}
 
                     {aboutFetchState.status === 'error' ? (
-                      <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-xs text-amber-700 dark:text-amber-300">
+                      <div className="flex items-start gap-2 rounded-xl border border-warning/30 bg-warning-soft px-3 py-2.5 text-xs text-warning">
                         <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                         <span>
                           {bundledAboutModel

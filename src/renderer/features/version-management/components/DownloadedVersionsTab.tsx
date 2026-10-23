@@ -108,16 +108,16 @@ export default function DownloadedVersionsTab({
                       </div>
                     </div>
                     {isDesktopIncompatible(version) && (
-                      <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+                      <div className="mt-4 rounded-xl border border-warning/30 bg-warning-soft p-4">
                         <div className="flex items-start gap-3">
-                          <AlertCircle className="mt-0.5 h-4 w-4 text-amber-600 dark:text-amber-300" />
+                          <AlertCircle className="mt-0.5 h-4 w-4 text-warning" />
                           <div className="space-y-2 text-sm">
-                            <p className="font-medium text-amber-900 dark:text-amber-100">{t('versionManagement.desktopCompatibility.blockedTitle')}</p>
-                            <div className="grid gap-1 text-amber-900/90 dark:text-amber-100/90">
+                            <p className="font-medium text-foreground">{t('versionManagement.desktopCompatibility.blockedTitle')}</p>
+                            <div className="grid gap-1 text-foreground/90">
                               <p>{t('versionManagement.desktopCompatibility.requiredVersion')} <span className="font-mono">{compatibility?.requiredVersion}</span></p>
                               <p>{t('versionManagement.desktopCompatibility.currentVersion')} <span className="font-mono">{compatibility?.currentVersion}</span></p>
                             </div>
-                            <p className="text-xs text-amber-800/90 dark:text-amber-200/90">{compatibility?.reason ?? t('versionManagement.desktopCompatibility.upgradeGuidance')}</p>
+                            <p className="text-xs text-muted-foreground">{compatibility?.reason ?? t('versionManagement.desktopCompatibility.upgradeGuidance')}</p>
                           </div>
                         </div>
                       </div>

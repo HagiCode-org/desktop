@@ -248,18 +248,18 @@ function BootstrapLoadingShell({
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center px-6">
-      <div className="w-full max-w-3xl rounded-3xl border border-slate-800 bg-slate-900/90 p-8 shadow-2xl shadow-slate-950/40">
-        <div className="flex items-center gap-3 text-slate-200">
-          <LoaderCircle className="h-7 w-7 animate-spin text-cyan-400" />
+    <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-6">
+      <div className="w-full max-w-3xl rounded-2xl border border-border bg-card p-8 shadow-sm">
+        <div className="flex items-center gap-3 text-foreground">
+          <LoaderCircle className="h-7 w-7 animate-spin text-primary" />
           <div>
-            <p className="text-sm uppercase tracking-[0.3em] text-slate-500">Hagicode Desktop</p>
+            <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">Hagicode Desktop</p>
             <h1 className="mt-2 text-2xl font-semibold">{t('bootstrap.loading.title')}</h1>
           </div>
         </div>
 
-        <p className="mt-6 text-lg text-slate-200">{summary}</p>
-        <p className="mt-2 text-sm text-slate-400">
+        <p className="mt-6 text-lg text-foreground">{summary}</p>
+        <p className="mt-2 text-sm text-muted-foreground">
           {details || t('bootstrap.loading.description')}
         </p>
 
@@ -271,7 +271,7 @@ function BootstrapLoadingShell({
               <div
                 key={label}
                 className={`flex items-center justify-between rounded-2xl border px-4 py-3 ${
-                  active ? 'border-cyan-500/50 bg-cyan-500/10 text-cyan-100' : 'border-slate-800 bg-slate-950/40 text-slate-500'
+                  active ? 'border-primary/40 bg-primary/10 text-foreground' : 'border-border bg-muted/40 text-muted-foreground'
                 }`}
               >
                 <span>{label}</span>
@@ -283,7 +283,7 @@ function BootstrapLoadingShell({
           })}
         </div>
 
-        <p className="mt-6 text-xs uppercase tracking-[0.2em] text-slate-500">
+        <p className="mt-6 text-xs uppercase tracking-[0.2em] text-muted-foreground">
           {t('bootstrap.loading.stage', { stage })}
         </p>
       </div>
@@ -306,21 +306,21 @@ function BootstrapErrorShell({
   const diagnostic = snapshot.diagnostics[0];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center px-6">
-      <div className="w-full max-w-3xl rounded-3xl border border-rose-500/30 bg-slate-900/95 p-8 shadow-2xl shadow-slate-950/50">
+    <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-6">
+      <div className="w-full max-w-3xl rounded-2xl border border-destructive/30 bg-card p-8 shadow-sm">
         <div className="flex items-start gap-4">
-          <div className="rounded-2xl bg-rose-500/10 p-3 text-rose-300">
+          <div className="rounded-xl bg-destructive/10 p-3 text-destructive">
             <AlertCircle className="h-7 w-7" />
           </div>
           <div className="flex-1">
-            <p className="text-sm uppercase tracking-[0.3em] text-rose-300/70">Hagicode Desktop</p>
+            <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">Hagicode Desktop</p>
             <h1 className="mt-2 text-2xl font-semibold">{t('bootstrap.error.title')}</h1>
-            <p className="mt-3 text-base text-slate-200">{snapshot.summary}</p>
-            <p className="mt-2 text-sm text-slate-400">{snapshot.details || t('bootstrap.error.description')}</p>
+            <p className="mt-3 text-base text-foreground">{snapshot.summary}</p>
+            <p className="mt-2 text-sm text-muted-foreground">{snapshot.details || t('bootstrap.error.description')}</p>
           </div>
         </div>
 
-        <Alert className="mt-8 border-slate-800 bg-slate-950/60 text-slate-200">
+        <Alert className="mt-8 border-border bg-muted/40 text-foreground">
           <AlertTitle>{t('bootstrap.error.diagnosticTitle')}</AlertTitle>
           <AlertDescription className="mt-3 space-y-2 text-sm leading-6">
             <p>{t('bootstrap.error.stage', { stage: snapshot.stage })}</p>

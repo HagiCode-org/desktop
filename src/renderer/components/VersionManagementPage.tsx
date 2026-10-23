@@ -388,7 +388,7 @@ export default function VersionManagementPage({ distributionState }: VersionMana
   const getVersionStatus = (version: InstalledVersion) => {
     if (version.status === 'desktop-incompatible') {
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-700 border border-amber-500/20 dark:text-amber-300">
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning-soft text-warning border border-warning/20">
           <AlertCircle className="w-3 h-3" />
           {t('versionManagement.status.desktopIncompatible')}
         </span>

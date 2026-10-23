@@ -258,7 +258,7 @@ export default function HomeStoreDonationItem({ isWindowsStoreRuntime }: HomeSto
 
   return (
     <section
-      className="rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-orange-500/10 p-6 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
+      className="rounded-3xl border border-primary/30 bg-primary/5 p-6 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
       data-testid="msstore-donation-panel"
     >
       <div className="flex items-start justify-between gap-4">
