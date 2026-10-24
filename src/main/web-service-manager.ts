@@ -42,6 +42,11 @@ import {
   type BackendProcessSnapshot,
 } from './backend-process-owner.js';
 import { HealthProbeBackoff } from './health-probe-backoff.js';
+import {
+  DEFAULT_STARTUP_PHASE_WINDOW_MS,
+  resolveStartupTimeouts,
+  WEB_SERVICE_STARTUP_TIMEOUT_ENV_KEY,
+} from './web-service-startup-timeouts.js';
 
 const { app } = electron;
 
@@ -77,6 +82,8 @@ export interface ProcessInfo {
   phaseMessage?: string;
   host: string;
   port: number;
+  slowStart?: boolean;
+  startupElapsedMs?: number;
 }
 
 interface WebServiceStateFile {
@@ -101,6 +108,67 @@ interface ResolveManagedLaunchContextOptions {
   logResolvedContext?: boolean;
 }
 
+export interface StartupClock {
+  now(): number;
+  sleep(ms: number): Promise<void>;
+}
+
+/** 'listening' and 'healthy' mean the step succeeded; the others end the wait. */
+type ReadinessWaitCause = 'listening' | 'healthy' | 'exited' | 'deadline' | 'aborted';
+
+/** One spawn of the owned backend and the readiness wait that follows it. */
+interface StartupAttemptState {
+  spawnAt: number;
+  deadline: number;
+  limitMs: number;
+  /** Moves forward on the first backend output; the slow-start window is measured from here. */
+  phaseAnchor: number;
+  firstOutputAt: number | null;
+  listened: boolean;
+  slowStart: boolean;
+  lastSlowEmitAt: number;
+}
+
+const STARTUP_PORT_POLL_INTERVAL_MS = 500;
+const STARTUP_HEALTH_POLL_INTERVAL_MS = 1_000;
+const SLOW_START_REFRESH_INTERVAL_MS = 5_000;
+const PORT_PROBE_TIMEOUT_MS = 5_000;
+const WAITING_LISTENING_MESSAGE = 'Waiting for the owned backend to start listening...';
+
+const realStartupClock: StartupClock = {
+  now: () => Date.now(),
+  sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+};
+
+function toWholeSeconds(ms: number): number {
+  return Math.floor(ms / 1000);
+}
+
+async function probeTcpPort(host: string, port: number): Promise<boolean> {
+  const net = await import('node:net');
+  return await new Promise<boolean>((resolve) => {
+    const socket = new net.Socket();
+    socket.setTimeout(PORT_PROBE_TIMEOUT_MS);
+
+    socket.on('connect', () => {
+      socket.destroy();
+      resolve(true);
+    });
+
+    socket.on('timeout', () => {
+      socket.destroy();
+      resolve(false);
+    });
+
+    socket.on('error', () => {
+      socket.destroy();
+      resolve(false);
+    });
+
+    socket.connect(port, host);
+  });
+}
+
 interface WebServiceManagerDeps {
   configManager?: ConfigManager | null;
   httpClient?: DesktopHttpClient;
@@ -110,6 +178,9 @@ interface WebServiceManagerDeps {
   resolveLaunchContext?: typeof resolveManagedLaunchContextForRuntimeRoot;
   prepareServiceEnvironment?: () => Promise<NodeJS.ProcessEnv>;
   startupTimeoutMs?: number;
+  startupPhaseWindowMs?: number;
+  startupClock?: StartupClock;
+  probePort?: (host: string, port: number) => Promise<boolean>;
   shutdownTimeoutMs?: number;
   maxRestartAttempts?: number;
   resolveTurboEngineDlcProgramOption?: (() => { enabled: boolean | null; source: string | null } | null) | null;
@@ -198,7 +269,11 @@ export class PCodeWebServiceManager {
   private startTime: number | null = null;
   private restartCount: number = 0;
   private maxRestartAttempts: number = 3;
-  private startTimeout: number;
+  private readonly startupTimeoutOverrideMs: number | undefined;
+  private readonly startupPhaseWindowMs: number;
+  private readonly startupClock: StartupClock;
+  private readonly probePort: (host: string, port: number) => Promise<boolean>;
+  private startupAttempt: StartupAttemptState | null = null;
   private stopTimeout: number;
   private pathManager: WebServicePathManager;
   private currentPhase: StartupPhase = StartupPhase.Idle;
@@ -240,7 +315,10 @@ export class PCodeWebServiceManager {
     this.pathManager = deps.pathManager ?? PathManager.getInstance();
     this.resolveLaunchContext = deps.resolveLaunchContext ?? resolveManagedLaunchContextForRuntimeRoot;
     this.prepareServiceEnvironmentOverride = deps.prepareServiceEnvironment;
-    this.startTimeout = deps.startupTimeoutMs ?? 30_000;
+    this.startupTimeoutOverrideMs = deps.startupTimeoutMs;
+    this.startupPhaseWindowMs = deps.startupPhaseWindowMs ?? DEFAULT_STARTUP_PHASE_WINDOW_MS;
+    this.startupClock = deps.startupClock ?? realStartupClock;
+    this.probePort = deps.probePort ?? probeTcpPort;
     this.stopTimeout = deps.shutdownTimeoutMs ?? 10_000;
     this.maxRestartAttempts = deps.maxRestartAttempts ?? 3;
     this.dependencyManagementService = deps.dependencyManagementService ?? null;
@@ -248,7 +326,10 @@ export class PCodeWebServiceManager {
     this.backendProcessOwner = deps.backendProcessOwner ?? new BackendProcessOwner(
       path.join(this.pathManager.getRuntimeDataHome(), 'backend-process.json'),
       {
-        onOutput: (stream, text) => this.appendDiagnosticOutput(`Backend ${stream}`, text),
+        onOutput: (stream, text) => {
+          this.noteBackendOutput(text);
+          this.appendDiagnosticOutput(`Backend ${stream}`, text);
+        },
         onError: (message, error) => {
           this.appendStartupLogLine(message);
           log.error('[WebService][BackendProcessOwner]', message, error);
@@ -640,15 +721,26 @@ export class PCodeWebServiceManager {
     // Emit to renderer via IPC
     // Note: Need to access mainWindow from main module
     // This will be handled through a callback or event emitter in a full implementation
-    if ((global as any).mainWindow) {
-      (global as any).mainWindow.webContents.send('web-service-startup-phase', {
-        phase,
-        message,
-        timestamp: Date.now()
-      });
-    }
+    this.sendStartupPhaseEvent({
+      phase,
+      message,
+      timestamp: Date.now(),
+      slow: false,
+    });
 
     log.info('[WebService] Phase:', phase, message || '');
+  }
+
+  private sendStartupPhaseEvent(payload: {
+    phase: StartupPhase;
+    message?: string;
+    timestamp: number;
+    slow: boolean;
+    elapsedMs?: number;
+  }): void {
+    if ((global as any).mainWindow) {
+      (global as any).mainWindow.webContents.send('web-service-startup-phase', payload);
+    }
   }
 
   private resolveProbeHosts(host: string): string[] {
@@ -663,57 +755,35 @@ export class PCodeWebServiceManager {
   /**
    * Wait for port to be listening
    */
-  private async waitForPortListening(timeout: number = 60000): Promise<boolean> {
-    const startTime = Date.now();
-    const net = await import('node:net');
-    let attempt = 0;
+  private async waitForPortListening(attempt: StartupAttemptState): Promise<ReadinessWaitCause> {
+    let probeAttempt = 0;
     const probeHosts = this.resolveProbeHosts(this.config.host);
 
-    log.info('[WebService] Waiting for port listening:', `${this.config.host}:${this.config.port}`, 'probeHosts:', probeHosts, 'timeout:', timeout);
+    log.info('[WebService] Waiting for port listening:', `${this.config.host}:${this.config.port}`, 'probeHosts:', probeHosts, 'limit ms:', attempt.limitMs);
 
-    while (Date.now() - startTime < timeout) {
+    while (this.startupClock.now() < attempt.deadline) {
+      if (this.isStartupAborted()) {
+        return 'aborted';
+      }
       if (!this.ownedBackend?.isAlive()) {
-        return false;
+        return 'exited';
       }
-      attempt++;
+      probeAttempt++;
       for (const probeHost of probeHosts) {
-        try {
-          await new Promise<void>((resolve, reject) => {
-            const socket = new net.Socket();
-            socket.setTimeout(5000);
-
-            socket.on('connect', () => {
-              socket.destroy();
-              log.info('[WebService] Port is listening on attempt:', attempt, 'host:', probeHost);
-              resolve();
-            });
-
-            socket.on('timeout', () => {
-              socket.destroy();
-              reject(new Error('Timeout'));
-            });
-
-            socket.on('error', (err) => {
-              socket.destroy();
-              reject(new Error(`Connection error: ${err.message}`));
-            });
-
-            socket.connect(this.config.port, probeHost);
-          });
-          return true; // Port is listening
-        } catch (error) {
-          log.debug('[WebService] Port not ready on attempt:', attempt, 'host:', probeHost, 'error:', (error as Error).message);
+        if (await this.probePort(probeHost, this.config.port)) {
+          attempt.listened = true;
+          log.info('[WebService] Port is listening on attempt:', probeAttempt, 'host:', probeHost);
+          return 'listening';
         }
+        log.debug('[WebService] Port not ready on attempt:', probeAttempt, 'host:', probeHost);
       }
 
-      await new Promise(resolve => setTimeout(
-        resolve,
-        Math.min(500, Math.max(0, timeout - (Date.now() - startTime))),
-      ));
+      this.refreshStartupProgress(attempt);
+      await this.startupClock.sleep(this.startupPollDelayMs(attempt, STARTUP_PORT_POLL_INTERVAL_MS));
     }
 
-    log.error('[WebService] Port listening timeout after', attempt, 'attempts');
-    return false; // Timeout
+    log.error('[WebService] Port listening timeout after', probeAttempt, 'attempts');
+    return 'deadline';
   }
 
   /**
@@ -1006,24 +1076,24 @@ export class PCodeWebServiceManager {
   }
 
   /**
-   * Wait for health check with timeout
+   * Wait for the health check until the shared startup deadline
    */
-  private async waitForHealthCheck(): Promise<boolean> {
-    const startTime = Date.now();
-    const checkInterval = 1000; // Check every second
-
-    while (Date.now() - startTime < this.startTimeout) {
+  private async waitForHealthCheck(attempt: StartupAttemptState): Promise<ReadinessWaitCause> {
+    while (this.startupClock.now() < attempt.deadline) {
+      if (this.isStartupAborted()) {
+        return 'aborted';
+      }
       if (!this.ownedBackend?.isAlive()) {
-        return false;
+        return 'exited';
       }
       const isHealthy = await this.performHealthCheck();
       if (isHealthy) {
-        return true;
+        return 'healthy';
       }
-      await new Promise(resolve => setTimeout(resolve, checkInterval));
+      await this.startupClock.sleep(this.startupPollDelayMs(attempt, STARTUP_HEALTH_POLL_INTERVAL_MS));
     }
 
-    return false;
+    return 'deadline';
   }
 
   /**
@@ -1167,6 +1237,13 @@ export class PCodeWebServiceManager {
   }
 
   private buildProcessInfo(): ProcessInfo {
+    const attempt = this.startupAttempt;
+    const slowStartElapsedMs = attempt
+      && attempt.slowStart
+      && !attempt.listened
+      && this.status === 'starting'
+      ? this.startupClock.now() - attempt.spawnAt
+      : null;
     return {
       status: this.status,
       uptime: this.startTime ? Date.now() - this.startTime : 0,
@@ -1177,6 +1254,7 @@ export class PCodeWebServiceManager {
       phase: this.currentPhase,
       port: this.config.port,
       host: this.config.host,
+      ...(slowStartElapsedMs !== null ? { slowStart: true, startupElapsedMs: slowStartElapsedMs } : {}),
     };
   }
 
@@ -1233,6 +1311,7 @@ export class PCodeWebServiceManager {
         throw this.orphanReconciliationError;
       }
 
+      const startupLimitMs = await this.resolveStartupLimitMs();
       const launchContext = await this.resolveDirectBackendLaunchContext();
       this.appendStartupLogLine(`Managed entry point: ${launchContext.serviceDllPath}`);
       this.appendStartupLogLine(`Managed working directory: ${launchContext.serviceWorkingDirectory}`);
@@ -1250,9 +1329,7 @@ export class PCodeWebServiceManager {
       const dotnetExecutable = await this.resolveManagedDotnetExecutable();
       const available = await this.checkPortAvailable(this.config.port);
       if (!available) {
-        throw new Error(
-          `Port ${this.config.port} is already in use by a process Desktop does not own. Stop that service before starting Hagicode Server; Desktop will not adopt a port-only listener.`,
-        );
+        throw new Error(this.buildPortInUseMessage());
       }
 
       const runtime = this.activeRuntime;
@@ -1270,38 +1347,75 @@ export class PCodeWebServiceManager {
         port: this.config.port,
       };
 
-      this.emitPhase(StartupPhase.Spawning, action === 'restart' ? 'Restarting the owned backend...' : 'Starting the owned backend...');
+      this.appendStartupLogLine(`Startup limit ${toWholeSeconds(startupLimitMs)} s`);
       this.appendStartupLogLine(`Managed .NET executable: ${dotnetExecutable}`);
-      this.ownedBackend = await this.backendProcessOwner.start(launch);
-      this.startTime = this.ownedBackend.startTime;
-      this.restartCount = Math.max(this.restartCount, 0);
 
-      this.emitPhase(StartupPhase.WaitingListening, 'Waiting for the owned backend to start listening...');
-      const listening = await this.waitForPortListening(this.startTimeout);
-      if (!listening) {
-        const summary = this.ownedBackend?.isAlive()
-          ? `Owned backend did not listen on ${this.config.host}:${this.config.port} within ${this.startTimeout}ms.`
-          : 'Owned backend exited before it began listening.';
+      // An alive backend that misses the deadline gets one retry from the restart budget.
+      let slowRetryUsed = false;
+      for (let attemptNumber = 1; ; attemptNumber += 1) {
+        this.emitPhase(
+          StartupPhase.Spawning,
+          attemptNumber > 1
+            ? 'Retrying the owned backend start...'
+            : action === 'restart' ? 'Restarting the owned backend...' : 'Starting the owned backend...',
+        );
+        this.ownedBackend = await this.backendProcessOwner.start(launch);
+        this.startTime = this.ownedBackend.startTime;
+        this.restartCount = Math.max(this.restartCount, 0);
+        const attempt = this.beginStartupAttempt(startupLimitMs);
+
+        this.emitPhase(StartupPhase.WaitingListening, WAITING_LISTENING_MESSAGE);
+        let stage: 'listening' | 'health' = 'listening';
+        let readiness = await this.waitForPortListening(attempt);
+        if (readiness === 'listening') {
+          stage = 'health';
+          this.emitPhase(StartupPhase.HealthCheck, 'Verifying the owned backend health endpoint...');
+          readiness = await this.waitForHealthCheck(attempt);
+        }
+
+        if (readiness === 'aborted') {
+          return this.abortStartup();
+        }
+        if (readiness === 'healthy') {
+          break;
+        }
+
+        const alive = this.ownedBackend?.isAlive() ?? false;
+        const elapsedMs = this.startupClock.now() - attempt.spawnAt;
+        const timedOutAlive = readiness === 'deadline' && alive;
+        const summary = timedOutAlive
+          ? this.describeStartupTimeout({
+            stage,
+            limitMs: attempt.limitMs,
+            elapsedMs,
+            pid: this.ownedBackend?.pid ?? null,
+            firstOutputMs: attempt.firstOutputAt === null ? null : attempt.firstOutputAt - attempt.spawnAt,
+          })
+          : stage === 'listening'
+            ? 'Owned backend exited before it began listening.'
+            : 'Owned backend exited before passing its HTTP health check.';
         this.appendStartupLogLine(summary);
         await this.stopBackendAfterStartupFailure();
+        this.endStartupAttempt();
+
+        if (timedOutAlive && !slowRetryUsed && this.restartCount < this.maxRestartAttempts) {
+          slowRetryUsed = true;
+          this.restartCount += 1;
+          const retryMessage = `Owned backend was still alive after ${toWholeSeconds(elapsedMs)} s without becoming ready; retrying ${this.restartCount}/${this.maxRestartAttempts}.`;
+          log.warn('[WebService]', retryMessage);
+          this.appendStartupLogLine(retryMessage);
+          if (!(await this.checkPortAvailable(this.config.port))) {
+            throw new Error(this.buildPortInUseMessage());
+          }
+          continue;
+        }
+
         this.status = 'error';
         this.emitPhase(StartupPhase.Error, summary);
         return this.buildStartupFailureResult(summary);
       }
 
-      this.emitPhase(StartupPhase.HealthCheck, 'Verifying the owned backend health endpoint...');
-      const healthCheckPassed = await this.waitForHealthCheck();
-      if (!healthCheckPassed) {
-        const summary = this.ownedBackend?.isAlive()
-          ? `Owned backend failed its HTTP health check within ${this.startTimeout}ms.`
-          : 'Owned backend exited before passing its HTTP health check.';
-        this.appendStartupLogLine(summary);
-        await this.stopBackendAfterStartupFailure();
-        this.status = 'error';
-        this.emitPhase(StartupPhase.Error, summary);
-        return this.buildStartupFailureResult(summary);
-      }
-
+      this.endStartupAttempt();
       this.status = 'running';
       this.currentPhase = StartupPhase.Running;
       await this.saveLastSuccessfulConfig();
@@ -1322,6 +1436,121 @@ export class PCodeWebServiceManager {
       this.emitPhase(StartupPhase.Error, summary);
       return this.buildStartupFailureResult(summary);
     }
+  }
+
+  private async resolveStartupLimitMs(): Promise<number> {
+    const state = await this.readStateFile();
+    const resolved = resolveStartupTimeouts({
+      depsTimeoutMs: this.startupTimeoutOverrideMs,
+      envValue: process.env[WEB_SERVICE_STARTUP_TIMEOUT_ENV_KEY],
+      isFirstLaunch: !state.lastSuccessfulPort,
+      phaseWindowMs: this.startupPhaseWindowMs,
+    });
+    if (resolved.warning) {
+      log.warn('[WebService]', resolved.warning);
+      this.appendStartupLogLine(resolved.warning);
+    }
+    return resolved.startupLimitMs;
+  }
+
+  private buildPortInUseMessage(): string {
+    return `Port ${this.config.port} is already in use by a process Desktop does not own. Stop that service before starting Hagicode Server; Desktop will not adopt a port-only listener.`;
+  }
+
+  private isStartupAborted(): boolean {
+    return this.explicitStopRequested || this.cleanupPromise !== null;
+  }
+
+  private beginStartupAttempt(limitMs: number): StartupAttemptState {
+    const spawnAt = this.startupClock.now();
+    const attempt: StartupAttemptState = {
+      spawnAt,
+      deadline: spawnAt + limitMs,
+      limitMs,
+      phaseAnchor: spawnAt,
+      firstOutputAt: null,
+      listened: false,
+      slowStart: false,
+      lastSlowEmitAt: 0,
+    };
+    this.startupAttempt = attempt;
+    return attempt;
+  }
+
+  private endStartupAttempt(): void {
+    this.startupAttempt = null;
+  }
+
+  /**
+   * A stop, restart, or quit ends the wait without a failure: the stop path owns cleanup.
+   */
+  private abortStartup(): StartResult {
+    this.endStartupAttempt();
+    this.appendStartupLogLine('Startup stopped before the owned backend became ready.');
+    return this.buildStartupFailureResult('Startup was stopped before the owned backend became ready.');
+  }
+
+  /**
+   * The first output line counts as progress: it re-anchors the slow-start window but never moves the deadline.
+   */
+  private noteBackendOutput(text: string): void {
+    const attempt = this.startupAttempt;
+    if (!attempt || attempt.firstOutputAt !== null || text.trim().length === 0) {
+      return;
+    }
+    const now = this.startupClock.now();
+    attempt.firstOutputAt = now;
+    attempt.phaseAnchor = now;
+    this.appendStartupLogLine(`Backend first output after ${toWholeSeconds(now - attempt.spawnAt)} s`);
+  }
+
+  /**
+   * Publishes the slow-start indication once the port has stayed closed for the phase window.
+   */
+  private refreshStartupProgress(attempt: StartupAttemptState): void {
+    if (attempt.listened) {
+      return;
+    }
+    const now = this.startupClock.now();
+    const quietMs = now - attempt.phaseAnchor;
+    if (quietMs < this.startupPhaseWindowMs) {
+      return;
+    }
+    if (attempt.slowStart && now - attempt.lastSlowEmitAt < SLOW_START_REFRESH_INTERVAL_MS) {
+      return;
+    }
+    if (!attempt.slowStart) {
+      this.appendStartupLogLine(`No progress for ${toWholeSeconds(quietMs)} s; the owned backend is still alive, so startup continues.`);
+    }
+    attempt.slowStart = true;
+    attempt.lastSlowEmitAt = now;
+    this.sendStartupPhaseEvent({
+      phase: StartupPhase.WaitingListening,
+      message: WAITING_LISTENING_MESSAGE,
+      timestamp: Date.now(),
+      slow: true,
+      elapsedMs: now - attempt.spawnAt,
+    });
+  }
+
+  private startupPollDelayMs(attempt: StartupAttemptState, intervalMs: number): number {
+    return Math.min(intervalMs, Math.max(0, attempt.deadline - this.startupClock.now()));
+  }
+
+  private describeStartupTimeout(input: {
+    stage: 'listening' | 'health';
+    limitMs: number;
+    elapsedMs: number;
+    pid: number | null;
+    firstOutputMs: number | null;
+  }): string {
+    const lead = input.stage === 'listening'
+      ? `Owned backend did not listen on ${this.config.host}:${this.config.port}`
+      : 'Owned backend failed its HTTP health check';
+    const firstOutput = input.firstOutputMs === null
+      ? 'no output received'
+      : `first output after ${toWholeSeconds(input.firstOutputMs)} s`;
+    return `${lead} within the ${toWholeSeconds(input.limitMs)} s startup limit (elapsed ${toWholeSeconds(input.elapsedMs)} s, backend still alive, pid ${input.pid ?? 'unknown'}, ${firstOutput}).`;
   }
 
   private async stopBackendAfterStartupFailure(): Promise<string | null> {

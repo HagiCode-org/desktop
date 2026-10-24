@@ -6,7 +6,9 @@ import { spawn as spawnChild, type ChildProcess } from 'node:child_process';
 import { createServer } from 'node:net';
 import { describe, it } from 'node:test';
 import { BackendProcessOwner } from '../backend-process-owner.js';
-import { PCodeWebServiceManager } from '../web-service-manager.js';
+import { PCodeWebServiceManager, type ProcessInfo, type StartupClock } from '../web-service-manager.js';
+import { WEB_SERVICE_STARTUP_TIMEOUT_ENV_KEY } from '../web-service-startup-timeouts.js';
+import type { DesktopHttpClient } from '../http-client.js';
 import type { ActiveRuntimeDescriptor } from '../../types/distribution-mode.js';
 
 interface LifecycleFixture {
@@ -33,12 +35,42 @@ async function reservePort(): Promise<number> {
   return port;
 }
 
+interface VirtualStartupClock extends StartupClock {
+  onTick(listener: (now: number) => void): void;
+}
+
+/**
+ * Virtual time for startup waits: sleeping advances `now` at once, so a 35 s
+ * listen delay is covered in milliseconds of real time.
+ */
+function createVirtualStartupClock(): VirtualStartupClock {
+  let current = 0;
+  const listeners: Array<(now: number) => void> = [];
+  return {
+    now: () => current,
+    sleep: async (ms: number) => {
+      current += ms;
+      for (const listener of listeners) {
+        listener(current);
+      }
+      await new Promise((resolve) => setImmediate(resolve));
+    },
+    onTick: (listener) => {
+      listeners.push(listener);
+    },
+  };
+}
+
 async function createLifecycleFixture(options: {
   readyDelayMs?: number;
   exitAfterReadyMs?: number;
   listen?: boolean;
   ignoreTermination?: boolean;
   startupTimeoutMs?: number;
+  useStartupLimitDefaults?: boolean;
+  startupClock?: StartupClock;
+  probePort?: (host: string, port: number) => Promise<boolean>;
+  httpClient?: DesktopHttpClient;
   shutdownTimeoutMs?: number;
   maxRestartAttempts?: number;
 } = {}): Promise<LifecycleFixture> {
@@ -156,7 +188,10 @@ async function createLifecycleFixture(options: {
       };
     },
     prepareServiceEnvironment: async () => ({}),
-    startupTimeoutMs: options.startupTimeoutMs ?? 2_000,
+    startupTimeoutMs: options.useStartupLimitDefaults ? undefined : (options.startupTimeoutMs ?? 2_000),
+    startupClock: options.startupClock,
+    probePort: options.probePort,
+    httpClient: options.httpClient,
     shutdownTimeoutMs: options.shutdownTimeoutMs ?? 100,
     maxRestartAttempts: options.maxRestartAttempts,
   });
@@ -257,6 +292,8 @@ describe('Desktop-owned backend lifecycle', () => {
       const result = await fixture.manager.start();
       assert.equal(result.success, false);
       assert.match(result.parsedResult.errorMessage ?? '', /did not listen/);
+      // The alive-but-silent child gets one retry from the default restart budget.
+      assert.equal(fixture.spawnCount(), 2);
       assert.equal((await fixture.manager.getStatus()).status, 'error');
     } finally {
       await fixture.manager.cleanup();
@@ -321,6 +358,299 @@ describe('Desktop-owned backend lifecycle', () => {
     } finally {
       await fixture.manager.cleanup();
       await fs.rm(fixture.root, { recursive: true, force: true });
+    }
+  });
+});
+
+interface StartupPhaseEvent {
+  phase: string;
+  message?: string;
+  timestamp: number;
+  slow?: boolean;
+  elapsedMs?: number;
+}
+
+function captureStartupPhaseEvents(): { events: StartupPhaseEvent[]; restore(): void } {
+  const globals = globalThis as { mainWindow?: unknown };
+  const previous = globals.mainWindow;
+  const events: StartupPhaseEvent[] = [];
+  globals.mainWindow = {
+    webContents: {
+      send: (channel: string, payload: StartupPhaseEvent) => {
+        if (channel === 'web-service-startup-phase') {
+          events.push(payload);
+        }
+      },
+    },
+  };
+  return {
+    events,
+    restore: () => {
+      globals.mainWindow = previous;
+    },
+  };
+}
+
+function healthyHttpClient(isHealthy: () => boolean): DesktopHttpClient {
+  return {
+    requestText: async () => {
+      if (!isHealthy()) {
+        throw new Error('connect ECONNREFUSED 127.0.0.1');
+      }
+      return { status: 200, text: 'ok' };
+    },
+  } as unknown as DesktopHttpClient;
+}
+
+function noteBackendOutput(manager: PCodeWebServiceManager, text: string): void {
+  (manager as unknown as { noteBackendOutput(text: string): void }).noteBackendOutput(text);
+}
+
+async function disposeFixture(fixture: LifecycleFixture): Promise<void> {
+  await fixture.manager.cleanup();
+  await fs.rm(fixture.root, { recursive: true, force: true });
+}
+
+describe('Desktop-owned backend startup readiness', () => {
+  it('resolves the startup limit per start, with a longer limit before the first successful start', async () => {
+    const previousOverride = process.env[WEB_SERVICE_STARTUP_TIMEOUT_ENV_KEY];
+    delete process.env[WEB_SERVICE_STARTUP_TIMEOUT_ENV_KEY];
+    const fixture = await createLifecycleFixture({ useStartupLimitDefaults: true });
+    try {
+      const first = await fixture.manager.start();
+      assert.equal(first.success, true);
+      assert.match(first.resultSession.stdout, /Startup limit 180 s/);
+      assert.equal(await fixture.manager.stop(), true);
+
+      const second = await fixture.manager.start();
+      assert.equal(second.success, true);
+      assert.match(second.resultSession.stdout, /Startup limit 120 s/);
+      assert.equal(await fixture.manager.stop(), true);
+    } finally {
+      if (previousOverride === undefined) {
+        delete process.env[WEB_SERVICE_STARTUP_TIMEOUT_ENV_KEY];
+      } else {
+        process.env[WEB_SERVICE_STARTUP_TIMEOUT_ENV_KEY] = previousOverride;
+      }
+      await disposeFixture(fixture);
+    }
+  });
+
+  it('keeps waiting for a backend that listens at 35 seconds and starts it once', async () => {
+    const clock = createVirtualStartupClock();
+    const fixture = await createLifecycleFixture({
+      listen: false,
+      startupClock: clock,
+      startupTimeoutMs: 120_000,
+      probePort: async () => clock.now() >= 35_000,
+      httpClient: healthyHttpClient(() => clock.now() >= 35_000),
+    });
+    try {
+      const result = await fixture.manager.start();
+      assert.equal(result.success, true);
+      assert.equal(fixture.spawnCount(), 1);
+      assert.equal((await fixture.manager.getStatus()).status, 'running');
+    } finally {
+      await disposeFixture(fixture);
+    }
+  });
+
+  it('ends a slow start promptly when the user stops the service at 40 seconds', async () => {
+    const clock = createVirtualStartupClock();
+    const stopRequests: Array<Promise<boolean>> = [];
+    let fixture!: LifecycleFixture;
+    fixture = await createLifecycleFixture({
+      listen: false,
+      startupClock: clock,
+      startupTimeoutMs: 120_000,
+      probePort: async () => false,
+      httpClient: healthyHttpClient(() => false),
+    });
+    clock.onTick((now) => {
+      if (now >= 40_000 && stopRequests.length === 0) {
+        stopRequests.push(fixture.manager.stop());
+      }
+    });
+    try {
+      const result = await fixture.manager.start();
+      assert.equal(await stopRequests[0], true);
+      assert.equal(result.success, false);
+      assert.match(result.parsedResult.errorMessage ?? '', /stopped before the owned backend became ready/);
+      assert.ok(clock.now() <= 41_000, `stop completed at ${clock.now()} ms`);
+      assert.equal(fixture.spawnCount(), 1);
+      assert.equal((await fixture.manager.getStatus()).status, 'stopped');
+    } finally {
+      await disposeFixture(fixture);
+    }
+  });
+
+  it('treats the first output as progress so a listener at 38 seconds shows no slow-start notice', async () => {
+    const clock = createVirtualStartupClock();
+    const capture = captureStartupPhaseEvents();
+    let outputSent = false;
+    let fixture!: LifecycleFixture;
+    fixture = await createLifecycleFixture({
+      listen: false,
+      startupClock: clock,
+      startupTimeoutMs: 120_000,
+      probePort: async () => clock.now() >= 38_000,
+      httpClient: healthyHttpClient(() => clock.now() >= 38_000),
+    });
+    clock.onTick((now) => {
+      if (now >= 28_000 && !outputSent) {
+        outputSent = true;
+        noteBackendOutput(fixture.manager, 'Application starting');
+      }
+    });
+    try {
+      const result = await fixture.manager.start();
+      assert.equal(result.success, true);
+      assert.equal(capture.events.filter((event) => event.slow === true).length, 0);
+      assert.match(result.resultSession.stdout, /Backend first output after 28 s/);
+    } finally {
+      capture.restore();
+      await disposeFixture(fixture);
+    }
+  });
+
+  it('shows a slow-start indication after 30 seconds of silence and refreshes it every 5 seconds', async () => {
+    const clock = createVirtualStartupClock();
+    const capture = captureStartupPhaseEvents();
+    const slowStatuses: ProcessInfo[] = [];
+    let statusRequested = false;
+    let fixture!: LifecycleFixture;
+    fixture = await createLifecycleFixture({
+      listen: false,
+      startupClock: clock,
+      startupTimeoutMs: 120_000,
+      probePort: async () => clock.now() >= 50_000,
+      httpClient: healthyHttpClient(() => clock.now() >= 50_000),
+    });
+    clock.onTick((now) => {
+      if (now >= 31_000 && !statusRequested) {
+        statusRequested = true;
+        void fixture.manager.getStatus().then((status) => slowStatuses.push(status));
+      }
+    });
+    try {
+      const result = await fixture.manager.start();
+      assert.equal(result.success, true);
+
+      const slowEvents = capture.events.filter((event) => event.slow === true);
+      assert.equal(slowEvents[0]?.elapsedMs, 30_000);
+      assert.ok(slowEvents.length >= 4, `expected at least four refreshes, got ${slowEvents.length}`);
+      for (let index = 1; index < slowEvents.length; index += 1) {
+        const gap = (slowEvents[index].elapsedMs ?? 0) - (slowEvents[index - 1].elapsedMs ?? 0);
+        assert.ok(gap >= 5_000 && gap <= 5_500, `refresh gap was ${gap} ms`);
+      }
+
+      assert.equal(slowStatuses[0]?.status, 'starting');
+      assert.equal(slowStatuses[0]?.slowStart, true);
+      assert.ok((slowStatuses[0]?.startupElapsedMs ?? 0) >= 30_000);
+
+      const running = await fixture.manager.getStatus();
+      assert.equal(running.status, 'running');
+      assert.equal(running.slowStart, undefined);
+      assert.equal(running.startupElapsedMs, undefined);
+      assert.equal(capture.events[capture.events.length - 1]?.slow, false);
+    } finally {
+      capture.restore();
+      await disposeFixture(fixture);
+    }
+  });
+
+  it('relaunches once when an alive backend misses the deadline and then starts', async () => {
+    const clock = createVirtualStartupClock();
+    const capture = captureStartupPhaseEvents();
+    let fixture!: LifecycleFixture;
+    const secondAttemptListening = () => fixture.spawnCount() >= 2;
+    fixture = await createLifecycleFixture({
+      listen: false,
+      startupClock: clock,
+      startupTimeoutMs: 120_000,
+      probePort: async () => secondAttemptListening(),
+      httpClient: healthyHttpClient(secondAttemptListening),
+    });
+    try {
+      const result = await fixture.manager.start();
+      assert.equal(result.success, true);
+      assert.equal(fixture.spawnCount(), 2);
+      assert.equal((await fixture.manager.getStatus()).status, 'running');
+      assert.match(result.resultSession.stdout, /retrying 1\/3/);
+      assert.match(result.resultSession.stdout, /did not listen/);
+      assert.equal(capture.events.some((event) => event.phase === 'error'), false);
+      assert.equal(capture.events.some((event) => event.message === 'Retrying the owned backend start...'), true);
+    } finally {
+      capture.restore();
+      await disposeFixture(fixture);
+    }
+  });
+
+  it('reports error with both attempts in the log when the retry also misses the deadline', async () => {
+    const clock = createVirtualStartupClock();
+    let fixture!: LifecycleFixture;
+    fixture = await createLifecycleFixture({
+      listen: false,
+      startupClock: clock,
+      startupTimeoutMs: 120_000,
+      probePort: async () => false,
+      httpClient: healthyHttpClient(() => false),
+    });
+    try {
+      const result = await fixture.manager.start();
+      assert.equal(result.success, false);
+      assert.equal(fixture.spawnCount(), 2);
+      assert.equal((await fixture.manager.getStatus()).status, 'error');
+      const log = result.parsedResult.rawOutput ?? '';
+      assert.equal(log.match(/did not listen/g)?.length, 2);
+      assert.equal(log.match(/no output received/g)?.length, 2);
+      assert.match(log, /retrying 1\/3/);
+      assert.match(result.parsedResult.errorMessage ?? '', /did not listen.*within the 120 s startup limit.*backend still alive, pid \d+/);
+    } finally {
+      await disposeFixture(fixture);
+    }
+  });
+
+  it('reports the health-check miss with liveness when the port listened but health never passed', async () => {
+    const clock = createVirtualStartupClock();
+    let fixture!: LifecycleFixture;
+    fixture = await createLifecycleFixture({
+      listen: false,
+      startupClock: clock,
+      startupTimeoutMs: 120_000,
+      probePort: async () => true,
+      httpClient: healthyHttpClient(() => false),
+    });
+    try {
+      const result = await fixture.manager.start();
+      assert.equal(result.success, false);
+      assert.match(result.parsedResult.errorMessage ?? '', /failed its HTTP health check within the 120 s startup limit.*backend still alive/);
+      assert.equal((await fixture.manager.getStatus()).status, 'error');
+    } finally {
+      await disposeFixture(fixture);
+    }
+  });
+
+  it('does not retry an alive backend once the automatic restart budget is spent', async () => {
+    const fixture = await createLifecycleFixture({
+      exitAfterReadyMs: 1_200,
+      maxRestartAttempts: 1,
+      startupTimeoutMs: 600,
+      probePort: async () => fixture.spawnCount() === 1,
+      httpClient: healthyHttpClient(() => fixture.spawnCount() === 1),
+    });
+    try {
+      assert.equal((await fixture.manager.start()).success, true);
+      const finalStatus = await waitForStatus(
+        fixture.manager,
+        (status) => status.status === 'error' && status.restartCount === 1,
+        7_000,
+      );
+      assert.equal(finalStatus.status, 'error');
+      assert.equal(finalStatus.restartCount, 1);
+      assert.equal(fixture.spawnCount(), 2);
+    } finally {
+      await disposeFixture(fixture);
     }
   });
 });

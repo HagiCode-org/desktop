@@ -136,6 +136,27 @@ describe('hagicode env loader', () => {
     });
   });
 
+  it('loads the desktop startup timeout override like any other HAGICODE key', async () => {
+    const appRoot = await createTempDir('hagicode-env-startup-timeout-');
+    const envFilePath = path.join(appRoot, 'hagicode.env');
+    await fs.writeFile(envFilePath, 'HAGICODE_DESKTOP_STARTUP_TIMEOUT_MS=90000\n', 'utf8');
+
+    const env: NodeJS.ProcessEnv = {};
+    const result = await applyHagicodeEnvFile({
+      argv: ['/tmp/node', '/tmp/app/bootstrap.js'],
+      cwd: appRoot,
+      env,
+      execPath: path.join(appRoot, 'hagicode-desktop'),
+      platform: 'linux',
+    });
+
+    assert.equal(result.envFilePath, envFilePath);
+    assert.equal(env.HAGICODE_DESKTOP_STARTUP_TIMEOUT_MS, '90000');
+    assert.deepEqual(result.appliedFileValues, {
+      HAGICODE_DESKTOP_STARTUP_TIMEOUT_MS: '90000',
+    });
+  });
+
   it('formats diagnostics for observable bootstrap logging', () => {
     const messages = formatHagicodeEnvDiagnostics({
       candidateRoots: ['/tmp/app'],

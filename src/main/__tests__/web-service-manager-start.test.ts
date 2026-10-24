@@ -27,8 +27,8 @@ describe('web-service startup flow', () => {
     assert.match(source, /checkPortAvailable\(this\.config\.port\)/);
     assert.match(source, /Desktop will not adopt a port-only listener/);
     assert.match(source, /emitPhase\(\s*StartupPhase\.Spawning/);
-    assert.match(source, /waitForPortListening\(this\.startTimeout\)/);
-    assert.match(source, /waitForHealthCheck\(\)/);
+    assert.match(source, /waitForPortListening\(attempt\)/);
+    assert.match(source, /waitForHealthCheck\(attempt\)/);
     assert.match(ownerSource, /shell:\s*false/);
   });
 

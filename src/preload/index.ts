@@ -115,12 +115,16 @@ export interface WebServiceProcessInfo {
   phaseMessage?: string;
   host: string;
   port: number;
+  slowStart?: boolean;
+  startupElapsedMs?: number;
 }
 
 export interface WebServiceStartupPhaseEvent {
   phase: WebServiceProcessInfo['phase'];
   message?: string;
   timestamp: number;
+  slow?: boolean;
+  elapsedMs?: number;
 }
 
 export interface SetWebServiceConfigResult {

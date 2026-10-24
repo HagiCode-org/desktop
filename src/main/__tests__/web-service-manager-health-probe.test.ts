@@ -1,4 +1,8 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { createServer } from 'node:net';
 import { afterEach, describe, it, mock } from 'node:test';
 import log from 'electron-log';
 import type { BackendProcessOwner } from '../backend-process-owner.js';
@@ -101,3 +105,104 @@ describe('PCodeWebServiceManager health probing', () => {
     assert.ok(requestText.mock.callCount() > probesAfterTwoPolls);
   });
 });
+
+describe('PCodeWebServiceManager delayed readiness on the shared deadline', () => {
+  it('lets a health wait that begins at 35 seconds finish on the shared 120-second deadline', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'hagicode-health-deadline-'));
+    const port = await reserveFreePort();
+    let virtualNow = 0;
+    const startupClock = {
+      now: () => virtualNow,
+      sleep: async (ms: number) => {
+        virtualNow += ms;
+        await new Promise((resolve) => setImmediate(resolve));
+      },
+    };
+    const requestText = mock.fn(async () => {
+      if (virtualNow < 100_000) {
+        throw new Error('connect ECONNREFUSED 127.0.0.1');
+      }
+      return { status: 200, text: 'ok' };
+    });
+    let alive = false;
+    let startCount = 0;
+    const snapshot = {
+      pid: 4321,
+      startTime: 0,
+      identity: {},
+      isAlive: () => alive,
+      waitForExit: async () => true,
+    };
+    const owner = {
+      get snapshot() {
+        return alive ? snapshot : null;
+      },
+      start: async () => {
+        startCount += 1;
+        alive = true;
+        return snapshot;
+      },
+      stop: async () => {
+        alive = false;
+        return true;
+      },
+      reconcileOrphan: async () => undefined,
+    };
+    const manager = new PCodeWebServiceManager(
+      { host: '127.0.0.1', port },
+      {
+        pathManager: {
+          getPaths: () => ({
+            config: root,
+            webServiceConfig: path.join(root, 'web-service.json'),
+          }),
+          getEmbeddedDotnetPath: () => process.execPath,
+        } as never,
+        backendProcessOwner: owner as unknown as BackendProcessOwner,
+        httpClient: { requestText } as never,
+        resolveLaunchContext: async (runtimeRoot: string) => ({
+          serviceDllPath: path.join(runtimeRoot, 'PCode.Web.dll'),
+          serviceWorkingDirectory: runtimeRoot,
+        }),
+        prepareServiceEnvironment: async () => ({}),
+        startupTimeoutMs: 120_000,
+        startupClock,
+        probePort: async () => virtualNow >= 35_000,
+      },
+    );
+    manager.setActiveRuntime({
+      kind: 'installed-version',
+      rootPath: path.join(root, 'version-a'),
+      versionLabel: 'version-a',
+      displayName: 'test',
+      isReadOnly: false,
+    });
+
+    try {
+      const result = await manager.start();
+      assert.equal(result.success, true);
+      assert.equal(startCount, 1);
+      assert.ok(virtualNow >= 100_000 && virtualNow < 120_000, `health passed at ${virtualNow} ms`);
+      assert.doesNotMatch(result.resultSession.stdout, /retrying/);
+      assert.equal((await manager.getStatus()).status, 'running');
+    } finally {
+      await manager.cleanup();
+      await fs.rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+async function reserveFreePort(): Promise<number> {
+  const server = createServer();
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve);
+  });
+  const address = server.address();
+  assert.ok(address && typeof address !== 'string');
+  const { port } = address;
+  await new Promise<void>((resolve, reject) => {
+    server.close((error) => (error ? reject(error) : resolve()));
+  });
+  return port;
+}
