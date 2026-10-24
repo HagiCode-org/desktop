@@ -1,12 +1,18 @@
-import { motion } from 'motion/react';
+import { useMemo } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Play, Monitor, Loader2, ExternalLink } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import hagicodeIcon from '../assets/hagicode-icon.png';
+import { CatHead } from '@/components/ui/cat-head';
+import { shuffleCatOrder } from '@/lib/cat-sprite';
+import StartupProgressTrack from './StartupProgressTrack';
+import { StartupPhase } from '../store/slices/webServiceSlice';
 
 interface HagicodeActionButtonProps {
   isRunning: boolean;
   isDisabled: boolean;
   status: string;
+  /** Current startup phase; positions the progress track while the service is starting. */
+  phase?: StartupPhase;
   onStart: () => void;
   onOpenApp: () => void;
   onOpenBrowser: () => void;
@@ -21,6 +27,7 @@ export default function HagicodeActionButton({
   isRunning,
   isDisabled,
   status,
+  phase = StartupPhase.Idle,
   onStart,
   onOpenApp,
   onOpenBrowser,
@@ -31,6 +38,9 @@ export default function HagicodeActionButton({
   waitingPhaseMessage,
 }: HagicodeActionButtonProps) {
   const { t } = useTranslation('components');
+  const reduceMotion = useReducedMotion();
+  // One shuffle per mount: the idle avatar is the first cat and the startup track walks on from it.
+  const cats = useMemo(() => shuffleCatOrder(), []);
 
   const isStarting = status === 'starting';
   const isStopping = status === 'stopping';
@@ -50,13 +60,15 @@ export default function HagicodeActionButton({
         transition={{ duration: 0.3 }}
         onClick={onStart}
         disabled={isDisabled}
-        whileHover={{ scale: 1.01, y: -2 }}
-        whileTap={{ scale: 0.99 }}
+        whileHover={isDisabled ? undefined : { scale: 1.01, y: -2 }}
+        whileTap={isDisabled ? undefined : { scale: 0.99 }}
+        aria-busy={isTransitioning}
         className={`
           relative w-full h-16 rounded-xl overflow-hidden
           font-semibold text-base
           transition-all duration-300
           disabled:opacity-50 disabled:cursor-not-allowed
+          ${isTransitioning ? 'disabled:opacity-100 disabled:cursor-progress' : ''}
           ${isDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}
         `}
       >
@@ -96,26 +108,35 @@ export default function HagicodeActionButton({
           />
         )}
 
-        {/* Content */}
-        <div className="relative z-10 flex items-center justify-center gap-4 h-full text-primary-foreground">
-          {/* Hagicode Icon */}
-          <motion.img
-            src={hagicodeIcon}
-            alt="Hagicode"
-            className="w-8 h-8"
-            animate={isTransitioning ? { rotate: 360 } : { scale: [1, 1.1, 1] }}
-            transition={{ duration: isTransitioning ? 1 : 2, repeat: isTransitioning ? 0 : Infinity, ease: 'easeInOut' }}
-          />
+        <AnimatePresence mode="wait">
+          {isTransitioning ? (
+            <motion.div
+              key="progress"
+              className="absolute inset-0 z-10"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <StartupProgressTrack status={isStopping ? 'stopping' : 'starting'} phase={phase} cats={cats} />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="idle"
+              className="absolute inset-0 z-10 flex items-center justify-center gap-4 text-primary-foreground"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <motion.div
+                animate={reduceMotion ? undefined : { scale: [1, 1.08, 1] }}
+                transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+              >
+                <CatHead index={cats[0]} className="h-10 w-10 rounded-xl ring-2 ring-primary-foreground/70" />
+              </motion.div>
 
-          {/* Play icon or loader */}
-          <div className="flex items-center gap-2">
-            {isTransitioning ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                <span>{t(isStopping ? 'webServiceStatus.status.stopping' : 'webServiceStatus.status.starting')}</span>
-              </>
-            ) : (
-              <>
+              <div className="flex items-center gap-2">
                 <motion.div
                   animate={{ x: [0, 6, 0] }}
                   transition={{ duration: 1.2, repeat: Infinity, repeatDelay: 0.3 }}
@@ -123,12 +144,10 @@ export default function HagicodeActionButton({
                   <Play className="w-5 h-5" fill="currentColor" />
                 </motion.div>
                 <span className="text-lg">{startLabel ?? t('webServiceStatus.startButton')}</span>
-              </>
-            )}
-          </div>
-
-          {/* Separator */}
-        </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Subtle border */}
         <div className="absolute inset-0 rounded-xl border-2 border-primary-foreground/20 pointer-events-none" />

@@ -6,6 +6,7 @@ import { ensureGeneratedLocales } from '../test-utils/ensure-generated-locales.m
 
 const cardPath = path.resolve(process.cwd(), 'src/renderer/components/WebServiceStatusCard.tsx');
 const actionButtonPath = path.resolve(process.cwd(), 'src/renderer/components/HagicodeActionButton.tsx');
+const progressTrackPath = path.resolve(process.cwd(), 'src/renderer/components/StartupProgressTrack.tsx');
 const zhComponentsPath = path.resolve(process.cwd(), 'src/renderer/i18n/generated-locales/zh-CN/components.json');
 const enComponentsPath = path.resolve(process.cwd(), 'src/renderer/i18n/generated-locales/en-US/components.json');
 
@@ -45,7 +46,10 @@ describe('hagicode action button port waiting state', () => {
     assert.match(source, /const isStarting = status === 'starting';/);
     assert.match(source, /const isStopping = status === 'stopping';/);
     assert.match(source, /const isTransitioning = isStarting \|\| isStopping;/);
-    assert.match(source, /t\(isStopping \? 'webServiceStatus\.status\.stopping' : 'webServiceStatus\.status\.starting'\)/);
+    assert.match(source, /<StartupProgressTrack status=\{isStopping \? 'stopping' : 'starting'\}/);
+
+    const trackSource = await fs.readFile(progressTrackPath, 'utf8');
+    assert.match(trackSource, /t\(isStopping \? 'webServiceStatus\.status\.stopping' : 'webServiceStatus\.status\.starting'\)/);
   });
 
   it('keeps ready URL state on the existing open action branch', async () => {

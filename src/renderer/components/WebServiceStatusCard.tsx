@@ -615,6 +615,7 @@ const WebServiceStatusCard: React.FC = () => {
                     isRunning={isRunning}
                     isDisabled={isDisabled}
                     status={webServiceInfo.status}
+                    phase={webServiceInfo.phase}
                     canLaunchService={canLaunchService}
                     isWaitingForPort={isWaitingForPort}
                     waitingPort={webServiceInfo.port}
