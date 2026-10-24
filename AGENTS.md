@@ -41,11 +41,14 @@ npm run build:linux
 - `src/renderer/store/`: Redux store, slices, and thunks
 - `src/renderer/i18n/`: desktop translations; `locales/` holds the YAML sources (generated runtime JSON lives in git-ignored `generated-locales/`)
 - `src/renderer/assets/illustrations/`: compact AVIF artwork catalog, exposed through `index.ts`; keep new artwork small
+- `src/renderer/assets/cat-sprite/`: cat-head sprite sheet (AVIF) used by the sidebar logo and start button; regenerate with `node scripts/build-cat-sprite.mjs` (needs `ffmpeg` and ImageMagick `magick`, `--check` verifies)
 - `src/main/telemetry/`: PostHog telemetry (see `docs/cloud-telemetry.md`)
 - `src/shared/`: types and catalogs shared by main and renderer (agent CLI catalog, telemetry events, package-source defaults)
 - `src/ipc/handlers/`, `src/services/`: IPC handlers and preset loading/caching services
 - `scripts/`: packaging, runtime preparation, and verification helpers
 - `config/`, `native/StorePurchaseAddon/`: release/store packaging config and the Windows Store native addon
+- `resources/manifest.yml`: Desktop hagiscript runtime manifest (managed .NET runtime pin); `schemas/`: JSON schemas (e.g. `index.schema.json`)
+- `build.sh`, `build.ps1`, `build.cmd`, `pybuild/`, `pyproject.toml`: Python Invoke build entry (`python -m pybuild.entry <Setup|Build|GenerateR2UploadPlan|GenerateR2Index|PublishToR2>`); `smoke-test` asserts the wrappers dispatch to it
 - `docs/`: development, i18n, telemetry, npm management, agent CLI probe, artifact signing, R2 storage sync, and channel testing guides (plus `docs/release-notes/`)
 - `PRODUCT.md`, `DESIGN.md`: product and design context for UI work
 
