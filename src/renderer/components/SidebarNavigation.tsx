@@ -22,6 +22,7 @@ import {
 import { switchView } from '../store/slices/viewSlice';
 import type { RootState } from '../store';
 import type { ViewType } from '../store/slices/viewSlice';
+import { CatLogo } from './CatLogo';
 import { ThemeToggle } from './ui/theme-toggle';
 import { LanguageToggle } from './ui/language-toggle';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
@@ -609,9 +610,7 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
             collapsed ? 'justify-center px-2' : 'gap-3 px-4',
           )}
         >
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/80 bg-muted text-foreground">
-            <span className="text-base font-semibold">H</span>
-          </div>
+          <CatLogo label={collapsed ? 'Hagicode' : undefined} />
           {!collapsed ? (
             <div className="min-w-0 leading-tight">
               <h1 className="truncate text-sm font-semibold text-foreground">Hagicode</h1>
