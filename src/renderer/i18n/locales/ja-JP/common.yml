@@ -110,24 +110,6 @@ navigation:
   versionManagement: バージョン管理
   webServiceNotRunning: Webサービスが実行されていません
   officialWebsite: 公式ウェブサイト
-  about:
-    snapshotLabel: バンドルされたスナップショット
-    runtimeLabel: ライブデータ
-    updatedAt: '{{value}}を更新しました'
-    loading: データに関する最新の公式情報を更新しています...
-    refreshFailed: データに関する最新の公式情報のロードに失敗しました。代わりにバンドルされたスナップショットを表示します。
-    loadFailed: データに関する公式情報は一時的に利用できなくなりましたが、ウェブサイトのエントリは引き続き機能します。
-    snapshotMissing: このビルドにはバンドルされたスナップショットについては含まれていません。ライブエンドポイントを直接試してみます。
-    empty: 現在、公式のエントリーはありません。
-    sections:
-      store: ストア
-      community: コミュニティ
-      content: 内容
-    types:
-      link: リンク
-      contact: お問い合わせ
-      qr: "QRコード"
-      image: 画像
 sidebar:
   dashboard: ダッシュボード
   webService: ウェブサービス

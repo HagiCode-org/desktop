@@ -1,10 +1,9 @@
-import { Fragment, useEffect, useMemo, useState, type ComponentType, type ReactElement } from 'react';
+import { useEffect, useMemo, useState, type ComponentType, type ReactElement } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
 import { useTheme } from '@/components/providers/theme-provider';
 import {
-  AlertCircle,
   BadgeCheck,
   Cpu,
   ExternalLink,
@@ -12,7 +11,6 @@ import {
   Info,
   Layers,
   LayoutDashboard,
-  LoaderCircle,
   PackageOpen,
   PanelLeftClose,
   PanelLeftOpen,
@@ -25,24 +23,13 @@ import type { ViewType } from '../store/slices/viewSlice';
 import { CatLogo } from './CatLogo';
 import { ThemeToggle } from './ui/theme-toggle';
 import { LanguageToggle } from './ui/language-toggle';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { ScrollArea } from './ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import type { DistributionModeState } from '../../types/distribution-mode';
 import type { DesktopVersionInfoPayload } from '../../types/version-info';
 import { useSidebarLayout } from '../hooks/useSidebarLayout';
 import { isDesktopTheme } from '../lib/desktop-theme';
-import {
-  createLoadingSidebarAboutFetchState,
-  hasSidebarAboutEntries,
-  loadBundledSidebarAbout,
-  normalizeSidebarAboutLocale,
-  refreshSidebarAboutModel,
-  type SidebarAboutEntry,
-  type SidebarAboutFetchState,
-  type SidebarAboutModel,
-  type SidebarAboutSectionId,
-} from '../lib/about-sidebar';
+import { resolveDesktopLanguageCode } from '../../shared/desktop-languages';
 import { buildRelatedSitesModel, type RelatedSitesModel } from '../lib/related-sites';
 import { cn } from '../lib/utils';
 
@@ -97,100 +84,11 @@ const featuredNavigationItems: NavigationItem[] = [
   turboEngineNavigationItem,
 ];
 
-const ABOUT_SECTION_TITLE_CLASS =
+const SIDEBAR_SECTION_TITLE_CLASS =
   'px-1 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground/90';
 
 interface SidebarNavigationProps {
   distributionState: DistributionModeState;
-}
-
-const ABOUT_BRAND_DOMAIN_OVERRIDES: Partial<Record<SidebarAboutEntry['id'], string>> = {
-  'product-hunt': 'producthunt.com',
-  'qq-group': 'qq.com',
-  'feishu-group': 'feishu.cn',
-  'douyin-account': 'douyin.com',
-  'douyin-qr': 'douyin.com',
-  'wechat-account': 'weixin.qq.com',
-};
-
-function normalizeAboutBrandDomain(hostname: string): string {
-  const normalizedHostname = hostname.toLowerCase().replace(/^www\./, '');
-
-  if (normalizedHostname.endsWith('.qq.com')) {
-    return 'qq.com';
-  }
-
-  if (normalizedHostname.endsWith('.feishu.cn')) {
-    return 'feishu.cn';
-  }
-
-  return normalizedHostname;
-}
-
-function getAboutBrandDomain(entry: SidebarAboutEntry): string | null {
-  const explicitDomain = ABOUT_BRAND_DOMAIN_OVERRIDES[entry.id];
-  if (explicitDomain) {
-    return explicitDomain;
-  }
-
-  if (!entry.href) {
-    return null;
-  }
-
-  try {
-    return normalizeAboutBrandDomain(new URL(entry.href).hostname);
-  } catch {
-    return null;
-  }
-}
-
-function getAboutEntryMonogram(label: string): string {
-  const latin = Array.from(label.matchAll(/[A-Za-z0-9]/g))
-    .map((match) => match[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-
-  if (latin.length > 0) {
-    return latin;
-  }
-
-  return Array.from(label.replace(/\s+/g, '')).slice(0, 2).join('');
-}
-
-function getAboutEntryHint(entry: SidebarAboutEntry): string {
-  if (entry.value) {
-    return entry.value;
-  }
-
-  return entry.detail;
-}
-
-function AboutBrandLogo({ entry }: { entry: SidebarAboutEntry }) {
-  const [imageFailed, setImageFailed] = useState(false);
-  const domain = getAboutBrandDomain(entry);
-
-  if (!imageFailed && domain) {
-    return (
-      <img
-        src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`}
-        alt=""
-        aria-hidden
-        className="h-6 w-6 rounded-md object-contain"
-        loading="lazy"
-        onError={() => setImageFailed(true)}
-      />
-    );
-  }
-
-  return (
-    <span
-      aria-hidden
-      className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/70"
-    >
-      {getAboutEntryMonogram(entry.label)}
-    </span>
-  );
 }
 
 function getFeaturedNavigationPalette(
@@ -280,20 +178,15 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
     (item) => item.emphasis === 'default' && item.id !== settingsNavigationItem.id,
   );
   const featuredItems = visibleNavigationItems.filter((item) => item.emphasis !== 'default');
-  const aboutLocale = useMemo(
-    () => normalizeSidebarAboutLocale(i18n.resolvedLanguage ?? i18n.language),
+  const relatedSitesLocale = useMemo(
+    () => resolveDesktopLanguageCode(i18n.resolvedLanguage ?? i18n.language),
     [i18n.language, i18n.resolvedLanguage],
   );
-  const bundledAboutModel = useMemo(() => loadBundledSidebarAbout(aboutLocale), [aboutLocale]);
-  const relatedSitesModel = useMemo(() => buildRelatedSitesModel(aboutLocale), [aboutLocale]);
+  const relatedSitesModel = useMemo(() => buildRelatedSitesModel(relatedSitesLocale), [relatedSitesLocale]);
 
   const { collapsed, toggleCollapsed } = useSidebarLayout();
   const [versionInfo, setVersionInfo] = useState<DesktopVersionInfoPayload | null>(null);
   const [webVersion, setWebVersion] = useState<string | null>(null);
-  const [aboutModel, setAboutModel] = useState<SidebarAboutModel | null>(bundledAboutModel);
-  const [aboutFetchState, setAboutFetchState] = useState<SidebarAboutFetchState>(
-    createLoadingSidebarAboutFetchState(),
-  );
   useEffect(() => {
     const fetchVersion = async () => {
       try {
@@ -333,26 +226,6 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
   }, [isFusionMode]);
 
   useEffect(() => {
-    setAboutModel(bundledAboutModel);
-    setAboutFetchState(createLoadingSidebarAboutFetchState());
-
-    let cancelled = false;
-
-    void refreshSidebarAboutModel(aboutLocale, bundledAboutModel).then((result) => {
-      if (cancelled) {
-        return;
-      }
-
-      setAboutModel(result.model);
-      setAboutFetchState(result.fetchState);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [aboutLocale, bundledAboutModel]);
-
-  useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
         e.preventDefault();
@@ -369,11 +242,6 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
     : t('sidebar.unknownVersion');
   const appVersion = versionInfo?.desktopVersion ?? '';
   const windowsStoreVersion = versionInfo?.windowsStoreVersion ?? null;
-
-  const hasAboutContent = hasSidebarAboutEntries(aboutModel);
-  // The related-sites block follows the community section; without one it is appended after the About content.
-  const relatedSitesFollowCommunity = hasAboutContent
-    && Boolean(aboutModel?.sections.some((section) => section.id === 'community'));
 
   const openExternalUrl = async (url: string) => {
     try {
@@ -405,15 +273,9 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
     return currentView === viewId;
   };
 
-  const renderAboutSectionTitle = (sectionId: SidebarAboutSectionId) => (
-    <p className={ABOUT_SECTION_TITLE_CLASS}>
-      {t(`navigation.about.sections.${sectionId}`)}
-    </p>
-  );
-
   const renderRelatedSitesBlock = (model: RelatedSitesModel) => (
     <div className="space-y-2" data-related-sites>
-      <p className={ABOUT_SECTION_TITLE_CLASS}>{model.title}</p>
+      <p className={SIDEBAR_SECTION_TITLE_CLASS}>{model.title}</p>
       <div className="space-y-1.5">
         {model.entries.map((entry) => {
           const accessibleLabel = entry.description ? `${entry.name} · ${entry.description}` : entry.name;
@@ -440,96 +302,6 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
       </div>
     </div>
   );
-
-  const renderAboutEntryIcon = (entry: SidebarAboutEntry) => {
-    const actionable = Boolean(entry.href);
-    const hint = getAboutEntryHint(entry);
-    const accessibleLabel = hint ? `${entry.label} · ${hint}` : entry.label;
-    const iconButton = (
-      <div className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-border/60 bg-background/80 shadow-sm transition-colors group-hover:border-primary/40 group-hover:bg-accent/50 group-focus-visible:border-primary/40 group-focus-visible:bg-accent/50">
-        <AboutBrandLogo entry={entry} />
-        {actionable ? (
-          <span className="absolute -right-1 -top-1 rounded-full border border-background bg-background p-0.5 shadow-sm">
-            <ExternalLink className="h-2.5 w-2.5 text-muted-foreground" />
-          </span>
-        ) : null}
-      </div>
-    );
-
-    if (entry.imageUrl) {
-      return (
-        <Popover key={entry.id}>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              aria-label={accessibleLabel}
-              title={accessibleLabel}
-              className="group flex items-center justify-center rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
-            >
-              {iconButton}
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-64 space-y-3" align="start">
-            <div className="space-y-1">
-              <p className="text-sm font-semibold text-foreground">{entry.label}</p>
-              <p className="text-xs text-muted-foreground">{t(`navigation.about.types.${entry.type}`)}</p>
-            </div>
-
-            <div className="overflow-hidden rounded-xl border border-border/60 bg-muted/20 p-2">
-              <img
-                src={entry.imageUrl}
-                alt={entry.alt}
-                className="mx-auto max-h-52 w-auto rounded-lg object-contain"
-                loading="lazy"
-              />
-            </div>
-
-            {hint ? (
-              <p className="text-xs leading-5 text-muted-foreground">{hint}</p>
-            ) : null}
-
-            {entry.href ? (
-              <button
-                type="button"
-                onClick={() => void openExternalUrl(entry.href!)}
-                className="inline-flex h-9 items-center justify-center rounded-lg border border-border/60 bg-background px-3 text-xs font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-accent/50"
-              >
-                <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-                {t('button.open')}
-              </button>
-            ) : null}
-          </PopoverContent>
-        </Popover>
-      );
-    }
-
-    if (!actionable || !entry.href) {
-      return (
-        <div
-          key={entry.id}
-          aria-label={accessibleLabel}
-          title={accessibleLabel}
-          className="flex items-center justify-center rounded-xl"
-        >
-          {iconButton}
-        </div>
-      );
-    }
-
-    return (
-      <button
-        key={entry.id}
-        type="button"
-        aria-label={accessibleLabel}
-        title={accessibleLabel}
-        onClick={() => void openExternalUrl(entry.href!)}
-        className="group flex items-center justify-center rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
-      >
-        {iconButton}
-      </button>
-    );
-  };
-
   const OfficialWebsiteIcon = officialWebsiteItem.icon;
   const collapseLabel = collapsed ? t('sidebar.expand') : t('sidebar.collapse');
   const navRowClass = cn(NAV_ROW_CLASS, collapsed ? 'pr-[15px]' : 'pr-2');
@@ -623,7 +395,7 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
           The whole list scrolls as one region between the pinned header and footer, so no row can end up
           hidden behind the footer on a short window. The inset lives inside the viewport so focus rings
           are not clipped, and the viewport's inner table wrapper is made a block so wide content
-          (official card, about icons) is laid out against the sidebar width instead of widening past it.
+          (official card, related-site cards) is laid out against the sidebar width instead of widening past it.
         */}
         <nav className="min-h-0 flex-1">
           <ScrollArea
@@ -638,12 +410,12 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
 
               {featuredItems.length > 0 ? (
                 <>
-                  <div role="separator" className="mx-2 my-2 border-t border-border/70" />
+                  <div role="separator" className="mx-2 my-1.5 border-t border-border/70" />
                   <div className="space-y-0.5">{featuredItems.map(renderNavItem)}</div>
                 </>
               ) : null}
 
-              <div role="separator" className="mx-2 my-2 border-t border-border/70" />
+              <div role="separator" className="mx-2 my-1.5 border-t border-border/70" />
 
               <div className="space-y-2">
                 <CollapsedTooltip label={t(officialWebsiteItem.labelKey)} enabled={collapsed}>
@@ -654,7 +426,7 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
                     whileTap={{ scale: 0.98 }}
                     className={collapsed
                       ? cn(navRowClass, 'text-muted-foreground hover:bg-muted/60 hover:text-foreground focus-visible:ring-primary/35')
-                      : 'group relative w-full overflow-hidden rounded-xl border border-border/70 bg-card px-3 py-3 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35'}
+                      : 'group relative w-full overflow-hidden rounded-xl border border-border/70 bg-card px-3 py-2.5 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35'}
                   >
                     <div className={collapsed ? 'flex items-center' : 'flex items-start gap-3'}>
                       <div className={collapsed
@@ -677,54 +449,9 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
                   </motion.button>
                 </CollapsedTooltip>
 
-                {!collapsed ? (
-                  <div className="space-y-3 pl-3 pr-2" data-about-source={aboutModel?.source ?? 'none'}>
-                    {!bundledAboutModel ? (
-                      <div className="rounded-xl border border-dashed border-border/60 bg-muted/10 px-3 py-2.5 text-xs text-muted-foreground">
-                        {t('navigation.about.snapshotMissing')}
-                      </div>
-                    ) : null}
-
-                    {aboutFetchState.status === 'loading' ? (
-                      <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-muted/10 px-3 py-2.5 text-xs text-muted-foreground">
-                        <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-                        <span>{t('navigation.about.loading')}</span>
-                      </div>
-                    ) : null}
-
-                    {aboutFetchState.status === 'error' ? (
-                      <div className="flex items-start gap-2 rounded-xl border border-warning/30 bg-warning-soft px-3 py-2.5 text-xs text-warning">
-                        <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                        <span>
-                          {bundledAboutModel
-                            ? t('navigation.about.refreshFailed')
-                            : t('navigation.about.loadFailed')}
-                        </span>
-                      </div>
-                    ) : null}
-
-                    {hasAboutContent && aboutModel ? (
-                      aboutModel.sections.map((section) => (
-                        <Fragment key={section.id}>
-                          <div className="space-y-2">
-                            {renderAboutSectionTitle(section.id)}
-                            <div className="grid grid-cols-4 gap-2">
-                              {section.entries.map((entry) => renderAboutEntryIcon(entry))}
-                            </div>
-                          </div>
-                          {section.id === 'community' && relatedSitesModel
-                            ? renderRelatedSitesBlock(relatedSitesModel)
-                            : null}
-                        </Fragment>
-                      ))
-                    ) : (
-                      <div className="rounded-xl border border-dashed border-border/60 bg-muted/10 px-3 py-2.5 text-xs text-muted-foreground">
-                        {t('navigation.about.empty')}
-                      </div>
-                    )}
-                    {!relatedSitesFollowCommunity && relatedSitesModel
-                      ? renderRelatedSitesBlock(relatedSitesModel)
-                      : null}
+                {!collapsed && relatedSitesModel ? (
+                  <div className="pl-3 pr-2">
+                    {renderRelatedSitesBlock(relatedSitesModel)}
                   </div>
                 ) : null}
               </div>

@@ -110,24 +110,6 @@ navigation:
   versionManagement: Gestión de versiones
   webServiceNotRunning: El servicio web no se está ejecutando
   officialWebsite: Sitio web oficial
-  about:
-    snapshotLabel: Instantánea incluida
-    runtimeLabel: datos en vivo
-    updatedAt: Actualizado {{value}}
-    loading: Actualizando el último funcionario sobre datos...
-    refreshFailed: El último funcionario sobre datos no se pudo cargar. En su lugar, se muestra la instantánea incluida.
-    loadFailed: Los datos oficiales no están disponibles temporalmente, pero la entrada del sitio web aún funciona.
-    snapshotMissing: Esta compilación no incluye una instantánea incluida. Probar el punto final en vivo directamente.
-    empty: No hay información oficial sobre las entradas disponibles en este momento.
-    sections:
-      store: Tienda
-      community: Comunidad
-      content: Contenido
-    types:
-      link: Enlace
-      contact: Contacto
-      qr: "Código QR"
-      image: Imagen
 sidebar:
   dashboard: Panel
   webService: Servicio Web

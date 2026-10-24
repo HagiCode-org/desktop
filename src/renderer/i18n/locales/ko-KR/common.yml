@@ -110,24 +110,6 @@ navigation:
   versionManagement: 버전 관리
   webServiceNotRunning: 웹 서비스가 실행되고 있지 않습니다.
   officialWebsite: 공식 홈페이지
-  about:
-    snapshotLabel: 번들 스냅샷
-    runtimeLabel: 실시간 데이터
-    updatedAt: '{{value}} 업데이트됨'
-    loading: 데이터에 관한 최신 공식을 갱신 중입니다...
-    refreshFailed: 데이터에 관한 최신 공식을 로드하지 못했습니다. 대신 번들 스냅샷을 표시합니다.
-    loadFailed: 데이터 관련 공식 기능을 일시적으로 사용할 수 없지만 웹사이트 항목은 계속 작동합니다.
-    snapshotMissing: 이 빌드에는 번들에 대한 스냅샷이 포함되어 있지 않습니다. 라이브 엔드포인트를 직접 시도합니다.
-    empty: 현재 출품작에 대한 공식적인 정보는 없습니다.
-    sections:
-      store: 매장
-      community: 커뮤니티
-      content: 내용
-    types:
-      link: 링크
-      contact: 연락처
-      qr: "QR 코드"
-      image: 이미지
 sidebar:
   dashboard: 대시보드
   webService: 웹 서비스

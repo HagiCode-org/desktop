@@ -110,24 +110,6 @@ navigation:
   versionManagement: Gerenciamento de versão
   webServiceNotRunning: O serviço da Web não está em execução
   officialWebsite: Site oficial
-  about:
-    snapshotLabel: Instantâneo empacotado
-    runtimeLabel: Dados ao vivo
-    updatedAt: Atualizado {{value}}
-    loading: Atualizando o último relatório oficial sobre dados...
-    refreshFailed: O último oficial sobre os dados não foi carregado. Em vez disso, mostra o instantâneo agrupado.
-    loadFailed: Os dados oficiais estão temporariamente indisponíveis, mas a entrada do site ainda funciona.
-    snapshotMissing: Esta compilação não inclui um pacote about snapshot. Tentando o endpoint ativo diretamente.
-    empty: Nenhum oficial sobre as inscrições está disponível no momento.
-    sections:
-      store: Loja
-      community: Comunidade
-      content: Conteúdo
-    types:
-      link: Ligação
-      contact: Contato
-      qr: "Código QR"
-      image: Imagem
 sidebar:
   dashboard: Painel
   webService: Serviço Web

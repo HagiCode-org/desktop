@@ -15,10 +15,10 @@ describe('diagnostic primary navigation wiring', () => {
       fs.readFile(systemManagementViewPath, 'utf8'),
     ]);
 
-    assert.match(sidebarSource, /\{ id: 'diagnostic', labelKey: 'sidebar\.diagnostic', icon: Stethoscope \}/);
+    assert.match(sidebarSource, /\{ id: 'diagnostic', labelKey: 'sidebar\.diagnostic', icon: Stethoscope, emphasis: 'default' \}/);
     assert.match(appSource, /import SystemDiagnosticPage from '\.\/components\/SystemDiagnosticPage';/);
     assert.match(appSource, /\{currentView === 'diagnostic' && <SystemDiagnosticPage \/>\}/);
     assert.equal(systemViewSource.includes('DiagnosisButton'), false);
-    assert.equal(systemViewSource.includes(\"'diagnosis'\"), false);
+    assert.equal(systemViewSource.includes("'diagnosis'"), false);
   });
 });

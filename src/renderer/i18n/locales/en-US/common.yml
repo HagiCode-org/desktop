@@ -110,24 +110,6 @@ navigation:
   versionManagement: Version Management
   webServiceNotRunning: Web service is not running
   officialWebsite: Official Website
-  about:
-    snapshotLabel: Bundled snapshot
-    runtimeLabel: Live data
-    updatedAt: Updated {{value}}
-    loading: Refreshing the latest official about data...
-    refreshFailed: The latest official about data failed to load. Showing the bundled snapshot instead.
-    loadFailed: Official about data is temporarily unavailable, but the website entry still works.
-    snapshotMissing: This build does not include a bundled about snapshot. Trying the live endpoint directly.
-    empty: No official about entries are available right now.
-    sections:
-      store: Store
-      community: Community
-      content: Content
-    types:
-      link: Link
-      contact: Contact
-      qr: QR
-      image: Image
 sidebar:
   dashboard: Dashboard
   webService: Web Service

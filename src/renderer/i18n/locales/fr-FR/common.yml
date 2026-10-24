@@ -110,24 +110,6 @@ navigation:
   versionManagement: Gestion des versions
   webServiceNotRunning: Le service Web ne fonctionne pas
   officialWebsite: Site officiel
-  about:
-    snapshotLabel: Instantané groupé
-    runtimeLabel: Données en direct
-    updatedAt: '{{value}} mis à jour'
-    loading: Actualisation du dernier officiel sur les données...
-    refreshFailed: Le dernier responsable concernant les données n'a pas pu être chargé. Affichage de l'instantané fourni à la place.
-    loadFailed: Les données officielles sont temporairement indisponibles, mais l'entrée du site Web fonctionne toujours.
-    snapshotMissing: Cette version n'inclut pas d'instantané fourni. Essayer directement le point de terminaison en direct.
-    empty: Aucun officiel sur les inscriptions n’est disponible pour le moment.
-    sections:
-      store: Magasin
-      community: Communauté
-      content: Contenu
-    types:
-      link: Lien
-      contact: Contacter
-      qr: "Code QR"
-      image: Images
 sidebar:
   dashboard: Tableau de bord
   webService: Service Web

@@ -19,7 +19,7 @@ export type RelatedSitesResolver = typeof resolveSiteLinks;
  * No siteId is passed on purpose: Desktop is not a registered core site, and
  * passing one would hide that site and append web-footer campaign UTM parameters.
  * Returns null when there is nothing to show or when resolution throws, so the
- * About area and sidebar navigation are never affected by related-site data.
+ * sidebar navigation is never affected by related-site data.
  */
 export function buildRelatedSitesModel(
   locale: string | null | undefined,

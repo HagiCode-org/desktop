@@ -110,24 +110,6 @@ navigation:
   versionManagement: 版本管理
   webServiceNotRunning: Hagicode 服务未运行，无法访问
   officialWebsite: 官方网站
-  about:
-    snapshotLabel: 打包 snapshot
-    runtimeLabel: 最新数据
-    updatedAt: 更新于 {{value}}
-    loading: 正在刷新最新官方 about 信息…
-    refreshFailed: 最新官方 about 加载失败，当前继续显示打包 snapshot。
-    loadFailed: 官方 about 暂时不可用，但官网入口仍可正常打开。
-    snapshotMissing: 当前构建未携带 about snapshot，正在尝试直接拉取最新官方数据。
-    empty: 暂时没有可展示的官方 about 条目。
-    sections:
-      store: 商店
-      community: 社区
-      content: 内容
-    types:
-      link: 链接
-      contact: 联系
-      qr: 二维码
-      image: 图片
 sidebar:
   dashboard: 仪表盘
   webService: Hagicode 服务

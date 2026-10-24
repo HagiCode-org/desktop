@@ -110,24 +110,6 @@ navigation:
   versionManagement: 版本管理
   webServiceNotRunning: Hagicode 服務未運行，無法存取
   officialWebsite: 官方網站
-  about:
-    snapshotLabel: 打包 snapshot
-    runtimeLabel: 最新數據
-    updatedAt: 更新於 {{value}}
-    loading: 正在刷新最新官方 about 資訊…
-    refreshFailed: 最新官方 about 載入失敗，目前繼續顯示打包 snapshot。
-    loadFailed: 官方 about 暫時無法使用，但官網入口仍可正常開啟。
-    snapshotMissing: 目前建置未攜帶 about snapshot，正在嘗試直接拉取最新官方資料。
-    empty: 暫時沒有可展示的官方 about 條目。
-    sections:
-      store: 商店
-      community: 社群
-      content: 內容
-    types:
-      link: 連結
-      contact: 聯繫
-      qr: QR 圖碼
-      image: 圖片
 sidebar:
   dashboard: 控制台
   webService: Hagicode 服務

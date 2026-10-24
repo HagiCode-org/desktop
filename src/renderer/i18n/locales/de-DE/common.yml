@@ -110,24 +110,6 @@ navigation:
   versionManagement: Versionsverwaltung
   webServiceNotRunning: Der Webdienst wird nicht ausgeführt
   officialWebsite: Offizielle Website
-  about:
-    snapshotLabel: Gebündelter Schnappschuss
-    runtimeLabel: Live-Daten
-    updatedAt: Aktualisiert {{value}}
-    loading: Aktualisierung der neuesten offiziellen Informationen zu Daten...
-    refreshFailed: Die neuesten offiziellen Daten konnten nicht geladen werden. Stattdessen wird der gebündelte Snapshot angezeigt.
-    loadFailed: Offizielle Daten sind vorübergehend nicht verfügbar, der Website-Eintrag funktioniert jedoch weiterhin.
-    snapshotMissing: Dieser Build enthält keinen gebündelten Snapshot. Direkter Versuch mit dem Live-Endpunkt.
-    empty: Derzeit sind keine offiziellen Einträge verfügbar.
-    sections:
-      store: Speichern
-      community: Gemeinschaft
-      content: Inhalt
-    types:
-      link: "Verweis"
-      contact: Kontakt
-      qr: "QR-Code"
-      image: Bild
 sidebar:
   dashboard: "Übersicht"
   webService: Webdienst
