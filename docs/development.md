@@ -375,7 +375,7 @@ Windows and Linux builds now stage the runtime from a single manifest:
 
 - Manifest: `resources/manifest.yml` (`desktopExtensions.embeddedRuntime`)
 - Current pinned channel: `.NET 10.0`
-- Current pinned release: `10.0.12` (release date `2026-09-08`)
+- Current pinned release: `10.0.13` (release date `2026-10-13`)
 - Official release metadata: `https://dotnetcli.blob.core.windows.net/dotnet/release-metadata/10.0/releases.json`
 - Official download host allowlist: `builds.dotnet.microsoft.com`
 - Supported Desktop private-runtime package targets in this flow:
@@ -387,7 +387,7 @@ Windows and Linux builds now stage the runtime from a single manifest:
 ```json
 {
   "channelVersion": "10.0",
-  "releaseVersion": "10.0.12",
+  "releaseVersion": "10.0.13",
   "source": {
     "provider": "microsoft",
     "releaseMetadataUrl": "https://dotnetcli.blob.core.windows.net/dotnet/release-metadata/10.0/releases.json",
@@ -397,12 +397,12 @@ Windows and Linux builds now stage the runtime from a single manifest:
     "linux-x64": {
       "rid": "linux-x64",
       "archiveType": "tar.gz",
-      "downloadUrl": "https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/10.0.12/aspnetcore-runtime-10.0.12-linux-x64.tar.gz"
+      "downloadUrl": "https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/10.0.13/aspnetcore-runtime-10.0.13-linux-x64.tar.gz"
     },
     "win-x64": {
       "rid": "win-x64",
       "archiveType": "zip",
-      "downloadUrl": "https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/10.0.12/aspnetcore-runtime-10.0.12-win-x64.zip"
+      "downloadUrl": "https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/10.0.13/aspnetcore-runtime-10.0.13-win-x64.zip"
     }
   }
 }
@@ -421,9 +421,9 @@ build/embedded-runtime/current/
     ??? <rid>/
         ??? dotnet[.exe]
         ??? .hagicode-runtime.json
-        ??? host/fxr/10.0.12/...
-        ??? shared/Microsoft.NETCore.App/10.0.12/...
-        ??? shared/Microsoft.AspNetCore.App/10.0.12/...
+        ??? host/fxr/10.0.13/...
+        ??? shared/Microsoft.NETCore.App/10.0.13/...
+        ??? shared/Microsoft.AspNetCore.App/10.0.13/...
 ```
 
 The `.hagicode-runtime.json` file is generated during staging and travels with the packaged runtime.
