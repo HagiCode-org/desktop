@@ -41,6 +41,7 @@ import {
   type BackendProcessLaunch,
   type BackendProcessSnapshot,
 } from './backend-process-owner.js';
+import { HealthProbeBackoff } from './health-probe-backoff.js';
 
 const { app } = electron;
 
@@ -214,6 +215,7 @@ export class PCodeWebServiceManager {
   private startupLogTruncated: boolean = false;
   private lastResolvedServiceEnv: NodeJS.ProcessEnv | null = null;
   private lastHealthCheckLogState: 'healthy' | 'unhealthy' | null = null;
+  private readonly healthProbeBackoff = new HealthProbeBackoff();
   private distributionMode: DistributionMode = 'normal';
   private statusRequestPromise: Promise<ProcessInfo> | null = null;
   private readonly backendProcessOwner: BackendProcessOwner;
@@ -926,6 +928,7 @@ export class PCodeWebServiceManager {
     // A manual Desktop start gets a fresh automatic-restart budget.
     this.restartCount = 0;
     this.lastBackendWasRunning = false;
+    this.healthProbeBackoff.reset();
 
     const currentOwned = this.backendProcessOwner.snapshot;
     const runtime = this.activeRuntime;
@@ -1048,6 +1051,7 @@ export class PCodeWebServiceManager {
       this.lastBackendWasRunning = false;
       this.currentPhase = StartupPhase.Idle;
       this.lastHealthCheckLogState = null;
+      this.healthProbeBackoff.reset();
       log.info('[WebService] Stopped successfully');
       return true;
     } catch (error) {
@@ -1133,8 +1137,15 @@ export class PCodeWebServiceManager {
 
     this.ownedBackend = owned;
     const startupTransitionActive = this.isStartupTransitionActive();
+    // Between backoff probes the last result stands. Startup keeps its own pacing.
+    if (!startupTransitionActive && !this.healthProbeBackoff.shouldProbe(Date.now())) {
+      return this.buildProcessInfo();
+    }
+
+    const probeStartedAt = Date.now();
     const healthCheckPassed = await this.performHealthCheck();
     if (healthCheckPassed) {
+      this.healthProbeBackoff.reset();
       this.status = 'running';
       this.currentPhase = StartupPhase.Running;
       this.lastBackendWasRunning = true;
@@ -1145,6 +1156,9 @@ export class PCodeWebServiceManager {
       this.currentPhase = StartupPhase.HealthCheck;
       this.startTime = owned.startTime;
     } else {
+      if (!startupTransitionActive) {
+        this.healthProbeBackoff.recordFailure(probeStartedAt);
+      }
       this.status = 'error';
       this.currentPhase = StartupPhase.Error;
       this.appendStartupLogLine('The owned backend process is alive, but HTTP health verification failed.');
