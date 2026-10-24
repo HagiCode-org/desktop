@@ -68,6 +68,13 @@ export interface ProcessInfo {
   phaseMessage?: string;
   host: string;
   port: number;
+  slowStart?: boolean;
+  startupElapsedMs?: number;
+}
+
+/** Set while the owned backend is alive but has not listened after the phase window. */
+export interface WebServiceSlowStart {
+  elapsedMs: number;
 }
 
 export interface PackageInfo {
@@ -120,6 +127,7 @@ export interface WebServiceState {
   // Startup phase state
   phase: StartupPhase;
   phaseMessage: string | null;
+  slowStart: WebServiceSlowStart | null;
 
   // Port availability state
   portAvailable: boolean;
@@ -167,6 +175,7 @@ const initialState: WebServiceState = {
 
   phase: StartupPhase.Idle,
   phaseMessage: null,
+  slowStart: null,
 
   portAvailable: true,
   portStatusChecked: false,
@@ -186,6 +195,10 @@ const initialState: WebServiceState = {
 
   installState: InstallState.Idle,
 };
+
+function toSlowStart(info: Pick<ProcessInfo, 'slowStart' | 'startupElapsedMs'>): WebServiceSlowStart | null {
+  return info.slowStart ? { elapsedMs: info.startupElapsedMs ?? 0 } : null;
+}
 
 export const webServiceSlice = createSlice({
   name: 'webService',
@@ -276,6 +289,7 @@ export const webServiceSlice = createSlice({
       state.restartCount = action.payload.restartCount;
       state.phase = action.payload.phase;
       state.phaseMessage = action.payload.phaseMessage || null;
+      state.slowStart = toSlowStart(action.payload);
       state.host = action.payload.host;
       state.port = action.payload.port;
       state.isChecking = action.payload.status === 'starting';
@@ -298,6 +312,7 @@ export const webServiceSlice = createSlice({
       state.restartCount = info.restartCount;
       state.phase = info.phase;
       state.phaseMessage = info.phaseMessage || null;
+      state.slowStart = toSlowStart(info);
       state.host = info.host;
       state.port = info.port;
       state.isChecking = info.status === 'starting';
@@ -378,9 +393,15 @@ export const webServiceSlice = createSlice({
     },
 
     // Startup phase actions
-    setStartupPhase: (state, action: PayloadAction<{ phase: StartupPhase; message?: string }>) => {
+    setStartupPhase: (
+      state,
+      action: PayloadAction<{ phase: StartupPhase; message?: string; slow?: boolean; elapsedMs?: number }>,
+    ) => {
       state.phase = action.payload.phase;
       state.phaseMessage = action.payload.message || null;
+      state.slowStart = action.payload.slow && action.payload.elapsedMs !== undefined
+        ? { elapsedMs: action.payload.elapsedMs }
+        : null;
     },
 
     // Package management actions
@@ -497,6 +518,7 @@ export const selectWebServiceUptime = (state: { webService: WebServiceState }) =
 export const selectRestartCount = (state: { webService: WebServiceState }) => state.webService.restartCount;
 export const selectStartupPhase = (state: { webService: WebServiceState }) => state.webService.phase;
 export const selectPhaseMessage = (state: { webService: WebServiceState }) => state.webService.phaseMessage;
+export const selectSlowStart = (state: { webService: WebServiceState }) => state.webService.slowStart;
 export const selectPortAvailable = (state: { webService: WebServiceState }) => state.webService.portAvailable;
 export const selectPortStatusChecked = (state: { webService: WebServiceState }) => state.webService.portStatusChecked;
 export const selectWebServiceHost = (state: { webService: WebServiceState }) => state.webService.host;
@@ -544,6 +566,7 @@ export const selectWebServiceInfo = (state: { webService: WebServiceState }) => 
   lastError: state.webService.lastError,
   phase: state.webService.phase,
   phaseMessage: state.webService.phaseMessage,
+  slowStart: state.webService.slowStart,
   host: state.webService.host,
   port: state.webService.port,
 });

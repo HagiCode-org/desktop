@@ -37,4 +37,16 @@ describe('web service startup progress dialog contracts', () => {
     assert.match(source, /webServiceStatus\.startupProgress\.actions\.openFailureLog/);
     assert.match(source, /steps\.map\(\(step, index\) => \{/);
   });
+  it('shows the slow-start line only while startup is slow and no other step changes', async () => {
+    const drawerSource = await fs.readFile(drawerPath, 'utf8');
+    const cardSource = await fs.readFile(cardPath, 'utf8');
+
+    assert.match(drawerSource, /const slowStartSummary = isStarting \? getSlowStartSummary\(t, slowStart \?\? null\) : null;/);
+    assert.match(drawerSource, /\{stepState === 'active' && slowStartSummary \? \(/);
+    assert.match(drawerSource, /text-warning/);
+    assert.match(drawerSource, /slowStart\?: WebServiceSlowStart \| null;/);
+    assert.match(cardSource, /slowStart=\{webServiceInfo\.slowStart\}/);
+    assert.match(cardSource, /const slowStartSummary = webServiceInfo\.status === 'starting'/);
+    assert.match(cardSource, /\{slowStartSummary \? \(/);
+  });
 });

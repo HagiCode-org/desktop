@@ -39,6 +39,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import {
+  getSlowStartSummary,
   getStartupPhaseSummary,
 } from '@/lib/webServiceStartupProgress';
 import {
@@ -165,6 +166,9 @@ const WebServiceStatusCard: React.FC = () => {
     webServiceInfo.phase,
     lastStartupPhaseRef.current,
   );
+  const slowStartSummary = webServiceInfo.status === 'starting'
+    ? getSlowStartSummary(t, webServiceInfo.slowStart)
+    : null;
 
   const clearStartupDrawerCloseTimeout = () => {
     if (startupDrawerCloseTimeoutRef.current !== null) {
@@ -590,6 +594,9 @@ const WebServiceStatusCard: React.FC = () => {
                   <p className="text-sm font-medium text-foreground">
                     {startupSummary}
                   </p>
+                  {slowStartSummary ? (
+                    <p className="mt-1 text-xs font-semibold text-warning">{slowStartSummary}</p>
+                  ) : null}
                   <p className="mt-1 text-xs text-muted-foreground">
                     {isRunning ? (webServiceInfo.url || t('common:common.notAvailable')) : accessUrlPreview}
                   </p>
@@ -931,6 +938,7 @@ const WebServiceStatusCard: React.FC = () => {
             port={webServiceInfo.port}
             errorMessage={error}
             startupFailure={startupFailure}
+            slowStart={webServiceInfo.slowStart}
             onOpenChange={handleStartupProgressDrawerOpenChange}
             onOpenFailureLog={handleOpenStartupFailure}
           />

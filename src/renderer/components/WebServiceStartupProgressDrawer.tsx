@@ -11,11 +11,17 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import {
+  getSlowStartSummary,
   getStartupPhaseSummary,
   getStartupProgressSteps,
   resolveDisplayedStartupPhase,
 } from '@/lib/webServiceStartupProgress';
-import { StartupPhase, type ProcessStatus, type StartupFailurePayload } from '../store/slices/webServiceSlice';
+import {
+  StartupPhase,
+  type ProcessStatus,
+  type StartupFailurePayload,
+  type WebServiceSlowStart,
+} from '../store/slices/webServiceSlice';
 
 type StepVisualState = 'pending' | 'active' | 'completed' | 'failed';
 
@@ -29,6 +35,7 @@ interface WebServiceStartupProgressDrawerProps {
   port: number;
   errorMessage?: string | null;
   startupFailure: StartupFailurePayload | null;
+  slowStart?: WebServiceSlowStart | null;
   onOpenChange: (open: boolean) => void;
   onOpenFailureLog: () => void;
 }
@@ -75,6 +82,7 @@ export default function WebServiceStartupProgressDrawer({
   port,
   errorMessage,
   startupFailure,
+  slowStart,
   onOpenChange,
   onOpenFailureLog,
 }: WebServiceStartupProgressDrawerProps) {
@@ -95,6 +103,7 @@ export default function WebServiceStartupProgressDrawer({
     ?? errorMessage
     ?? getStartupPhaseSummary(t, status, phase, failurePhase);
   const currentDetail = currentSummary;
+  const slowStartSummary = isStarting ? getSlowStartSummary(t, slowStart ?? null) : null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -208,6 +217,9 @@ export default function WebServiceStartupProgressDrawer({
                       </span>
                     </div>
                     <p className="mt-1 text-sm leading-6 text-muted-foreground">{step.description}</p>
+                    {stepState === 'active' && slowStartSummary ? (
+                      <p className="mt-1 text-xs font-semibold text-warning">{slowStartSummary}</p>
+                    ) : null}
                   </div>
                 </div>
               );

@@ -151,6 +151,8 @@ function registerRealtimeListeners(): void {
         phase: 'idle' | 'checking_version' | 'checking_dependencies' | 'spawning' | 'waiting_listening' | 'health_check' | 'running' | 'error';
         message?: string;
         timestamp: number;
+        slow?: boolean;
+        elapsedMs?: number;
       }) => void,
     ) => (() => void) | void;
     subscription?: {
@@ -191,6 +193,8 @@ function registerRealtimeListeners(): void {
     store.dispatch(setStartupPhase({
       phase: payload.phase,
       message: payload.message,
+      slow: payload.slow === true,
+      elapsedMs: payload.elapsedMs,
     }));
   });
 

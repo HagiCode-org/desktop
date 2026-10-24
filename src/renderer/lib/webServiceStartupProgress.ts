@@ -1,5 +1,5 @@
 import type { TFunction } from 'i18next';
-import { StartupPhase, type ProcessStatus } from '../store/slices/webServiceSlice';
+import { StartupPhase, type ProcessStatus, type WebServiceSlowStart } from '../store/slices/webServiceSlice.js';
 
 export interface StartupProgressStepDefinition {
   phase: StartupPhase;
@@ -91,4 +91,20 @@ export function getStartupPhaseSummary(
             ? t('webServiceStatus.startupProgress.stepDescriptions.checkingVersion')
             : t('webServiceStatus.statusDescription.stopped');
   }
+}
+
+/**
+ * Localized "still starting" line with whole seconds, or null when startup is not slow.
+ */
+export function getSlowStartSummary(
+  t: TFunction<'components'>,
+  slowStart: WebServiceSlowStart | null,
+): string | null {
+  if (!slowStart) {
+    return null;
+  }
+
+  return t('webServiceStatus.startupProgress.slowStart', {
+    seconds: Math.floor(slowStart.elapsedMs / 1000),
+  });
 }
