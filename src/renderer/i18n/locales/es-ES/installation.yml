@@ -16,7 +16,7 @@ apiKey:
   change: Cambiar
 status:
   region: Región
-  cn: China
+  cn: "China continental"
   international: Internacional
 callingApi:
   message: Llamando al Claude API...

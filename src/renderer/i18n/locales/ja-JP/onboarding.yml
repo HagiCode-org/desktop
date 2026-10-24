@@ -70,7 +70,7 @@ dependencies:
   manualHandoff:
     title: 手動 CLI パッケージのインストールが必要
     faqLinkLabel: ノード環境のよくある質問を見る
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    faqUrl: "https://docs.hagicode.com/ja-JP/faq/desktop-node-environment/"
 depInstallConfirm:
   title: 不足している依存関係をインストールする
   installingTitle: 依存関係のインストール
@@ -178,7 +178,7 @@ dependencyManagement:
   manualHandoff:
     title: 手動 CLI パッケージのインストールが必要
     faqLinkLabel: ノード環境のよくある質問を見る
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    faqUrl: "https://docs.hagicode.com/ja-JP/faq/desktop-node-environment/"
   noDependencies: 依存関係が検出されませんでした
 dependencyCheck:
   title: 依存関係チェックの結果
@@ -223,7 +223,7 @@ legal:
     cache: 最後に成功したキャッシュされた法的メタデータの使用
     unavailable: 法的なメタデータは現在利用できません
   types:
-    eula: EULA
+    eula: "EULA（エンドユーザー使用許諾契約）"
     privacy-policy: プライバシーポリシー
 languageSelection:
   title: 言語を選択

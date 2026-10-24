@@ -93,7 +93,7 @@ settings:
       userData-runtime-data:
         label: userData/runtime-data (padrão)
       home-runtime-data:
-        label: ~/.hagicode/runtime-data
+        label: "~/.hagicode/runtime-data (pasta do usuário)"
     warnings:
       noMigration: Alterar esta configuração apenas atualiza o caminho de destino. O Desktop não migra automaticamente os dados de runtime existentes.
       restart: Salvar uma predefinição alterada reinicia o backend gerenciado para que a nova raiz de dados de runtime entre em vigor imediatamente.
@@ -117,7 +117,7 @@ settings:
       shortLabel: Simular sucesso da gorjeta
     installDate:
       label: Data de instalação bruta (msstoreRatingPrompt.installDate)
-      placeholder: e.g. 2024-01-01T00:00:00.000Z
+      placeholder: "ex.: 2024-01-01T00:00:00.000Z"
       ageDays: 'Tempo desde a instalação (dias): {{value}}'
       ageDaysUnknown: desconhecido
     actions:
@@ -131,7 +131,7 @@ settings:
     errors:
       saveErrorDetail: 'Falha ao salvar: {{error}}'
 footer:
-  copyright: © 2026 Hagicode Desktop
+  copyright: "© 2026 Hagicode Desktop. Todos os direitos reservados"
 quickStart:
   title: Início rápido
 secure:
@@ -172,7 +172,7 @@ dependencyManagement:
   manualHandoff:
     title: Instalação manual do pacote CLI necessária
     faqLinkLabel: Ver perguntas frequentes sobre o ambiente Node
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    faqUrl: "https://docs.hagicode.com/pt-BR/faq/desktop-node-environment/"
 versionManagement:
   tabs:
     newVersions: Novas versões
@@ -351,7 +351,7 @@ subscription:
     source: 'Origem: {{value}}'
   sourceValue:
     initial: Estado padrão da sessão atual
-    store: Microsoft Store
+    store: "Loja da Microsoft"
     fallback: Fallback snapshot
   mission:
     eyebrow: Por que o apoio importa
@@ -388,7 +388,7 @@ subscription:
     title: Status da Store e detalhes dos direitos locais
     fields:
       status: Status atual
-      planStoreId: Store ID
+      planStoreId: "ID da Loja"
       lastCheckedAt: Última verificação
       renewalDate: Data de renovação
       expirationDate: Data de expiração
@@ -478,8 +478,8 @@ turboEngine:
     unsupported: Store indisponível
   summary:
     productName: Licença perpétua do TurboEngine
-    storeId: 'Store ID: {{storeId}}'
-    storeIdLabel: Store ID
+    storeId: "ID da Loja: {{storeId}}"
+    storeIdLabel: "ID da Loja"
     statusLabel: Status da licença
     lastCheckedLabel: Última verificação
     lastSuccessLabel: Última sincronização bem-sucedida
@@ -496,13 +496,13 @@ turboEngine:
     sectionTitle: Contrato de runtime
     supported: This runtime can query Microsoft Store directly and run the packaged TurboEngine purchase path for Store ID `9NSD809W18Z6`.
     unsupported: This runtime cannot complete Microsoft Store purchase APIs directly, so Desktop falls back to a Store handoff path instead of showing a broken in-app purchase button.
-    runtimeLabel: Runtime
+    runtimeLabel: "Ambiente de execução"
     sourceLabel: Origem do snapshot
     storeEdition: Edição da Microsoft Store
     nonStoreEdition: Runtime fora da Store
   sourceValue:
     initial: Estado padrão da sessão atual
-    store: Microsoft Store
+    store: "Loja da Microsoft"
     fallback: Fallback snapshot
   diagnostics:
     sectionTitle: Diagnóstico

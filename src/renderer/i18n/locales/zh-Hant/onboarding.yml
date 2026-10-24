@@ -223,7 +223,7 @@ legal:
     cache: 正在使用最近快取的協定版本
     unavailable: 協定版本資訊暫不可用
   types:
-    eula: EULA
+    eula: "EULA（使用者授權合約）"
     privacy-policy: 隱私權政策
 languageSelection:
   title: 選擇語言

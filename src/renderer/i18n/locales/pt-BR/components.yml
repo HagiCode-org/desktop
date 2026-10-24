@@ -145,6 +145,7 @@ webServiceStatus:
     title: Iniciando o serviço
     successTitle: O serviço está pronto
     failureTitle: A inicialização não foi concluída
+    slowStart: "Ainda iniciando ({{seconds}} segundos)"
     currentStepLabel: Progresso atual
     states:
       pending: Pendente
@@ -181,7 +182,7 @@ webServiceStatus:
   listenAddress:
     label: Endereço de escuta
     customInputLabel: IPv4 personalizado
-    customPlaceholder: 192.168.1.24
+    customPlaceholder: "ex.: 192.168.1.24"
     customError: Insira um endereço IPv4 válido
     accessUrlPreviewLabel: Acesse a visualização URL
     wildcardHint: '`0.0.0.0` vincula todas as interfaces. Desktop ainda abre o cliente local através de `127.0.0.1`.'
@@ -189,9 +190,9 @@ webServiceStatus:
       localhost:
         label: host local
       loopback:
-        label: 127.0.0.1
+        label: "127.0.0.1 (loopback)"
       wildcard:
-        label: 0.0.0.0
+        label: "0.0.0.0 (todos os endereços)"
       custom:
         label: IP personalizado
 languageSelector:
@@ -206,7 +207,7 @@ dependencyManagement:
     copy: Copiar
     shellSelectorLabel: Shell de destino
     cmdShell: Prompt de Comando (cmd)
-    powershellShell: Windows PowerShell
+    powershellShell: "Terminal do Windows PowerShell"
     destinationHint: "Copie este comando e execute-o no {{shell}}. O Desktop não executa comandos copiados."
     requiredLabel: Obrigatório
   status:
@@ -236,7 +237,7 @@ dependencyManagement:
   manualHandoff:
     title: Instalação manual do pacote CLI necessária
     faqLinkLabel: Ver perguntas frequentes sobre o ambiente Node
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    faqUrl: "https://docs.hagicode.com/pt-BR/faq/desktop-node-environment/"
   noDependencies: Nenhuma dependência detectada
   installToast:
     manualDisabledTitle: A instalação automática está desativada
@@ -261,7 +262,7 @@ packageSource:
     label: Tipo de origem do pacote
     folder: Pasta local
     httpIndex: HTTP Índice
-    http: HTTP URL
+    http: "URL HTTP"
   folder:
     path:
       label: Caminho da pasta
@@ -274,11 +275,11 @@ packageSource:
   http:
     url:
       label: Pacote URL
-      placeholder: https://example.com/hagicode-0.1.0-linux-x64.zip
+      placeholder: "ex.: https://example.com/hagicode-0.1.0-linux-x64.zip"
   httpIndex:
     indexUrl:
       label: Índice URL
-      placeholder: https://index.hagicode.com/server/index.json
+      placeholder: "ex.: https://index.hagicode.com/server/index.json"
       hint: O arquivo de índice deve conter uma matriz de versões e ativos para cada versão
   validateButton: Validar configuração
   applyButton: Aplicar configuração
@@ -331,7 +332,7 @@ homePromote:
   next: Próximo
   pause: Pausar rotação
   resume: Retomar rotação
-  position: '{{current}} / {{total}}'
+  position: "{{current}}/{{total}}"
   defaultCta: Saiba mais
   openFailed: Não foi possível abrir o link
 serviceRegion:

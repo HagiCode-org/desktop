@@ -145,6 +145,7 @@ webServiceStatus:
     title: 正在启动服务
     successTitle: 服务已就绪
     failureTitle: 启动未完成
+    slowStart: "仍在启动（{{seconds}} 秒）"
     currentStepLabel: 当前进度
     states:
       pending: 等待中
@@ -181,17 +182,17 @@ webServiceStatus:
   listenAddress:
     label: 监听地址
     customInputLabel: 自定义 IPv4
-    customPlaceholder: 192.168.1.24
+    customPlaceholder: "例如 192.168.1.24"
     customError: 请输入有效的 IPv4 地址
     accessUrlPreviewLabel: 访问 URL 预览
     wildcardHint: '`0.0.0.0` 会绑定所有网卡；Desktop 仍会通过 `127.0.0.1` 打开本机客户端。'
     presets:
       localhost:
-        label: localhost
+        label: "localhost（本机）"
       loopback:
-        label: 127.0.0.1
+        label: "127.0.0.1（回环地址）"
       wildcard:
-        label: 0.0.0.0
+        label: "0.0.0.0（所有地址）"
       custom:
         label: 自定义 IP
 languageSelector:
@@ -206,7 +207,7 @@ dependencyManagement:
     copy: 复制
     shellSelectorLabel: 目标命令行
     cmdShell: 命令提示符（cmd）
-    powershellShell: Windows PowerShell
+    powershellShell: "Windows PowerShell 终端"
     destinationHint: "复制此命令并在 {{shell}} 中运行。Desktop 不会执行复制的命令。"
     requiredLabel: 必需
   status:
@@ -261,7 +262,7 @@ packageSource:
     label: Server 包来源
     folder: 本地文件夹
     httpIndex: HTTP 索引源
-    http: HTTP URL
+    http: "HTTP 链接"
   folder:
     currentPath: "当前路径: {{path}}"
     path:
@@ -274,11 +275,11 @@ packageSource:
   http:
     url:
       label: 包 URL
-      placeholder: https://example.com/hagicode-0.1.0-linux-x64.zip
+      placeholder: "例如 https://example.com/hagicode-0.1.0-linux-x64.zip"
   httpIndex:
     indexUrl:
       label: 索引 URL
-      placeholder: https://index.hagicode.com/server/index.json
+      placeholder: "例如 https://index.hagicode.com/server/index.json"
       hint: 索引文件必须包含 versions 数组和每个版本的 assets
   validateButton: 验证配置
   applyButton: 应用配置
@@ -331,7 +332,7 @@ homePromote:
   next: 下一条
   pause: 暂停轮播
   resume: 继续轮播
-  position: '{{current}} / {{total}}'
+  position: "{{current}}/{{total}}"
   defaultCta: 了解更多
   openFailed: 打开链接失败
 serviceRegion:

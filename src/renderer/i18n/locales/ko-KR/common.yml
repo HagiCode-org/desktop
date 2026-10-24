@@ -59,13 +59,13 @@ settings:
     label: 언어
   embeddedWebServicePort: 내장형 웹 서비스 포트
 footer:
-  copyright: © 2026 Hagicode Desktop
+  copyright: "© 2026 Hagicode Desktop 저작권 소유"
   buildVersion: 버전
   buildBranch: 브랜치
   buildCommit: 커밋
 menu:
   systemManagement: 시스템 관리
-  hagicoWeb: Hagicode Web
+  hagicoWeb: "Hagicode 웹 버전"
   dependencies: 종속성
   webService: 웹 서비스
   packages: 패키지
@@ -126,7 +126,7 @@ navigation:
     types:
       link: 링크
       contact: 연락처
-      qr: QR
+      qr: "QR 코드"
       image: 이미지
 sidebar:
   dashboard: 대시보드
@@ -136,7 +136,7 @@ sidebar:
   dependencyManagement: 종속성 관리
   settings: 설정
   subscription: Hagicode 후원자 플랜
-  turboEngine: TurboEngine
+  turboEngine: "TurboEngine 엔진"
   subscriptionStatus:
     loading: 불러오는 중
     active: 활성화됨
@@ -160,7 +160,7 @@ dependencyManagement:
     externalNotice: Desktop은 현재 이 시스템에 이미 존재하는 전역 Node/npm 환경을 검사하고 있습니다.
     rationaleTitle: 데스크탑 관리 노드/npm 환경
     faqLinkLabel: 노드 환경 FAQ 보기
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    faqUrl: "https://docs.hagicode.com/ko-KR/faq/desktop-node-environment/"
     version: 버전
     source: 환경 소스
     nodeMajorVersion: 노드 주요 패키지 트리
@@ -301,7 +301,7 @@ dependencyManagement:
       base:
         title: 기본 의존성
       agentCli:
-        title: Agent CLI
+        title: "에이전트 CLI"
     tool: 도구
     status: 상태
     action: 액션

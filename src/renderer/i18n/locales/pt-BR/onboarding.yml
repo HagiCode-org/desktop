@@ -70,7 +70,7 @@ dependencies:
   manualHandoff:
     title: Instalação manual do pacote CLI necessária
     faqLinkLabel: Ver perguntas frequentes sobre o ambiente Node
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    faqUrl: "https://docs.hagicode.com/pt-BR/faq/desktop-node-environment/"
 depInstallConfirm:
   title: Instalar dependências ausentes
   installingTitle: Instalando Dependências
@@ -178,7 +178,7 @@ dependencyManagement:
   manualHandoff:
     title: Instalação manual do pacote CLI necessária
     faqLinkLabel: Ver perguntas frequentes sobre o ambiente Node
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    faqUrl: "https://docs.hagicode.com/pt-BR/faq/desktop-node-environment/"
   noDependencies: Nenhuma dependência detectada
 dependencyCheck:
   title: Resultados da verificação de dependência
@@ -223,7 +223,7 @@ legal:
     cache: Usando os últimos metadados legais armazenados em cache com êxito
     unavailable: Os metadados legais estão indisponíveis no momento
   types:
-    eula: EULA
+    eula: "EULA (Contrato de Licença do Usuário Final)"
     privacy-policy: Política de Privacidade
 languageSelection:
   title: Escolher idioma

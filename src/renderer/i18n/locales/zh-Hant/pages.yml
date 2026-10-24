@@ -93,7 +93,7 @@ settings:
       userData-runtime-data:
         label: userData/runtime-data（預設）
       home-runtime-data:
-        label: ~/.hagicode/runtime-data
+        label: "~/.hagicode/runtime-data（使用者目錄）"
     warnings:
       noMigration: 切換此設定只會修改目標路徑，Desktop 不會自動遷移既有執行時資料。
       restart: 儲存新的預設後，Desktop 會重新啟動受管後端，讓新的執行時資料根目錄立即生效。
@@ -117,7 +117,7 @@ settings:
       shortLabel: 模擬打賞成功
     installDate:
       label: 原始安裝日期（msstoreRatingPrompt.installDate）
-      placeholder: e.g. 2024-01-01T00:00:00.000Z
+      placeholder: "例如 2024-01-01T00:00:00.000Z"
       ageDays: 安裝天數：{{value}}
       ageDaysUnknown: 未知
     actions:
@@ -131,7 +131,7 @@ settings:
     errors:
       saveErrorDetail: 儲存失敗：{{error}}
 footer:
-  copyright: © 2026 Hagicode Desktop
+  copyright: "© 2026 Hagicode Desktop 版權所有"
 quickStart:
   title: 快速開始
 secure:
@@ -351,7 +351,7 @@ subscription:
     source: 來源：{{value}}
   sourceValue:
     initial: 目前工作階段初始狀態
-    store: Microsoft Store
+    store: "Microsoft 市集"
     fallback: Fallback snapshot
   mission:
     eyebrow: 為什麼需要贊助
@@ -388,7 +388,7 @@ subscription:
     title: Store 狀態與本機權益詳情
     fields:
       status: 目前狀態
-      planStoreId: Store ID
+      planStoreId: "商店 ID"
       lastCheckedAt: 最近檢查時間
       renewalDate: 續訂時間
       expirationDate: 到期時間
@@ -479,7 +479,7 @@ turboEngine:
   summary:
     productName: TurboEngine 永久授權
     storeId: 商店 ID：{{storeId}}
-    storeIdLabel: Store ID
+    storeIdLabel: "商店 ID"
     statusLabel: 授權狀態
     lastCheckedLabel: 最近檢查時間
     lastSuccessLabel: 最近一次成功同步
@@ -502,7 +502,7 @@ turboEngine:
     nonStoreEdition: 非 Store 執行階段
   sourceValue:
     initial: 目前工作階段初始狀態
-    store: Microsoft Store
+    store: "Microsoft 市集"
     fallback: Fallback snapshot
   diagnostics:
     sectionTitle: 診斷資訊

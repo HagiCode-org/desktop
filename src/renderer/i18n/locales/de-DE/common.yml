@@ -27,7 +27,7 @@ status:
   failed: Fehlgeschlagen
 form:
   required: Erforderlich
-  optional: Optional
+  optional: "Freiwillig"
   selectPlaceholder: Bitte wählen Sie...
   inputPlaceholder: Bitte geben Sie ein...
   validation:
@@ -36,7 +36,7 @@ form:
     minLength: Muss mindestens {{min}} Zeichen lang sein
     maxLength: Darf {{max}} Zeichen nicht überschreiten
 common:
-  version: Version
+  version: "Versionsnummer"
   platform: Plattform
   language: Sprache
   settings: Einstellungen
@@ -59,19 +59,19 @@ settings:
     label: Sprache
   embeddedWebServicePort: Eingebetteter Webdienst-Port
 footer:
-  copyright: © 2026 Hagicode Desktop
-  buildVersion: Version
-  buildBranch: Branch
-  buildCommit: Commit
+  copyright: "© 2026 Hagicode Desktop, alle Rechte vorbehalten"
+  buildVersion: "Versionsnummer"
+  buildBranch: "Zweig"
+  buildCommit: "Revision"
 menu:
   systemManagement: Systemmanagement
-  hagicoWeb: Hagicode Web
+  hagicoWeb: "Hagicode-Webversion"
   dependencies: Abhängigkeiten
   webService: Webdienst
   packages: Pakete
   settings: Einstellungen
   openWebUI: Öffnen Sie Web UI
-  navigate: Navigation
+  navigate: "Navigieren"
   back: Zurück
   forward: Vorwärts
   refresh: Aktualisieren
@@ -102,10 +102,10 @@ mirror:
   redetect: Neu erkennen
   info: NPM-Tools verwenden diesen Spiegel automatisch für schnellere Downloads
   regions:
-    CN: China
-    INTERNATIONAL: International
+    CN: "Festlandchina"
+    INTERNATIONAL: "Global"
 navigation:
-  dashboard: Dashboard
+  dashboard: "Übersicht"
   webService: Webdienst
   versionManagement: Versionsverwaltung
   webServiceNotRunning: Der Webdienst wird nicht ausgeführt
@@ -124,19 +124,19 @@ navigation:
       community: Gemeinschaft
       content: Inhalt
     types:
-      link: Link
+      link: "Verweis"
       contact: Kontakt
-      qr: QR
+      qr: "QR-Code"
       image: Bild
 sidebar:
-  dashboard: Dashboard
+  dashboard: "Übersicht"
   webService: Webdienst
   versionManagement: Versionsverwaltung
   diagnostic: Diagnose
   dependencyManagement: Abhängigkeitsmanagement
   settings: Einstellungen
   subscription: Hagicode Sponsorenplan
-  turboEngine: TurboEngine
+  turboEngine: "TurboEngine-Modul"
   subscriptionStatus:
     loading: Wird geladen
     active: Aktiv
@@ -160,8 +160,8 @@ dependencyManagement:
     externalNotice: Desktop prüft derzeit die globale Node/npm-Umgebung, die auf diesem System bereits vorhanden ist.
     rationaleTitle: Desktop-verwaltete Node/npm-Umgebung
     faqLinkLabel: Häufig gestellte Fragen zur Knotenumgebung anzeigen
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
-    version: Version
+    faqUrl: "https://docs.hagicode.com/de-DE/faq/desktop-node-environment/"
+    version: "Versionsnummer"
     source: Umgebungsquelle
     nodeMajorVersion: Knoten-Hauptpaketbaum
     globalPrefix: Globales Präfix
@@ -232,7 +232,7 @@ dependencyManagement:
       completed: Aktivierung abgeschlossen
       failed: Aktivierung fehlgeschlagen
   package:
-    version: Version
+    version: "Versionsnummer"
     requiredVersion: Erforderliche Version
     versionMismatch: Die aktuelle Version {{current}} erfüllt {{required}} nicht.
     packageName: Paket
@@ -279,7 +279,7 @@ dependencyManagement:
   categories:
     bootstrap: Altbestand
     workflow: Arbeitsablauf
-    agent-cli: Agent CLI
+    agent-cli: "Agent-CLI"
     developer-tool: Entwicklertool
   bootstrap:
     title: Alte CLI
@@ -301,9 +301,9 @@ dependencyManagement:
       base:
         title: Grundabhängigkeiten
       agentCli:
-        title: Agent CLI
+        title: "Agent-CLI"
     tool: Werkzeug
-    status: Status
+    status: "Zustand"
     action: Aktion
   batchLog:
     title: Batch-Installationsprotokoll
@@ -323,7 +323,7 @@ dependencyManagement:
     refresh: Aktualisieren
     install: Installieren
     installed: Installiert
-    upgrade: Upgrade
+    upgrade: "Aktualisieren"
     reinstall: Neu installieren
     installSelected: Batch-Installation ausgewählt
     installSelectedRunning: Batch-Installation...
@@ -379,7 +379,7 @@ systemDiagnostic:
     title: Integrierte Laufzeitmatrix
     unknown: unbekannt
     unresolved: ungelöst
-    version: 'Version: {{value}}'
+    version: "Versionsnummer: {{value}}"
     path: 'Pfad: {{value}}'
     boolean:
       'true': aktiviert
@@ -397,7 +397,7 @@ systemDiagnostic:
     npmConfig:
       title: npm Konfiguration
       registry: 'Registrierung: {{value}}'
-      cache: 'Cache: {{value}}'
+      cache: "Zwischenspeicher: {{value}}"
       prefix: 'Präfix/Paketstamm: {{value}}'
       mirror: 'Spiegelbeschleunigung: {{value}}'
     managedCommands:
@@ -474,10 +474,10 @@ system:
     actions:
       manage: Versionen verwalten
     labels:
-      version: Version
+      version: "Versionsnummer"
       package: Paket
       installedAt: Installiert am
-      status: Status
+      status: "Zustand"
     states:
       ready: Bereit
   updateReminder:
@@ -539,8 +539,8 @@ system:
         description: Wenn noch kein Paket installiert ist, verwenden Sie diesen Call-to-Action, um den Setup-Assistenten zu starten und die erste Laufzeitinstallation abzuschließen.
   services:
     title: Verwaltete Dienste
-    viewDetails: Details
-    port: 'Port: {{port}}'
+    viewDetails: "Einzelheiten"
+    port: "Anschluss: {{port}}"
     notReady: Nicht bereit
     installRequired: Installation erforderlich
     enableRequired: Laufzeit aktivieren

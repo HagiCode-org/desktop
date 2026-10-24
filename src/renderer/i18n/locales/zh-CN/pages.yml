@@ -93,7 +93,7 @@ settings:
       userData-runtime-data:
         label: userData/runtime-data（默认）
       home-runtime-data:
-        label: ~/.hagicode/runtime-data
+        label: "~/.hagicode/runtime-data（用户目录）"
     warnings:
       noMigration: 切换此设置只会修改目标路径，Desktop 不会自动迁移已有运行时数据。
       restart: 保存新的预设后，Desktop 会重启受管后端，让新的运行时数据根目录立即生效。
@@ -131,7 +131,7 @@ settings:
     errors:
       saveErrorDetail: 保存失败：{{error}}
 footer:
-  copyright: © 2026 Hagicode Desktop
+  copyright: "© 2026 Hagicode Desktop 版权所有"
 quickStart:
   title: 快速开始
 secure:
@@ -351,7 +351,7 @@ subscription:
     source: '来源：{{value}}'
   sourceValue:
     initial: 当前会话初始状态
-    store: Microsoft Store
+    store: "Microsoft 应用商店"
     fallback: 上次已知状态
   mission:
     eyebrow: 为什么需要赞助
@@ -388,7 +388,7 @@ subscription:
     title: 商店状态与本地权益详情
     fields:
       status: 当前状态
-      planStoreId: Store ID
+      planStoreId: "商店 ID"
       lastCheckedAt: 最近检查时间
       renewalDate: 续费时间
       expirationDate: 到期时间
@@ -479,7 +479,7 @@ turboEngine:
   summary:
     productName: TurboEngine 永久许可证
     storeId: 'Store ID：{{storeId}}'
-    storeIdLabel: Store ID
+    storeIdLabel: "商店 ID"
     statusLabel: 许可证状态
     lastCheckedLabel: 最近检查时间
     lastSuccessLabel: 最近一次成功同步
@@ -502,7 +502,7 @@ turboEngine:
     nonStoreEdition: 非 Store 运行时
   sourceValue:
     initial: 当前会话初始状态
-    store: Microsoft Store
+    store: "Microsoft 应用商店"
     fallback: 上次已知状态
   diagnostics:
     sectionTitle: 诊断信息

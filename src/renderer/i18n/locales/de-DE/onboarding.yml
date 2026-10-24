@@ -21,7 +21,7 @@ claude:
   title: Konfigurieren Sie Claude Code
 download:
   title: Laden Sie Hagicode Server herunter
-  version: Version
+  version: "Versionsnummer"
   progress: Laden Sie den Fortschritt herunter
   fileSize: Dateigröße
   downloading:
@@ -49,7 +49,7 @@ dependencies:
     ready: Bereit
   actions:
     install: Installieren
-    upgrade: Upgrade
+    upgrade: "Aktualisieren"
     installing: Installieren...
     refresh: Aktualisieren
     viewManualSteps: Manuelle Schritte anzeigen
@@ -70,7 +70,7 @@ dependencies:
   manualHandoff:
     title: Manuelle CLI-Paketinstallation erforderlich
     faqLinkLabel: Häufig gestellte Fragen zur Knotenumgebung anzeigen
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    faqUrl: "https://docs.hagicode.com/de-DE/faq/desktop-node-environment/"
 depInstallConfirm:
   title: Fehlende Abhängigkeiten installieren
   installingTitle: Abhängigkeiten installieren
@@ -161,7 +161,7 @@ dependencyManagement:
     checking: Überprüfen...
   actions:
     install: Installieren
-    upgrade: Upgrade
+    upgrade: "Aktualisieren"
     installing: Installieren...
     refresh: Aktualisieren
     viewManualSteps: Manuelle Schritte anzeigen
@@ -178,7 +178,7 @@ dependencyManagement:
   manualHandoff:
     title: Manuelle CLI-Paketinstallation erforderlich
     faqLinkLabel: Häufig gestellte Fragen zur Knotenumgebung anzeigen
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    faqUrl: "https://docs.hagicode.com/de-DE/faq/desktop-node-environment/"
   noDependencies: Keine Abhängigkeiten erkannt
 dependencyCheck:
   title: Ergebnisse der Abhängigkeitsprüfung
@@ -223,7 +223,7 @@ legal:
     cache: Verwendung der letzten erfolgreich zwischengespeicherten rechtlichen Metadaten
     unavailable: Rechtliche Metadaten sind derzeit nicht verfügbar
   types:
-    eula: EULA
+    eula: "EULA (Endnutzer-Lizenzvertrag)"
     privacy-policy: Datenschutzrichtlinie
 languageSelection:
   title: Sprache auswählen

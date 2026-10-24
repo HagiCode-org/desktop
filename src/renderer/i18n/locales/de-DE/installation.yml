@@ -6,7 +6,7 @@ steps:
   completed: Abgeschlossen
 apiKey:
   title: Geben Sie die Taste Claude API ein
-  placeholder: sk-ant-...
+  placeholder: "z. B. sk-ant-..."
   show: Zeigen
   hide: Verstecken
   continue: Weiter
@@ -15,9 +15,9 @@ apiKey:
   invalid: Ungültige API-Taste. Bitte überprüfen Sie es und versuchen Sie es erneut.
   change: Veränderung
 status:
-  region: Region
-  cn: China
-  international: International
+  region: "Gebiet"
+  cn: "Festlandchina"
+  international: "Global"
 callingApi:
   message: Anruf Claude API...
 confirmation:

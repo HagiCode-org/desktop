@@ -145,6 +145,7 @@ webServiceStatus:
     title: サービスを起動しています
     successTitle: サービスの準備ができました
     failureTitle: 起動が完了しませんでした
+    slowStart: "起動中です（{{seconds}} 秒経過）"
     currentStepLabel: 現在の進行状況
     states:
       pending: 待機中
@@ -181,7 +182,7 @@ webServiceStatus:
   listenAddress:
     label: リスニングアドレス
     customInputLabel: カスタムIPv4
-    customPlaceholder: 192.168.1.24
+    customPlaceholder: "例: 192.168.1.24"
     customError: 有効な IPv4 アドレスを入力してください
     accessUrlPreviewLabel: URL プレビューにアクセスする
     wildcardHint: '`0.0.0.0` はすべてのインターフェイスをバインドします。デスクトップは引き続き `127.0.0.1` を通じてローカル クライアントを開きます。'
@@ -189,9 +190,9 @@ webServiceStatus:
       localhost:
         label: ローカルホスト
       loopback:
-        label: 127.0.0.1
+        label: "127.0.0.1（ループバック）"
       wildcard:
-        label: 0.0.0.0
+        label: "0.0.0.0（すべてのアドレス）"
       custom:
         label: カスタムIP
 languageSelector:
@@ -206,7 +207,7 @@ dependencyManagement:
     copy: コピー
     shellSelectorLabel: 実行先のシェル
     cmdShell: コマンド プロンプト (cmd)
-    powershellShell: Windows PowerShell
+    powershellShell: "Windows PowerShell（ターミナル）"
     destinationHint: "このコマンドをコピーし、{{shell}} で実行してください。Desktop はコピーしたコマンドを実行しません。"
     requiredLabel: 必須
   status:
@@ -236,7 +237,7 @@ dependencyManagement:
   manualHandoff:
     title: 手動 CLI パッケージのインストールが必要
     faqLinkLabel: ノード環境のよくある質問を見る
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    faqUrl: "https://docs.hagicode.com/ja-JP/faq/desktop-node-environment/"
   noDependencies: 依存関係が検出されませんでした
   installToast:
     manualDisabledTitle: 自動インストールは無効です
@@ -261,7 +262,7 @@ packageSource:
     label: パッケージソースタイプ
     folder: ローカルフォルダー
     httpIndex: HTTP インデックス
-    http: HTTP URL
+    http: "HTTP リンク"
   folder:
     path:
       label: フォルダーのパス
@@ -274,11 +275,11 @@ packageSource:
   http:
     url:
       label: パッケージ URL
-      placeholder: https://example.com/hagicode-0.1.0-linux-x64.zip
+      placeholder: "例: https://example.com/hagicode-0.1.0-linux-x64.zip"
   httpIndex:
     indexUrl:
       label: インデックス URL
-      placeholder: https://index.hagicode.com/server/index.json
+      placeholder: "例: https://index.hagicode.com/server/index.json"
       hint: インデックス ファイルには、バージョン配列と各バージョンのアセットが含まれている必要があります
   validateButton: 構成の検証
   applyButton: 構成の適用
@@ -331,7 +332,7 @@ homePromote:
   next: 次へ
   pause: 切り替えを一時停止
   resume: 切り替えを再開
-  position: '{{current}} / {{total}}'
+  position: "{{current}}/{{total}}"
   defaultCta: 詳しく見る
   openFailed: リンクを開けませんでした
 serviceRegion:

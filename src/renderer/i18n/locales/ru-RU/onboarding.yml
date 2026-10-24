@@ -70,7 +70,7 @@ dependencies:
   manualHandoff:
     title: Требуется установка пакета вручную CLI
     faqLinkLabel: Посмотреть часто задаваемые вопросы по среде Node
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    faqUrl: "https://docs.hagicode.com/ru-RU/faq/desktop-node-environment/"
 depInstallConfirm:
   title: Установите недостающие зависимости
   installingTitle: Установка зависимостей
@@ -178,7 +178,7 @@ dependencyManagement:
   manualHandoff:
     title: Требуется установка пакета вручную CLI
     faqLinkLabel: Посмотреть часто задаваемые вопросы по среде Node
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    faqUrl: "https://docs.hagicode.com/ru-RU/faq/desktop-node-environment/"
   noDependencies: Зависимости не обнаружены
 dependencyCheck:
   title: Результаты проверки зависимостей

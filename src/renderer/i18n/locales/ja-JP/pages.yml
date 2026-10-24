@@ -93,7 +93,7 @@ settings:
       userData-runtime-data:
         label: userData/runtime-data（既定）
       home-runtime-data:
-        label: ~/.hagicode/runtime-data
+        label: "~/.hagicode/runtime-data（ホーム）"
     warnings:
       noMigration: この設定を変更しても、対象パスが更新されるだけです。Desktop は既存のランタイムデータを自動的には移行しません。
       restart: 変更したプリセットを保存すると、管理対象のバックエンドが再起動され、新しいランタイムデータのルートがすぐに有効になります。
@@ -117,7 +117,7 @@ settings:
       shortLabel: チップの成功をシミュレート
     installDate:
       label: インストール日の生の値（msstoreRatingPrompt.installDate）
-      placeholder: e.g. 2024-01-01T00:00:00.000Z
+      placeholder: "例: 2024-01-01T00:00:00.000Z"
       ageDays: 'インストール経過日数: {{value}}'
       ageDaysUnknown: 不明
     actions:
@@ -131,7 +131,7 @@ settings:
     errors:
       saveErrorDetail: '保存に失敗しました: {{error}}'
 footer:
-  copyright: © 2026 Hagicode Desktop
+  copyright: "© 2026 Hagicode Desktop 著作権所有"
 quickStart:
   title: クイックスタート
 secure:
@@ -172,7 +172,7 @@ dependencyManagement:
   manualHandoff:
     title: 手動 CLI パッケージのインストールが必要
     faqLinkLabel: ノード環境のよくある質問を見る
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    faqUrl: "https://docs.hagicode.com/ja-JP/faq/desktop-node-environment/"
 versionManagement:
   tabs:
     newVersions: 新しいバージョン
@@ -351,7 +351,7 @@ subscription:
     source: 'ソース: {{value}}'
   sourceValue:
     initial: 現在のセッションの既定の状態
-    store: Microsoft Store
+    store: "Microsoft ストア"
     fallback: Fallback snapshot
   mission:
     eyebrow: スポンサーシップが大切な理由
@@ -388,7 +388,7 @@ subscription:
     title: Store の状態とローカルの権限の詳細
     fields:
       status: 現在の状態
-      planStoreId: Store ID
+      planStoreId: "ストア ID"
       lastCheckedAt: 最終確認日時
       renewalDate: 更新日
       expirationDate: 有効期限
@@ -478,8 +478,8 @@ turboEngine:
     unsupported: Store は利用できません
   summary:
     productName: TurboEngine 永久ライセンス
-    storeId: 'Store ID: {{storeId}}'
-    storeIdLabel: Store ID
+    storeId: "ストア ID: {{storeId}}"
+    storeIdLabel: "ストア ID"
     statusLabel: ライセンス状態
     lastCheckedLabel: 最終確認日時
     lastSuccessLabel: 最後に同期に成功した日時
@@ -502,7 +502,7 @@ turboEngine:
     nonStoreEdition: Store 版以外のランタイム
   sourceValue:
     initial: 現在のセッションの既定の状態
-    store: Microsoft Store
+    store: "Microsoft ストア"
     fallback: Fallback snapshot
   diagnostics:
     sectionTitle: 診断情報

@@ -59,13 +59,13 @@ settings:
     label: Idioma
   embeddedWebServicePort: Puerto de servicio web integrado
 footer:
-  copyright: © 2026 Hagicode Desktop
+  copyright: "© 2026 Hagicode Desktop. Todos los derechos reservados"
   buildVersion: Versión
   buildBranch: Rama
-  buildCommit: Commit
+  buildCommit: "Confirmación"
 menu:
   systemManagement: Gestión del sistema
-  hagicoWeb: Hagicode Web
+  hagicoWeb: "Hagicode en la web"
   dependencies: Dependencias
   webService: Servicio Web
   packages: Paquetes
@@ -102,7 +102,7 @@ mirror:
   redetect: Redetectar
   info: NPM herramientas usarán automáticamente este espejo para descargas más rápidas
   regions:
-    CN: China
+    CN: "China continental"
     INTERNATIONAL: Internacional
 navigation:
   dashboard: Panel
@@ -126,7 +126,7 @@ navigation:
     types:
       link: Enlace
       contact: Contacto
-      qr: QR
+      qr: "Código QR"
       image: Imagen
 sidebar:
   dashboard: Panel
@@ -136,7 +136,7 @@ sidebar:
   dependencyManagement: Gestión de dependencias
   settings: Configuración
   subscription: Plan de patrocinio de Hagicode
-  turboEngine: TurboEngine
+  turboEngine: "Motor TurboEngine"
   subscriptionStatus:
     loading: Cargando
     active: Activo
@@ -160,7 +160,7 @@ dependencyManagement:
     externalNotice: Desktop está inspeccionando actualmente el entorno global de Node/npm que ya existe en este sistema.
     rationaleTitle: Nodo/entorno npm administrado por escritorio
     faqLinkLabel: Ver preguntas frecuentes sobre el entorno de nodo
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    faqUrl: "https://docs.hagicode.com/es-ES/faq/desktop-node-environment/"
     version: Versión
     source: Origen del entorno
     nodeMajorVersion: Árbol de paquetes principales del nodo
@@ -301,7 +301,7 @@ dependencyManagement:
       base:
         title: Dependencias base
       agentCli:
-        title: Agent CLI
+        title: "CLI de agente"
     tool: Herramienta
     status: Estado
     action: acción

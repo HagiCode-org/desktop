@@ -77,7 +77,7 @@ webServiceStatus:
   status:
     running: En ejecución
     stopped: Detenido
-    error: Error
+    error: "Fallo"
     starting: Iniciando...
     stopping: Deteniendo...
     unknown: Desconocido
@@ -145,6 +145,7 @@ webServiceStatus:
     title: Iniciando servicio
     successTitle: El servicio está listo
     failureTitle: El inicio no se completó
+    slowStart: "Aún iniciando ({{seconds}} segundos)"
     currentStepLabel: Progreso actual
     states:
       pending: Pendiente
@@ -181,7 +182,7 @@ webServiceStatus:
   listenAddress:
     label: Dirección de escucha
     customInputLabel: IPv4 personalizado
-    customPlaceholder: 192.168.1.24
+    customPlaceholder: "p. ej. 192.168.1.24"
     customError: Introduzca una dirección IPv4 válida
     accessUrlPreviewLabel: Acceder a vista previa URL
     wildcardHint: '`0.0.0.0` une todas las interfaces. El escritorio aún abre el cliente local a través de `127.0.0.1`.'
@@ -189,9 +190,9 @@ webServiceStatus:
       localhost:
         label: servidor local
       loopback:
-        label: 127.0.0.1
+        label: "127.0.0.1 (bucle local)"
       wildcard:
-        label: 0.0.0.0
+        label: "0.0.0.0 (todas las direcciones)"
       custom:
         label: IP personalizada
 languageSelector:
@@ -206,7 +207,7 @@ dependencyManagement:
     copy: Copiar
     shellSelectorLabel: Shell de destino
     cmdShell: Símbolo del sistema (cmd)
-    powershellShell: Windows PowerShell
+    powershellShell: "Terminal de Windows PowerShell"
     destinationHint: "Copia este comando y ejecútalo en {{shell}}. Desktop no ejecuta los comandos copiados."
     requiredLabel: Obligatorio
   status:
@@ -236,7 +237,7 @@ dependencyManagement:
   manualHandoff:
     title: Se requiere instalación manual del paquete CLI
     faqLinkLabel: Ver preguntas frecuentes sobre el entorno de nodo
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    faqUrl: "https://docs.hagicode.com/es-ES/faq/desktop-node-environment/"
   noDependencies: No se detectaron dependencias
   installToast:
     manualDisabledTitle: La instalación automática está desactivada
@@ -261,7 +262,7 @@ packageSource:
     label: Tipo de fuente del paquete
     folder: Carpeta local
     httpIndex: HTTP Índice
-    http: HTTP URL
+    http: "URL HTTP"
   folder:
     path:
       label: Ruta de la carpeta
@@ -274,11 +275,11 @@ packageSource:
   http:
     url:
       label: Paquete URL
-      placeholder: https://example.com/hagicode-0.1.0-linux-x64.zip
+      placeholder: "p. ej. https://example.com/hagicode-0.1.0-linux-x64.zip"
   httpIndex:
     indexUrl:
       label: Índice URL
-      placeholder: https://index.hagicode.com/server/index.json
+      placeholder: "p. ej. https://index.hagicode.com/server/index.json"
       hint: El archivo de índice debe contener una matriz de versiones y activos para cada versión.
   validateButton: Validar configuración
   applyButton: Aplicar configuración
@@ -331,7 +332,7 @@ homePromote:
   next: Siguiente
   pause: Pausar el carrusel
   resume: Reanudar el carrusel
-  position: '{{current}} / {{total}}'
+  position: "{{current}}/{{total}}"
   defaultCta: Más información
   openFailed: No se pudo abrir el enlace
 serviceRegion:

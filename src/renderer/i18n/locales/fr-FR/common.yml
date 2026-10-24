@@ -36,7 +36,7 @@ form:
     minLength: "Doit contenir au moins {{min}}\_caractères"
     maxLength: "Ne doit pas dépasser {{max}}\_caractères"
 common:
-  version: Version
+  version: "Numéro de version"
   platform: Plateforme
   language: Langue
   settings: Paramètres
@@ -59,19 +59,19 @@ settings:
     label: Langue
   embeddedWebServicePort: Port de service Web intégré
 footer:
-  copyright: © 2026 Hagicode Desktop
-  buildVersion: Version
+  copyright: "© 2026 Hagicode Desktop, tous droits réservés"
+  buildVersion: "Numéro de version"
   buildBranch: Branche
-  buildCommit: Commit
+  buildCommit: "Révision"
 menu:
   systemManagement: Gestion du système
-  hagicoWeb: Hagicode Web
+  hagicoWeb: "Hagicode version web"
   dependencies: Dépendances
   webService: Service Web
   packages: Forfaits
   settings: Paramètres
   openWebUI: Ouvrir Web UI
-  navigate: Navigation
+  navigate: "Naviguer"
   back: Retour
   forward: En avant
   refresh: Actualiser
@@ -126,17 +126,17 @@ navigation:
     types:
       link: Lien
       contact: Contacter
-      qr: QR
+      qr: "Code QR"
       image: Images
 sidebar:
   dashboard: Tableau de bord
   webService: Service Web
   versionManagement: Gestion des versions
-  diagnostic: Diagnostic
+  diagnostic: "Analyse système"
   dependencyManagement: Gestion des dépendances
   settings: Paramètres
   subscription: Programme de soutien Hagicode
-  turboEngine: TurboEngine
+  turboEngine: "Moteur TurboEngine"
   subscriptionStatus:
     loading: Chargement
     active: Actif
@@ -160,8 +160,8 @@ dependencyManagement:
     externalNotice: Desktop inspecte actuellement l'environnement global Node/npm déjà présent sur ce système.
     rationaleTitle: Environnement Node/npm géré par ordinateur
     faqLinkLabel: Afficher la FAQ sur l'environnement de nœud
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
-    version: Version
+    faqUrl: "https://docs.hagicode.com/fr-FR/faq/desktop-node-environment/"
+    version: "Numéro de version"
     source: Source de l'environnement
     nodeMajorVersion: Arborescence des packages principaux du nœud
     globalPrefix: Préfixe global
@@ -190,7 +190,7 @@ dependencyManagement:
     packagedMarkerPath: Marqueur packagé
     metadataPath: Chemin des métadonnées
     healthUrl: URL locale
-    diagnostics: Diagnostics
+    diagnostics: "Analyses système"
     primaryDescriptions:
       installed: Les fichiers du runtime sont installés et respectent le contrat de runtime Desktop le plus récent.
       packaged: L’archive packagée est prête, mais le runtime accessible en écriture n’a pas encore été activé.
@@ -232,7 +232,7 @@ dependencyManagement:
       completed: Activation terminée
       failed: Échec de l’activation
   package:
-    version: Version
+    version: "Numéro de version"
     requiredVersion: Version requise
     versionMismatch: La version actuelle {{current}} ne satisfait pas {{required}}.
     packageName: Forfait
@@ -279,7 +279,7 @@ dependencyManagement:
   categories:
     bootstrap: Hérité
     workflow: Flux de travail
-    agent-cli: Agent CLI
+    agent-cli: "CLI d’agent"
     developer-tool: Outil de développement
   bootstrap:
     title: Ancien CLI
@@ -301,10 +301,10 @@ dependencyManagement:
       base:
         title: Dépendances de base
       agentCli:
-        title: Agent CLI
+        title: "CLI d’agent"
     tool: Outil
     status: Statut
-    action: Action
+    action: "Opération"
   batchLog:
     title: Journal d'installation par lots
     empty: Les journaux apparaîtront ici après le démarrage de l'installation par lots.
@@ -474,7 +474,7 @@ system:
     actions:
       manage: Gérer les versions
     labels:
-      version: Version
+      version: "Numéro de version"
       package: Paquet
       installedAt: Installé le
       status: Statut

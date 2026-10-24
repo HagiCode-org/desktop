@@ -145,6 +145,7 @@ webServiceStatus:
     title: 서비스 시작 중
     successTitle: 서비스가 준비되었습니다
     failureTitle: 시작이 완료되지 않았습니다
+    slowStart: "아직 시작하는 중입니다 ({{seconds}}초)"
     currentStepLabel: 현재 진행 상황
     states:
       pending: 대기 중
@@ -181,7 +182,7 @@ webServiceStatus:
   listenAddress:
     label: 청취 주소
     customInputLabel: 사용자 정의 IPv4
-    customPlaceholder: 192.168.1.24
+    customPlaceholder: "예: 192.168.1.24"
     customError: 유효한 IPv4 주소를 입력하세요.
     accessUrlPreviewLabel: URL 미리보기에 액세스하세요
     wildcardHint: '`0.0.0.0`은 모든 인터페이스를 바인딩합니다. 데스크톱은 여전히 ​​`127.0.0.1`을 통해 로컬 클라이언트를 엽니다.'
@@ -189,9 +190,9 @@ webServiceStatus:
       localhost:
         label: 로컬호스트
       loopback:
-        label: 127.0.0.1
+        label: "127.0.0.1（루프백）"
       wildcard:
-        label: 0.0.0.0
+        label: "0.0.0.0（모든 주소）"
       custom:
         label: 맞춤 IP
 languageSelector:
@@ -206,7 +207,7 @@ dependencyManagement:
     copy: 복사
     shellSelectorLabel: 대상 셸
     cmdShell: 명령 프롬프트(cmd)
-    powershellShell: Windows PowerShell
+    powershellShell: "Windows PowerShell 터미널"
     destinationHint: "이 명령을 복사한 후 {{shell}}에서 실행하세요. Desktop은 복사한 명령을 실행하지 않습니다."
     requiredLabel: 필수
   status:
@@ -236,7 +237,7 @@ dependencyManagement:
   manualHandoff:
     title: 수동 CLI 패키지 설치 필요
     faqLinkLabel: 노드 환경 FAQ 보기
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    faqUrl: "https://docs.hagicode.com/ko-KR/faq/desktop-node-environment/"
   noDependencies: 종속성이 감지되지 않았습니다.
   installToast:
     manualDisabledTitle: 자동 설치가 비활성화되었습니다
@@ -261,7 +262,7 @@ packageSource:
     label: 패키지 소스 유형
     folder: 로컬 폴더
     httpIndex: HTTP 지수
-    http: HTTP URL
+    http: "HTTP 링크"
   folder:
     path:
       label: 폴더 경로
@@ -274,11 +275,11 @@ packageSource:
   http:
     url:
       label: 패키지 URL
-      placeholder: https://example.com/hagicode-0.1.0-linux-x64.zip
+      placeholder: "예: https://example.com/hagicode-0.1.0-linux-x64.zip"
   httpIndex:
     indexUrl:
       label: 지수 URL
-      placeholder: https://index.hagicode.com/server/index.json
+      placeholder: "예: https://index.hagicode.com/server/index.json"
       hint: 인덱스 파일에는 버전 배열과 각 버전의 자산이 포함되어야 합니다.
   validateButton: 구성 검증
   applyButton: 구성 적용
@@ -331,7 +332,7 @@ homePromote:
   next: 다음
   pause: 자동 넘김 일시정지
   resume: 자동 넘김 재개
-  position: '{{current}} / {{total}}'
+  position: "{{current}}/{{total}}"
   defaultCta: 자세히 보기
   openFailed: 링크를 열지 못했습니다
 serviceRegion:

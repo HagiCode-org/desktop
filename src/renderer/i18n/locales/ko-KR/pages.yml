@@ -93,7 +93,7 @@ settings:
       userData-runtime-data:
         label: userData/runtime-data (기본값)
       home-runtime-data:
-        label: ~/.hagicode/runtime-data
+        label: "~/.hagicode/runtime-data（홈 디렉터리）"
     warnings:
       noMigration: 이 설정을 변경하면 대상 경로만 업데이트됩니다. Desktop은 기존 런타임 데이터를 자동으로 마이그레이션하지 않습니다.
       restart: 변경된 프리셋을 저장하면 관리형 백엔드가 다시 시작되어 새 런타임 데이터 루트가 즉시 적용됩니다.
@@ -117,7 +117,7 @@ settings:
       shortLabel: 후원 성공 시뮬레이션
     installDate:
       label: 설치 날짜 원본 값 (msstoreRatingPrompt.installDate)
-      placeholder: e.g. 2024-01-01T00:00:00.000Z
+      placeholder: "예: 2024-01-01T00:00:00.000Z"
       ageDays: '설치 경과 일수: {{value}}'
       ageDaysUnknown: 알 수 없음
     actions:
@@ -131,7 +131,7 @@ settings:
     errors:
       saveErrorDetail: '저장 실패: {{error}}'
 footer:
-  copyright: © 2026 Hagicode Desktop
+  copyright: "© 2026 Hagicode Desktop 저작권 소유"
 quickStart:
   title: 빠른 시작
 secure:
@@ -172,7 +172,7 @@ dependencyManagement:
   manualHandoff:
     title: 수동 CLI 패키지 설치 필요
     faqLinkLabel: 노드 환경 FAQ 보기
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    faqUrl: "https://docs.hagicode.com/ko-KR/faq/desktop-node-environment/"
 versionManagement:
   tabs:
     newVersions: 새 버전
@@ -351,7 +351,7 @@ subscription:
     source: '출처: {{value}}'
   sourceValue:
     initial: 현재 세션 기본 상태
-    store: Microsoft Store
+    store: "Microsoft 스토어"
     fallback: Fallback snapshot
   mission:
     eyebrow: 후원이 중요한 이유
@@ -388,7 +388,7 @@ subscription:
     title: Store 상태와 로컬 권한 세부 정보
     fields:
       status: 현재 상태
-      planStoreId: Store ID
+      planStoreId: "스토어 ID"
       lastCheckedAt: 마지막 확인
       renewalDate: 갱신일
       expirationDate: 만료일
@@ -478,8 +478,8 @@ turboEngine:
     unsupported: Store를 사용할 수 없음
   summary:
     productName: TurboEngine 영구 라이선스
-    storeId: 'Store ID: {{storeId}}'
-    storeIdLabel: Store ID
+    storeId: "스토어 ID: {{storeId}}"
+    storeIdLabel: "스토어 ID"
     statusLabel: 라이선스 상태
     lastCheckedLabel: 마지막 확인
     lastSuccessLabel: 마지막으로 성공한 동기화
@@ -502,7 +502,7 @@ turboEngine:
     nonStoreEdition: Store 외 런타임
   sourceValue:
     initial: 현재 세션 기본 상태
-    store: Microsoft Store
+    store: "Microsoft 스토어"
     fallback: Fallback snapshot
   diagnostics:
     sectionTitle: 진단 정보

@@ -6,7 +6,7 @@ steps:
   completed: 已完成
 apiKey:
   title: 輸入 Claude API 金鑰
-  placeholder: sk-ant-...
+  placeholder: "例如 sk-ant-..."
   show: 顯示
   hide: 隱藏
   continue: 繼續

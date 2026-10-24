@@ -93,7 +93,7 @@ settings:
       userData-runtime-data:
         label: userData/runtime-data (по умолчанию)
       home-runtime-data:
-        label: ~/.hagicode/runtime-data
+        label: "~/.hagicode/runtime-data (домашний каталог)"
     warnings:
       noMigration: Изменение этого параметра обновляет только целевой путь. Desktop не переносит существующие данные среды выполнения автоматически.
       restart: Сохранение изменённого пресета перезапускает управляемый бэкенд, чтобы новый корневой каталог данных среды выполнения вступил в силу сразу.
@@ -117,7 +117,7 @@ settings:
       shortLabel: Имитировать успех чаевых
     installDate:
       label: Исходная дата установки (msstoreRatingPrompt.installDate)
-      placeholder: e.g. 2024-01-01T00:00:00.000Z
+      placeholder: "напр. 2024-01-01T00:00:00.000Z"
       ageDays: 'Возраст установки (дни): {{value}}'
       ageDaysUnknown: неизвестно
     actions:
@@ -131,7 +131,7 @@ settings:
     errors:
       saveErrorDetail: 'Не удалось сохранить: {{error}}'
 footer:
-  copyright: © 2026 Hagicode Desktop
+  copyright: "© 2026 Hagicode Desktop. Все права защищены"
 quickStart:
   title: Быстрый старт
 secure:
@@ -172,7 +172,7 @@ dependencyManagement:
   manualHandoff:
     title: Требуется установка пакета вручную CLI
     faqLinkLabel: Посмотреть часто задаваемые вопросы по среде Node
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    faqUrl: "https://docs.hagicode.com/ru-RU/faq/desktop-node-environment/"
 versionManagement:
   tabs:
     newVersions: Новые версии
@@ -351,7 +351,7 @@ subscription:
     source: 'Источник: {{value}}'
   sourceValue:
     initial: Состояние по умолчанию для текущего сеанса
-    store: Microsoft Store
+    store: "Магазин Microsoft"
     fallback: Fallback snapshot
   mission:
     eyebrow: Почему важна поддержка
@@ -388,7 +388,7 @@ subscription:
     title: Статус Store и сведения о локальных правах
     fields:
       status: Текущий статус
-      planStoreId: Store ID
+      planStoreId: "ID магазина"
       lastCheckedAt: Последняя проверка
       renewalDate: Дата продления
       expirationDate: Дата окончания
@@ -478,8 +478,8 @@ turboEngine:
     unsupported: Store недоступен
   summary:
     productName: Постоянная лицензия TurboEngine
-    storeId: 'Store ID: {{storeId}}'
-    storeIdLabel: Store ID
+    storeId: "ID магазина: {{storeId}}"
+    storeIdLabel: "ID магазина"
     statusLabel: Статус лицензии
     lastCheckedLabel: Последняя проверка
     lastSuccessLabel: Последняя успешная синхронизация
@@ -502,7 +502,7 @@ turboEngine:
     nonStoreEdition: Среда выполнения не из Store
   sourceValue:
     initial: Состояние по умолчанию для текущего сеанса
-    store: Microsoft Store
+    store: "Магазин Microsoft"
     fallback: Fallback snapshot
   diagnostics:
     sectionTitle: Диагностика

@@ -229,5 +229,5 @@ legal:
     cache: 正在使用最近缓存的协议版本
     unavailable: 协议版本信息暂不可用
   types:
-    eula: EULA
+    eula: "EULA（最终用户许可协议）"
     privacy-policy: 隐私政策

@@ -70,7 +70,7 @@ dependencies:
   manualHandoff:
     title: Se requiere instalación manual del paquete CLI
     faqLinkLabel: Ver preguntas frecuentes sobre el entorno de nodo
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    faqUrl: "https://docs.hagicode.com/es-ES/faq/desktop-node-environment/"
 depInstallConfirm:
   title: Instalar dependencias faltantes
   installingTitle: Instalación de dependencias
@@ -178,7 +178,7 @@ dependencyManagement:
   manualHandoff:
     title: Se requiere instalación manual del paquete CLI
     faqLinkLabel: Ver preguntas frecuentes sobre el entorno de nodo
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    faqUrl: "https://docs.hagicode.com/es-ES/faq/desktop-node-environment/"
   noDependencies: No se detectaron dependencias
 dependencyCheck:
   title: Resultados de la verificación de dependencia

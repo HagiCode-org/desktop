@@ -93,7 +93,7 @@ settings:
       userData-runtime-data:
         label: userData/runtime-data (par défaut)
       home-runtime-data:
-        label: ~/.hagicode/runtime-data
+        label: "~/.hagicode/runtime-data (dossier personnel)"
     warnings:
       noMigration: Modifier ce paramètre met uniquement à jour le chemin cible. Desktop ne migre pas automatiquement les données du runtime existantes.
       restart: L’enregistrement d’un préréglage modifié redémarre le backend géré afin que la nouvelle racine des données du runtime prenne effet immédiatement.
@@ -117,7 +117,7 @@ settings:
       shortLabel: Simuler le succès du pourboire
     installDate:
       label: Date d’installation brute (msstoreRatingPrompt.installDate)
-      placeholder: e.g. 2024-01-01T00:00:00.000Z
+      placeholder: "ex. 2024-01-01T00:00:00.000Z"
       ageDays: 'Ancienneté de l’installation (jours) : {{value}}'
       ageDaysUnknown: inconnue
     actions:
@@ -131,7 +131,7 @@ settings:
     errors:
       saveErrorDetail: 'Échec de l’enregistrement : {{error}}'
 footer:
-  copyright: © 2026 Hagicode Desktop
+  copyright: "© 2026 Hagicode Desktop, tous droits réservés"
 quickStart:
   title: Démarrage rapide
 secure:
@@ -166,13 +166,13 @@ dependencyManagement:
     updateDesktop: Mettre à jour le bureau
   details:
     manualCommand: Commande suggérée
-    source: Source
+    source: "Origine"
     bundledSource: Source groupée
     systemSource: Source système
   manualHandoff:
     title: Installation manuelle du package CLI requise
     faqLinkLabel: Afficher la FAQ sur l'environnement de nœud
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    faqUrl: "https://docs.hagicode.com/fr-FR/faq/desktop-node-environment/"
 versionManagement:
   tabs:
     newVersions: Nouvelles versions
@@ -263,7 +263,7 @@ versionManagement:
     fallback: 'Essayer une autre source directe'
     direct: 'Téléchargement direct'
   installTelemetry:
-    mode: Mode
+    mode: "Modalité"
     stage: Scène
     verified: Vérifié
     flow: 'Flux : Téléchargement direct -> Vérification de l’empreinte -> Extraction -> Terminé'
@@ -351,7 +351,7 @@ subscription:
     source: 'Source : {{value}}'
   sourceValue:
     initial: État par défaut de la session actuelle
-    store: Microsoft Store
+    store: "Store Microsoft"
     fallback: Fallback snapshot
   mission:
     eyebrow: Pourquoi le soutien compte
@@ -388,7 +388,7 @@ subscription:
     title: État du Store et détails des droits locaux
     fields:
       status: Statut actuel
-      planStoreId: Store ID
+      planStoreId: "ID du Store"
       lastCheckedAt: Dernière vérification
       renewalDate: Date de renouvellement
       expirationDate: Date d’expiration
@@ -479,7 +479,7 @@ turboEngine:
   summary:
     productName: Licence perpétuelle TurboEngine
     storeId: 'Store ID : {{storeId}}'
-    storeIdLabel: Store ID
+    storeIdLabel: "ID du Store"
     statusLabel: État de la licence
     lastCheckedLabel: Dernière vérification
     lastSuccessLabel: Dernière synchronisation réussie
@@ -496,13 +496,13 @@ turboEngine:
     sectionTitle: Contrat du runtime
     supported: This runtime can query Microsoft Store directly and run the packaged TurboEngine purchase path for Store ID `9NSD809W18Z6`.
     unsupported: This runtime cannot complete Microsoft Store purchase APIs directly, so Desktop falls back to a Store handoff path instead of showing a broken in-app purchase button.
-    runtimeLabel: Runtime
+    runtimeLabel: "Environnement d’exécution"
     sourceLabel: Source de l’instantané
     storeEdition: Édition Microsoft Store
     nonStoreEdition: Runtime non Store
   sourceValue:
     initial: État par défaut de la session actuelle
-    store: Microsoft Store
+    store: "Store Microsoft"
     fallback: Fallback snapshot
   diagnostics:
     sectionTitle: Diagnostic
@@ -538,7 +538,7 @@ donationItem:
     message: Grâce à votre soutien, l’auteur disposera de davantage de ressources pour améliorer encore HagiCode.
   tiers:
     coffee:
-      shortName: Cappuccino
+      shortName: "Café crème"
     dinner:
       shortName: Homard
     candy:

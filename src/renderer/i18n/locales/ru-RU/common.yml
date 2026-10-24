@@ -59,13 +59,13 @@ settings:
     label: Язык
   embeddedWebServicePort: Встроенный порт веб-службы
 footer:
-  copyright: © 2026 Hagicode Desktop
+  copyright: "© 2026 Hagicode Desktop. Все права защищены"
   buildVersion: Версия
   buildBranch: Ветка
   buildCommit: Коммит
 menu:
   systemManagement: Управление системой
-  hagicoWeb: Hagicode Web
+  hagicoWeb: "Hagicode в вебе"
   dependencies: Зависимости
   webService: Веб-сервис
   packages: Пакеты
@@ -126,7 +126,7 @@ navigation:
     types:
       link: Ссылка
       contact: Контакт
-      qr: QR
+      qr: "QR-код"
       image: Изображение
 sidebar:
   dashboard: Панель управления
@@ -136,7 +136,7 @@ sidebar:
   dependencyManagement: Управление зависимостями
   settings: Настройки
   subscription: План поддержки Hagicode
-  turboEngine: TurboEngine
+  turboEngine: "Движок TurboEngine"
   subscriptionStatus:
     loading: Загрузка
     active: Активно
@@ -160,7 +160,7 @@ dependencyManagement:
     externalNotice: Desktop сейчас проверяет глобальную среду Node/npm, которая уже существует в этой системе.
     rationaleTitle: Управляемая настольным компьютером среда Node/npm
     faqLinkLabel: Посмотреть часто задаваемые вопросы по среде Node
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    faqUrl: "https://docs.hagicode.com/ru-RU/faq/desktop-node-environment/"
     version: Версия
     source: Источник среды
     nodeMajorVersion: Основное дерево пакетов узла
@@ -301,7 +301,7 @@ dependencyManagement:
       base:
         title: Базовые зависимости
       agentCli:
-        title: Agent CLI
+        title: "CLI агента"
     tool: Инструмент
     status: Статус
     action: Действие

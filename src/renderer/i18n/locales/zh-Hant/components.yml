@@ -145,6 +145,7 @@ webServiceStatus:
     title: 正在啟動服務
     successTitle: 服務已就緒
     failureTitle: 啟動未完成
+    slowStart: "仍在啟動（{{seconds}} 秒）"
     currentStepLabel: 目前進度
     states:
       pending: 等待中
@@ -181,17 +182,17 @@ webServiceStatus:
   listenAddress:
     label: 監聽地址
     customInputLabel: 自訂 IPv4
-    customPlaceholder: 192.168.1.24
+    customPlaceholder: "例如 192.168.1.24"
     customError: 請輸入有效的 IPv4 位址
     accessUrlPreviewLabel: 訪問 URL 預覽
     wildcardHint: '`0.0.0.0` 會綁定所有網路卡；Desktop 仍會透過 `127.0.0.1` 開啟本機用戶端。'
     presets:
       localhost:
-        label: localhost
+        label: "localhost（本機）"
       loopback:
-        label: 127.0.0.1
+        label: "127.0.0.1（迴圈位址）"
       wildcard:
-        label: 0.0.0.0
+        label: "0.0.0.0（所有位址）"
       custom:
         label: 自訂 IP
 languageSelector:
@@ -206,7 +207,7 @@ dependencyManagement:
     copy: 複製
     shellSelectorLabel: 目標命令列
     cmdShell: 命令提示字元（cmd）
-    powershellShell: Windows PowerShell
+    powershellShell: "Windows PowerShell 終端機"
     destinationHint: "複製此命令並在 {{shell}} 中執行。Desktop 不會執行複製的命令。"
     requiredLabel: 必需
   status:
@@ -261,7 +262,7 @@ packageSource:
     label: 套件來源類型
     folder: 本地資料夾
     httpIndex: HTTP 索引來源
-    http: HTTP URL
+    http: "HTTP 連結"
   folder:
     path:
       label: 資料夾路徑
@@ -274,11 +275,11 @@ packageSource:
   http:
     url:
       label: 包 URL
-      placeholder: https://example.com/hagicode-0.1.0-linux-x64.zip
+      placeholder: "例如 https://example.com/hagicode-0.1.0-linux-x64.zip"
   httpIndex:
     indexUrl:
       label: 索引 URL
-      placeholder: https://index.hagicode.com/server/index.json
+      placeholder: "例如 https://index.hagicode.com/server/index.json"
       hint: 索引檔案必須包含 versions 陣列和每個版本的 assets
   validateButton: 驗證配置
   applyButton: 應用程式配置
@@ -331,7 +332,7 @@ homePromote:
   next: 下一則
   pause: 暫停輪播
   resume: 繼續輪播
-  position: '{{current}} / {{total}}'
+  position: "{{current}}/{{total}}"
   defaultCta: 了解更多
   openFailed: 開啟連結失敗
 serviceRegion:

@@ -21,7 +21,7 @@ claude:
   title: Configurer Claude Code
 download:
   title: Télécharger Hagicode Server
-  version: Version
+  version: "Numéro de version"
   progress: Progression du téléchargement
   fileSize: Taille du fichier
   downloading:
@@ -70,7 +70,7 @@ dependencies:
   manualHandoff:
     title: Installation manuelle du package CLI requise
     faqLinkLabel: Afficher la FAQ sur l'environnement de nœud
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    faqUrl: "https://docs.hagicode.com/fr-FR/faq/desktop-node-environment/"
 depInstallConfirm:
   title: Installer les dépendances manquantes
   installingTitle: Installation des dépendances
@@ -116,7 +116,7 @@ launch:
     config: Configurer les paramètres et paramètres du serveur
   support:
     title: Assistance
-    docs: Documentation
+    docs: "Documentation d’aide"
     issues: Signaler des problèmes
   failure:
     title: Échec du démarrage
@@ -169,13 +169,13 @@ dependencyManagement:
     currentVersion: Version actuelle
     requiredVersion: Version requise
     manualCommand: Commande suggérée
-    source: Source
+    source: "Origine"
     bundledSource: Source groupée
     systemSource: Source système
   manualHandoff:
     title: Installation manuelle du package CLI requise
     faqLinkLabel: Afficher la FAQ sur l'environnement de nœud
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    faqUrl: "https://docs.hagicode.com/fr-FR/faq/desktop-node-environment/"
   noDependencies: Aucune dépendance détectée
 dependencyCheck:
   title: Résultats de la vérification des dépendances

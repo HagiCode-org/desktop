@@ -70,7 +70,7 @@ dependencies:
   manualHandoff:
     title: 수동 CLI 패키지 설치 필요
     faqLinkLabel: 노드 환경 FAQ 보기
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    faqUrl: "https://docs.hagicode.com/ko-KR/faq/desktop-node-environment/"
 depInstallConfirm:
   title: 누락된 종속성 설치
   installingTitle: 종속성 설치
@@ -178,7 +178,7 @@ dependencyManagement:
   manualHandoff:
     title: 수동 CLI 패키지 설치 필요
     faqLinkLabel: 노드 환경 FAQ 보기
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    faqUrl: "https://docs.hagicode.com/ko-KR/faq/desktop-node-environment/"
   noDependencies: 종속성이 감지되지 않았습니다.
 dependencyCheck:
   title: 종속성 검사 결과
@@ -223,7 +223,7 @@ legal:
     cache: 마지막으로 성공적으로 캐시된 법적 메타데이터 사용
     unavailable: 현재 법적 메타데이터를 사용할 수 없습니다.
   types:
-    eula: EULA
+    eula: "EULA（최종 사용자 라이선스 계약）"
     privacy-policy: 개인 정보 보호 정책
 languageSelection:
   title: 언어 선택

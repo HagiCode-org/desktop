@@ -6,7 +6,7 @@ steps:
   completed: Terminé
 apiKey:
   title: Entrez la touche Claude API
-  placeholder: sk-ant-...
+  placeholder: "ex. sk-ant-..."
   show: Afficher
   hide: Masquer
   continue: Continuer
@@ -21,7 +21,7 @@ status:
 callingApi:
   message: Appel au Claude API...
 confirmation:
-  title: Confirmation
+  title: "Validation"
   message: Claude a terminé la vérification de l'installation. Veuillez confirmer les résultats.
   retry: Revérifier
   complete: Terminé

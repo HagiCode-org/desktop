@@ -145,6 +145,7 @@ webServiceStatus:
     title: Запуск службы
     successTitle: Служба готова
     failureTitle: Запуск не завершён
+    slowStart: "Всё ещё запускается ({{seconds}} с)"
     currentStepLabel: Текущий прогресс
     states:
       pending: Ожидается
@@ -181,7 +182,7 @@ webServiceStatus:
   listenAddress:
     label: Адрес прослушивания
     customInputLabel: Пользовательский IPv4
-    customPlaceholder: 192.168.1.24
+    customPlaceholder: "например, 192.168.1.24"
     customError: Введите действительный адрес IPv4
     accessUrlPreviewLabel: Доступ к предварительному просмотру URL
     wildcardHint: '`0.0.0.0` связывает каждый интерфейс. Рабочий стол по-прежнему открывает локальный клиент через `127.0.0.1`.'
@@ -189,9 +190,9 @@ webServiceStatus:
       localhost:
         label: локальный хост
       loopback:
-        label: 127.0.0.1
+        label: "127.0.0.1 (петлевой адрес)"
       wildcard:
-        label: 0.0.0.0
+        label: "0.0.0.0 (все адреса)"
       custom:
         label: Пользовательский IP-адрес
 languageSelector:
@@ -206,7 +207,7 @@ dependencyManagement:
     copy: Копировать
     shellSelectorLabel: Целевая оболочка
     cmdShell: Командная строка (cmd)
-    powershellShell: Windows PowerShell
+    powershellShell: "Терминал Windows PowerShell"
     destinationHint: "Скопируйте команду и выполните её в {{shell}}. Desktop не выполняет скопированные команды."
     requiredLabel: Обязательно
   status:
@@ -236,7 +237,7 @@ dependencyManagement:
   manualHandoff:
     title: Требуется установка пакета вручную CLI
     faqLinkLabel: Посмотреть часто задаваемые вопросы по среде Node
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    faqUrl: "https://docs.hagicode.com/ru-RU/faq/desktop-node-environment/"
   noDependencies: Зависимости не обнаружены
   installToast:
     manualDisabledTitle: Автоматическая установка отключена
@@ -261,7 +262,7 @@ packageSource:
     label: Тип источника пакета
     folder: Локальная папка
     httpIndex: HTTP Индекс
-    http: HTTP URL
+    http: "HTTP-ссылка"
   folder:
     path:
       label: Путь к папке
@@ -274,11 +275,11 @@ packageSource:
   http:
     url:
       label: Пакет URL
-      placeholder: https://example.com/hagicode-0.1.0-linux-x64.zip
+      placeholder: "например, https://example.com/hagicode-0.1.0-linux-x64.zip"
   httpIndex:
     indexUrl:
       label: Индекс URL
-      placeholder: https://index.hagicode.com/server/index.json
+      placeholder: "например, https://index.hagicode.com/server/index.json"
       hint: Индексный файл должен содержать массив версий и ресурсы для каждой версии.
   validateButton: Проверка конфигурации
   applyButton: Применить конфигурацию
@@ -331,7 +332,7 @@ homePromote:
   next: Следующая
   pause: Приостановить смену
   resume: Продолжить смену
-  position: '{{current}} / {{total}}'
+  position: "{{current}}/{{total}}"
   defaultCta: Подробнее
   openFailed: Не удалось открыть ссылку
 serviceRegion:

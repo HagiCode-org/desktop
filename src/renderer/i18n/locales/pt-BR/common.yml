@@ -59,13 +59,13 @@ settings:
     label: Idioma
   embeddedWebServicePort: Porta de serviço Web incorporada
 footer:
-  copyright: © 2026 Hagicode Desktop
+  copyright: "© 2026 Hagicode Desktop. Todos os direitos reservados"
   buildVersion: Versão
-  buildBranch: Branch
-  buildCommit: Commit
+  buildBranch: "Ramificação"
+  buildCommit: "Confirmação"
 menu:
   systemManagement: Gerenciamento do sistema
-  hagicoWeb: Hagicode Web
+  hagicoWeb: "Hagicode na web"
   dependencies: Dependências
   webService: Serviço Web
   packages: Pacotes
@@ -102,7 +102,7 @@ mirror:
   redetect: Detectar novamente
   info: NPM ferramentas usarão automaticamente este espelho para downloads mais rápidos
   regions:
-    CN: China
+    CN: "China continental"
     INTERNATIONAL: Internacional
 navigation:
   dashboard: Painel
@@ -126,7 +126,7 @@ navigation:
     types:
       link: Ligação
       contact: Contato
-      qr: QR
+      qr: "Código QR"
       image: Imagem
 sidebar:
   dashboard: Painel
@@ -136,7 +136,7 @@ sidebar:
   dependencyManagement: Gerenciamento de Dependências
   settings: Configurações
   subscription: Plano de apoio do Hagicode
-  turboEngine: TurboEngine
+  turboEngine: "Motor TurboEngine"
   subscriptionStatus:
     loading: Carregando
     active: Ativo
@@ -160,7 +160,7 @@ dependencyManagement:
     externalNotice: O Desktop está inspecionando no momento o ambiente global Node/npm que já existe neste sistema.
     rationaleTitle: Ambiente Node/npm gerenciado por desktop
     faqLinkLabel: Ver perguntas frequentes sobre o ambiente Node
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    faqUrl: "https://docs.hagicode.com/pt-BR/faq/desktop-node-environment/"
     version: Versão
     source: Origem do ambiente
     nodeMajorVersion: Árvore de pacotes principais do nó
@@ -301,7 +301,7 @@ dependencyManagement:
       base:
         title: Dependências básicas
       agentCli:
-        title: Agent CLI
+        title: "CLI de agente"
     tool: Ferramenta
     status: Estado
     action: Ação
@@ -397,7 +397,7 @@ systemDiagnostic:
     npmConfig:
       title: npm Configuração
       registry: 'Registro: {{value}}'
-      cache: 'Cache: {{value}}'
+      cache: "Memória cache: {{value}}"
       prefix: 'Prefixo/raiz do pacote: {{value}}'
       mirror: 'Aceleração do espelho: {{value}}'
     managedCommands:

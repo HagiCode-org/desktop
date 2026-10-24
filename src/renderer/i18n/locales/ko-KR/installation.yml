@@ -6,7 +6,7 @@ steps:
   completed: 완료됨
 apiKey:
   title: Claude API 키를 입력하세요
-  placeholder: sk-ant-...
+  placeholder: "예: sk-ant-..."
   show: 쇼
   hide: 숨기기
   continue: 계속

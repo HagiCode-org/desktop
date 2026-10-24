@@ -112,8 +112,8 @@ webServiceStatus:
     serviceUrl: Dienst-URL
     uptime: Betriebszeit
     restartCount: Zählung neu starten
-    port: Port
-    version: Version
+    port: "Anschluss"
+    version: "Versionsnummer"
     remoteUrl: Fernbedienung URL
     listenAddress: Abhöradresse
   notInstalledAlert:
@@ -145,6 +145,7 @@ webServiceStatus:
     title: Dienst wird gestartet
     successTitle: Dienst ist bereit
     failureTitle: Start nicht abgeschlossen
+    slowStart: "Startet noch ({{seconds}} Sekunden)"
     currentStepLabel: Aktueller Fortschritt
     states:
       pending: Ausstehend
@@ -157,7 +158,7 @@ webServiceStatus:
       openFailureLog: Fehlerprotokoll anzeigen
     meta:
       version: Aktive Version
-      port: Port
+      port: "Anschluss"
       accessUrl: Zugriffs-URL
     stepLabels:
       checkingVersion: Version prüfen
@@ -181,17 +182,17 @@ webServiceStatus:
   listenAddress:
     label: Höradresse
     customInputLabel: Benutzerdefiniertes IPv4
-    customPlaceholder: 192.168.1.24
+    customPlaceholder: "z. B. 192.168.1.24"
     customError: Geben Sie eine gültige IPv4-Adresse ein
     accessUrlPreviewLabel: Greifen Sie auf die URL-Vorschau zu
     wildcardHint: '`0.0.0.0` bindet jede Schnittstelle. Desktop öffnet weiterhin den lokalen Client über `127.0.0.1`.'
     presets:
       localhost:
-        label: localhost
+        label: "localhost (dieser Computer)"
       loopback:
-        label: 127.0.0.1
+        label: "127.0.0.1 (Loopback)"
       wildcard:
-        label: 0.0.0.0
+        label: "0.0.0.0 (alle Adressen)"
       custom:
         label: Benutzerdefinierte IP
 languageSelector:
@@ -206,7 +207,7 @@ dependencyManagement:
     copy: Kopieren
     shellSelectorLabel: Ziel-Shell
     cmdShell: Eingabeaufforderung (cmd)
-    powershellShell: Windows PowerShell
+    powershellShell: "Windows PowerShell-Terminal"
     destinationHint: "Kopieren Sie diesen Befehl und führen Sie ihn in {{shell}} aus. Desktop führt kopierte Befehle nicht aus."
     requiredLabel: Erforderlich
   status:
@@ -236,7 +237,7 @@ dependencyManagement:
   manualHandoff:
     title: Manuelle CLI-Paketinstallation erforderlich
     faqLinkLabel: Häufig gestellte Fragen zur Knotenumgebung anzeigen
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    faqUrl: "https://docs.hagicode.com/de-DE/faq/desktop-node-environment/"
   noDependencies: Keine Abhängigkeiten erkannt
   installToast:
     manualDisabledTitle: Automatische Installation ist deaktiviert
@@ -261,7 +262,7 @@ packageSource:
     label: Paketquellentyp
     folder: Lokaler Ordner
     httpIndex: HTTP-Index
-    http: HTTP URL
+    http: "HTTP-URL"
   folder:
     path:
       label: Ordnerpfad
@@ -274,11 +275,11 @@ packageSource:
   http:
     url:
       label: Paket URL
-      placeholder: https://example.com/hagicode-0.1.0-linux-x64.zip
+      placeholder: "z. B. https://example.com/hagicode-0.1.0-linux-x64.zip"
   httpIndex:
     indexUrl:
       label: Index-URL
-      placeholder: https://index.hagicode.com/server/index.json
+      placeholder: "z. B. https://index.hagicode.com/server/index.json"
       hint: Die Indexdatei muss ein Versionsarray und Assets für jede Version enthalten
   validateButton: Konfiguration validieren
   applyButton: Konfiguration anwenden
@@ -331,7 +332,7 @@ homePromote:
   next: Nächster Hinweis
   pause: Wechsel pausieren
   resume: Wechsel fortsetzen
-  position: '{{current}} / {{total}}'
+  position: "{{current}}/{{total}}"
   defaultCta: Mehr erfahren
   openFailed: Der Link konnte nicht geöffnet werden
 serviceRegion:
@@ -350,10 +351,10 @@ serviceRegion:
   current: 'Aktuell: {{region}}'
   regions:
     CN: Festlandchina
-    INTERNATIONAL: International
+    INTERNATIONAL: "Global"
   regionDetails:
     CN: Empfohlen für Nutzer in Festlandchina. Hagicode-Updates und zugehörige Softwarepakete werden bevorzugt über Cloudserver in China, etwa Alibaba Cloud und Tencent Cloud, geladen.
     INTERNATIONAL: Empfohlen für Nutzer außerhalb Festlandchinas. Hagicode-Updates und zugehörige Softwarepakete werden bevorzugt über internationale Cloud-Netzwerke wie Cloudflare und Azure Cloud geladen, die dort meist schneller sind.
   steamRestricted: Im Steam-Modus sind Paketquellen für diese Distribution festgelegt; die Dienstregion kann nicht geändert werden.
   changeFailed: Dienstregion konnte nicht geändert werden
-  errorDetails: 'Details: {{error}}'
+  errorDetails: "Einzelheiten: {{error}}"

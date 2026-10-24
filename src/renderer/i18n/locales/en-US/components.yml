@@ -145,6 +145,7 @@ webServiceStatus:
     title: Starting service
     successTitle: Service is ready
     failureTitle: Startup did not finish
+    slowStart: "Still starting ({{seconds}} seconds)"
     currentStepLabel: Current progress
     states:
       pending: Pending

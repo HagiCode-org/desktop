@@ -7,7 +7,7 @@ settings:
     debugOptions: Debug-Optionen
     region: Dienstregion
     language: Spracheinstellungen
-    onboarding: Onboarding
+    onboarding: "Einführung"
     theme: Designeinstellungen
     runtimeData: Laufzeitdaten
     updates: Hintergrundaktualisierungen
@@ -49,7 +49,7 @@ settings:
   smartConfig:
     title: Smart Config-Eingabeaufforderung
   onboarding:
-    title: Onboarding
+    title: "Einführung"
     restartWizard: Neustart-Assistent
     restartButton: Neustart-Assistent
     resetting: Zurücksetzen...
@@ -93,7 +93,7 @@ settings:
       userData-runtime-data:
         label: userData/runtime-data (Standard)
       home-runtime-data:
-        label: ~/.hagicode/runtime-data
+        label: "~/.hagicode/runtime-data (Benutzerverzeichnis)"
     warnings:
       noMigration: Eine Änderung dieser Einstellung aktualisiert nur den Zielpfad. Desktop migriert vorhandene Laufzeitdaten nicht automatisch.
       restart: Beim Speichern einer geänderten Voreinstellung wird das verwaltete Backend neu gestartet, damit das neue Stammverzeichnis für Laufzeitdaten sofort wirksam wird.
@@ -117,7 +117,7 @@ settings:
       shortLabel: Trinkgeld-Erfolg simulieren
     installDate:
       label: Rohes Installationsdatum (msstoreRatingPrompt.installDate)
-      placeholder: e.g. 2024-01-01T00:00:00.000Z
+      placeholder: "z. B. 2024-01-01T00:00:00.000Z"
       ageDays: 'Installationsalter (Tage): {{value}}'
       ageDaysUnknown: unbekannt
     actions:
@@ -131,7 +131,7 @@ settings:
     errors:
       saveErrorDetail: 'Speichern fehlgeschlagen: {{error}}'
 footer:
-  copyright: © 2026 Hagicode Desktop
+  copyright: "© 2026 Hagicode Desktop, alle Rechte vorbehalten"
 quickStart:
   title: Schnellstart
 secure:
@@ -172,7 +172,7 @@ dependencyManagement:
   manualHandoff:
     title: Manuelle CLI-Paketinstallation erforderlich
     faqLinkLabel: Häufig gestellte Fragen zur Knotenumgebung anzeigen
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    faqUrl: "https://docs.hagicode.com/de-DE/faq/desktop-node-environment/"
 versionManagement:
   tabs:
     newVersions: Neue Versionen
@@ -343,7 +343,7 @@ subscription:
     processing: Wird verarbeitet...
     secondaryLabel: Before you decide
   summary:
-    planLabel: Plan
+    planLabel: "Tarif"
     planName: Hagicode Sponsorenplan
     renewalLabel: Verlängerung oder Ablauf
     lastSyncLabel: Letzte erfolgreiche Synchronisierung
@@ -351,7 +351,7 @@ subscription:
     source: 'Quelle: {{value}}'
   sourceValue:
     initial: Standardstatus der aktuellen Sitzung
-    store: Microsoft Store
+    store: "Microsoft-Store"
     fallback: Fallback snapshot
   mission:
     eyebrow: Warum Sponsoring wichtig ist
@@ -388,7 +388,7 @@ subscription:
     title: Store-Status und lokale Berechtigungsdetails
     fields:
       status: Aktueller Status
-      planStoreId: Store ID
+      planStoreId: "Store-ID"
       lastCheckedAt: Zuletzt geprüft
       renewalDate: Verlängerungsdatum
       expirationDate: Ablaufdatum
@@ -478,8 +478,8 @@ turboEngine:
     unsupported: Store nicht verfügbar
   summary:
     productName: Unbefristete TurboEngine-Lizenz
-    storeId: 'Store ID: {{storeId}}'
-    storeIdLabel: Store ID
+    storeId: "Store-ID: {{storeId}}"
+    storeIdLabel: "Store-ID"
     statusLabel: Lizenzstatus
     lastCheckedLabel: Zuletzt geprüft
     lastSuccessLabel: Letzte erfolgreiche Synchronisierung
@@ -502,7 +502,7 @@ turboEngine:
     nonStoreEdition: Nicht-Store-Laufzeit
   sourceValue:
     initial: Standardstatus der aktuellen Sitzung
-    store: Microsoft Store
+    store: "Microsoft-Store"
     fallback: Fallback snapshot
   diagnostics:
     sectionTitle: Diagnoseinformationen
@@ -538,7 +538,7 @@ donationItem:
     message: Mit Ihrer Unterstützung hat der Autor mehr Ressourcen, um HagiCode noch besser zu machen.
   tiers:
     coffee:
-      shortName: Cappuccino
+      shortName: "Milchkaffee"
     dinner:
       shortName: Hummer
     candy:

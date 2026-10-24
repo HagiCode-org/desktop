@@ -112,8 +112,8 @@ webServiceStatus:
     serviceUrl: URL du service
     uptime: Temps de disponibilité
     restartCount: Compte de redémarrage
-    port: Port
-    version: Version
+    port: "Port réseau"
+    version: "Numéro de version"
     remoteUrl: Télécommande URL
     listenAddress: Adresse d'écoute
   notInstalledAlert:
@@ -145,6 +145,7 @@ webServiceStatus:
     title: Démarrage du service
     successTitle: Le service est prêt
     failureTitle: Le démarrage n’a pas abouti
+    slowStart: "Démarrage toujours en cours ({{seconds}} secondes)"
     currentStepLabel: Progression actuelle
     states:
       pending: En attente
@@ -157,7 +158,7 @@ webServiceStatus:
       openFailureLog: Afficher le journal des échecs
     meta:
       version: Version active
-      port: Port
+      port: "Port réseau"
       accessUrl: URL d’accès
     stepLabels:
       checkingVersion: Vérifier la version
@@ -181,7 +182,7 @@ webServiceStatus:
   listenAddress:
     label: Adresse d'écoute
     customInputLabel: IPv4 personnalisé
-    customPlaceholder: 192.168.1.24
+    customPlaceholder: "ex. 192.168.1.24"
     customError: Entrez une adresse IPv4 valide
     accessUrlPreviewLabel: Accéder à l'aperçu URL
     wildcardHint: '`0.0.0.0` lie chaque interface. Desktop ouvre toujours le client local via `127.0.0.1`.'
@@ -189,9 +190,9 @@ webServiceStatus:
       localhost:
         label: hôte local
       loopback:
-        label: 127.0.0.1
+        label: "127.0.0.1 (boucle locale)"
       wildcard:
-        label: 0.0.0.0
+        label: "0.0.0.0 (toutes les adresses)"
       custom:
         label: IP personnalisée
 languageSelector:
@@ -206,7 +207,7 @@ dependencyManagement:
     copy: Copier
     shellSelectorLabel: Shell de destination
     cmdShell: Invite de commandes (cmd)
-    powershellShell: Windows PowerShell
+    powershellShell: "Terminal Windows PowerShell"
     destinationHint: "Copiez cette commande et exécutez-la dans {{shell}}. Desktop n'exécute pas les commandes copiées."
     requiredLabel: Requis
   status:
@@ -230,13 +231,13 @@ dependencyManagement:
     currentVersion: Version actuelle
     requiredVersion: Version requise
     manualCommand: Commande suggérée
-    source: Source
+    source: "Origine"
     bundledSource: Source groupée
     systemSource: Source système
   manualHandoff:
     title: Installation manuelle du package CLI requise
     faqLinkLabel: Afficher la FAQ sur l'environnement de nœud
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    faqUrl: "https://docs.hagicode.com/fr-FR/faq/desktop-node-environment/"
   noDependencies: Aucune dépendance détectée
   installToast:
     manualDisabledTitle: L’installation automatique est désactivée
@@ -261,7 +262,7 @@ packageSource:
     label: Type de source du package
     folder: Dossier local
     httpIndex: Index HTTP
-    http: HTTP URL
+    http: "URL HTTP"
   folder:
     path:
       label: Chemin du dossier
@@ -274,11 +275,11 @@ packageSource:
   http:
     url:
       label: Forfait URL
-      placeholder: https://example.com/hagicode-0.1.0-linux-x64.zip
+      placeholder: "ex. https://example.com/hagicode-0.1.0-linux-x64.zip"
   httpIndex:
     indexUrl:
       label: Indice URL
-      placeholder: https://index.hagicode.com/server/index.json
+      placeholder: "ex. https://index.hagicode.com/server/index.json"
       hint: Le fichier d'index doit contenir un tableau de versions et des ressources pour chaque version
   validateButton: Valider la configuration
   applyButton: Appliquer la configuration
@@ -295,7 +296,7 @@ packageSource:
   availableSources: Sources de packages disponibles
   noSources: Aucune source de package configurée
   sourceName: Nom de la source
-  actions: Actions
+  actions: "Opérations"
   scanSuccess: Analyse terminée, {{count}} versions trouvées
   fetchSuccess: Récupération terminée, {{count}} versions trouvées
   saveSuccess: Configuration source du package enregistrée
@@ -331,7 +332,7 @@ homePromote:
   next: Suivant
   pause: Mettre en pause le défilement
   resume: Reprendre le défilement
-  position: '{{current}} / {{total}}'
+  position: "{{current}}/{{total}}"
   defaultCta: En savoir plus
   openFailed: Impossible d’ouvrir le lien
 serviceRegion:
@@ -350,7 +351,7 @@ serviceRegion:
   current: 'Actuelle : {{region}}'
   regions:
     CN: Chine continentale
-    INTERNATIONAL: International
+    INTERNATIONAL: "Mondial"
   regionDetails:
     CN: Recommandé pour la Chine continentale. Les mises à jour de Hagicode et les logiciels associés privilégient des serveurs cloud locaux, comme Alibaba Cloud et Tencent Cloud, pour accélérer les téléchargements.
     INTERNATIONAL: Recommandé hors de Chine continentale. Les mises à jour de Hagicode et les logiciels associés privilégient des réseaux cloud internationaux comme Cloudflare et Azure Cloud, généralement plus rapides à l’international.

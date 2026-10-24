@@ -1,7 +1,7 @@
 loading: Prompt-Anleitung wird geladen...
 emptyState: Desktop kann die Eingabeaufforderung auflösen, Ihnen zeigen, woher sie kommt, und den genauen Text zum Kopieren/Einfügen bereithalten.
 availableTools: Verfügbare Werkzeuge
-promptTitle: Prompt
+promptTitle: "Eingabeaufforderung"
 actions:
   refresh: Anleitung neu laden
   loading: Laden

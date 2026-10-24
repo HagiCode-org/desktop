@@ -59,13 +59,13 @@ settings:
     label: 语言
   embeddedWebServicePort: Hagicode 服务端口
 footer:
-  copyright: © 2026 Hagicode Desktop
+  copyright: "© 2026 Hagicode Desktop 版权所有"
   buildVersion: 版本
   buildBranch: 分支
   buildCommit: 提交
 menu:
   systemManagement: 系统管理
-  hagicoWeb: Hagicode Web
+  hagicoWeb: "Hagicode 网页版"
   dependencies: 依赖项
   webService: Hagicode 服务
   packages: 包管理
@@ -136,7 +136,7 @@ sidebar:
   dependencyManagement: 依赖项管理
   settings: 设置
   subscription: Hagicode 赞助者计划
-  turboEngine: TurboEngine
+  turboEngine: "TurboEngine 引擎"
   subscriptionStatus:
     loading: 加载中
     active: 已激活
@@ -279,7 +279,7 @@ dependencyManagement:
   categories:
     bootstrap: 旧版兼容
     workflow: 工作流
-    agent-cli: Agent CLI
+    agent-cli: "智能体 CLI"
     developer-tool: 开发工具
   bootstrap:
     title: 旧版 CLI
@@ -301,7 +301,7 @@ dependencyManagement:
       base:
         title: 基础依赖
       agentCli:
-        title: Agent CLI
+        title: "智能体 CLI"
     tool: 工具
     status: 状态
     action: 操作
