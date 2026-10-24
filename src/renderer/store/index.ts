@@ -45,6 +45,7 @@ import { initializeWebService, startWebService, stopWebService } from './thunks/
 import { initializeDependency } from './thunks/dependencyThunks';
 import { checkOnboardingTrigger } from './thunks/onboardingThunks';
 import type { HagihubApi } from '../../shared/api.js';
+import { isShallowEqualRecord } from '../../shared/shallow-equal.js';
 import type { ServiceRegionState } from '../../types/service-region.js';
 import { setStartupStoreLicenseVerificationPromise } from './startupStoreLicenseVerification';
 
@@ -176,7 +177,12 @@ function registerRealtimeListeners(): void {
     console.log('Active version changed:', version);
   });
 
+  let lastWebServiceStatus: Record<string, unknown> | null = null;
   electronAPI.onWebServiceStatusChange?.((status: any) => {
+    if (lastWebServiceStatus && isShallowEqualRecord(lastWebServiceStatus, status)) {
+      return;
+    }
+    lastWebServiceStatus = status;
     store.dispatch(setProcessInfo(status));
     console.log('Web service status changed:', status);
   });

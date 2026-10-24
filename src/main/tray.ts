@@ -111,11 +111,15 @@ export function setServerStatus(status: 'running' | 'stopped' | 'error' | 'start
     status === 'starting' ? 'running' :  // Show as running during startup
     'stopped';  // Show as stopped during shutdown
 
+  const previousStatus = serverStatus;
+  const previousUrl = currentServiceUrl;
   serverStatus = displayStatus;
   if (url !== undefined) {
     currentServiceUrl = url;
   }
-  updateTrayMenu();
+  if (serverStatus !== previousStatus || currentServiceUrl !== previousUrl) {
+    updateTrayMenu();
+  }
 }
 
 export function setServiceUrl(url: string | null | undefined): void {

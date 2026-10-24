@@ -10,6 +10,7 @@ import { createTray, destroyTray, setServerStatus, setServiceUrl, updateTrayMenu
 import { HagicoServerClient, type ServerStatus } from './server.js';
 import { ConfigManager } from './config.js';
 import { PCodeWebServiceManager, StartupPhase, type ProcessInfo, type WebServiceConfig } from './web-service-manager.js';
+import { createWebServiceStatusPublisher, startWebServiceStatusPoller } from './status-publisher.js';
 import { DependencyManager, type DependencyCheckResult, DependencyType } from './dependency-manager.js';
 import { MenuManager } from './menu-manager.js';
 import { RegionDetector } from './region-detector.js';
@@ -310,14 +311,12 @@ function loadWindowIcon(appRootPath: string): { icon: Electron.NativeImage | und
 let mainWindow: BrowserWindow | null = null;
 let serverClient: HagicoServerClient | null = null;
 let configManager: ConfigManager;
-let statusPollingInterval: NodeJS.Timeout | null = null;
 let webServiceManager: PCodeWebServiceManager | null = null;
 let dependencyManager: DependencyManager | null = null;
 let versionManager: VersionManager | null = null;
 let versionUpdateManager: VersionUpdateManager | null = null;
 let packageSourceConfigManager: PackageSourceConfigManager | null = null;
-let webServicePollingInterval: NodeJS.Timeout | null = null;
-let webServicePollingInFlight = false;
+let stopWebServiceStatusPollingLoop: (() => void) | null = null;
 let menuManager: MenuManager | null = null;
 let regionDetector: RegionDetector | null = null;
 let serviceRegionController: ServiceRegionController | null = null;
@@ -1264,13 +1263,8 @@ ipcMain.handle('start-web-service', async (_, force?: boolean) => {
 
     const result = await webServiceManager.start();
 
-    // Notify renderer of status change
     const status = await webServiceManager.getStatus();
-    mainWindow?.webContents.send('web-service-status-changed', status);
-
-    // Update tray status and URL
-    setServerStatus(status.status, status.url);
-    setServiceUrl(status.url);
+    webServiceStatusPublisher.publish(status, { force: true });
 
     if (!result.success) {
       const startupFailure = buildStartupFailurePayload(result, status.port);
@@ -1315,13 +1309,8 @@ ipcMain.handle('stop-web-service', async () => {
   }
   try {
     const result = await webServiceManager.stop();
-    // Notify renderer of status change
     const status = await webServiceManager.getStatus();
-    mainWindow?.webContents.send('web-service-status-changed', status);
-
-    // Update tray status and clear URL
-    setServerStatus(status.status);
-    setServiceUrl(null);
+    webServiceStatusPublisher.publish(status, { force: true });
 
     return result;
   } catch (error) {
@@ -1336,13 +1325,8 @@ ipcMain.handle('restart-web-service', async () => {
   }
   try {
     const result = await webServiceManager.restart();
-    // Notify renderer of status change
     const status = await webServiceManager.getStatus();
-    mainWindow?.webContents.send('web-service-status-changed', status);
-
-    // Update tray status and URL
-    setServerStatus(status.status, status.url);
-    setServiceUrl(status.url);
+    webServiceStatusPublisher.publish(status, { force: true });
 
     return result;
   } catch (error) {
@@ -1619,9 +1603,7 @@ ipcMain.handle('version:switch', async (_, versionId: string) => {
       });
       const stopped = await webServiceManager.stop();
       const stoppedStatus = await webServiceManager.getStatus();
-      mainWindow?.webContents.send('web-service-status-changed', stoppedStatus);
-      setServerStatus(stoppedStatus.status, stoppedStatus.url);
-      setServiceUrl(stoppedStatus.url);
+      webServiceStatusPublisher.publish(stoppedStatus, { force: true });
 
       if (!stopped) {
         return {
@@ -2530,53 +2512,35 @@ ipcMain.handle('preset:get-provider', presetGetProviderHandler);
 ipcMain.handle('preset:get-all-providers', presetGetAllProvidersHandler);
 ipcMain.handle('preset:get-cache-stats', presetGetCacheStatsHandler);
 
-function startStatusPolling(): void {
-  if (statusPollingInterval) {
-    clearInterval(statusPollingInterval);
-  }
-
-  statusPollingInterval = setInterval(async () => {
-    if (!serverClient || !mainWindow) return;
-
-    try {
-      const info = await serverClient.getStatus();
-      setServerStatus(info.status);
-      mainWindow?.webContents.send('server-status-changed', info.status);
-    } catch (error) {
-      console.error('Failed to poll server status:', error);
-    }
-  }, 5000); // Poll every 5 seconds
-}
+// Sends status to the renderer and refreshes the tray, menu and URL, only when the payload changes
+// or a lifecycle action forces it.
+const webServiceStatusPublisher = createWebServiceStatusPublisher({
+  sendToRenderer: (info) => {
+    mainWindow?.webContents.send('web-service-status-changed', info);
+  },
+  applyToShell: (info) => {
+    menuManager?.updateWebServiceStatus(info.status === 'running');
+    setServerStatus(info.status, info.url);
+    setServiceUrl(info.url);
+  },
+});
 
 function startWebServiceStatusPolling(): void {
-  if (webServicePollingInterval) {
-    clearInterval(webServicePollingInterval);
-  }
-
-  webServicePollingInterval = setInterval(async () => {
-    if (!webServiceManager || !mainWindow) return;
-    if (webServicePollingInFlight) return;
-
-    try {
-      webServicePollingInFlight = true;
-      const status = await webServiceManager.getStatus();
-      mainWindow?.webContents.send('web-service-status-changed', status);
-
-      // Update menu based on web service status
-      if (menuManager) {
-        const isRunning = status.status === 'running';
-        menuManager.updateWebServiceStatus(isRunning);
+  stopWebServiceStatusPollingLoop?.();
+  stopWebServiceStatusPollingLoop = startWebServiceStatusPoller({
+    intervalMs: MANAGED_SERVICE_STATUS_POLL_INTERVAL_MS,
+    canPoll: () => Boolean(webServiceManager && mainWindow),
+    readStatus: async () => {
+      if (!webServiceManager) {
+        throw new Error('Web service manager not initialized');
       }
-
-      // Update tray status and URL
-      setServerStatus(status.status, status.url);
-      setServiceUrl(status.url);
-    } catch (error) {
+      return await webServiceManager.getStatus();
+    },
+    publisher: webServiceStatusPublisher,
+    onError: (error) => {
       console.error('Failed to poll web service status:', error);
-    } finally {
-      webServicePollingInFlight = false;
-    }
-  }, MANAGED_SERVICE_STATUS_POLL_INTERVAL_MS);
+    },
+  });
 }
 
 /**
@@ -2843,7 +2807,6 @@ app.whenReady().then(async () => {
   triggerStartupStoreLicenseRefresh();
   createTray();
   setServerStatus('stopped');
-  startStatusPolling();
   await versionUpdateManager.refreshSnapshot('startup');
   versionUpdateManager.startScheduledRefresh();
 
@@ -2863,8 +2826,7 @@ app.whenReady().then(async () => {
   // Get initial web service status and update tray before starting polling
   try {
     const initialStatus = await webServiceManager.getStatus();
-    setServerStatus(initialStatus.status, initialStatus.url);
-    setServiceUrl(initialStatus.url);
+    webServiceStatusPublisher.publish(initialStatus);
   } catch (error) {
     console.error('Failed to get initial web service status:', error);
   }
@@ -2908,13 +2870,9 @@ app.on('before-quit', async (event) => {
 
   try {
     console.log('[App] Cleaning up before quit...');
-    if (statusPollingInterval) {
-      clearInterval(statusPollingInterval);
-      statusPollingInterval = null;
-    }
-    if (webServicePollingInterval) {
-      clearInterval(webServicePollingInterval);
-      webServicePollingInterval = null;
+    if (stopWebServiceStatusPollingLoop) {
+      stopWebServiceStatusPollingLoop();
+      stopWebServiceStatusPollingLoop = null;
     }
     if (subscriptionSyncInterval) {
       clearInterval(subscriptionSyncInterval);
