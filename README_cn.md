@@ -19,22 +19,11 @@ Hagicode Desktop 把常用 HagiCode 操作集中到一个入口：首次配置�
 - 管理包源、依赖项、许可证信息和运行时更新
 - 选择 Claude Code、Codex、GitHub Copilot CLI 等执行器
 - 通过系统托盘获得快捷的后台入口
-- 开箱支持英文和简体中文界面
-
-## 本地开发
-
-```bash
-npm install
-npm run dev
-npm run build:prod
-```
-
-- `npm run dev` 会先准备受管 .NET 运行时，再启动渲染层、监听 Electron 相关进程并以开发模式运行应用
-- Desktop 安装包仅包含受管 .NET 运行时，不再捆绑 Desktop 管理的 Node 或 PM2；CLI 包管理和辅助服务使用外部 Node/npm。
-- `npm run build:prod` 执行生产构建，并包含打包前的 smoke test
+- 界面支持 10 种语言，包括英文和简体中文
 
 ## 相关文档
 
 - `docs/development.md` - 本地开发说明与更新源配置
 - `docs/artifact-signing.md` - Windows 签名配置
 - `docs/r2-storage-sync.md` - 后续发布同步说明
+- `docs/i18n-hagi18n.md` - 使用 hagi18n YAML 源和生成的运行时 JSON 维护 Desktop 语言包
