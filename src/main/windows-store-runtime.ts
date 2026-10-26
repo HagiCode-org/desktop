@@ -31,7 +31,9 @@ export function looksLikeWindowsStoreDevelopmentPackage(
     return false;
   }
 
-  const installRoot = path.dirname(normalized);
+  // Use the original path for filesystem access: the backslash-normalized form is only
+  // meaningful for the WindowsApps check and breaks path.dirname on non-Windows hosts.
+  const installRoot = path.dirname(String(executablePath).trim());
   const appxManifestPath = path.join(installRoot, 'AppxManifest.xml');
   if (!fs.existsSync(appxManifestPath)) {
     return false;
