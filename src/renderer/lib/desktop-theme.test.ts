@@ -5,7 +5,7 @@ import {
   readSavedDesktopTheme,
   resolveDesktopTheme,
   resolveInitialDesktopTheme,
-} from './desktop-theme';
+} from './desktop-theme.js';
 
 function createStorage(initialValue: string | null) {
   let value = initialValue;

@@ -54,7 +54,7 @@ describe('portable version renderer integration', () => {
     assert.match(source, /const resolvedWebVersion = webVersion && webVersion !== 'unknown'/);
     assert.match(source, /t\('sidebar\.unknownVersion'\)/);
     assert.match(source, /const windowsStoreVersion = versionInfo\?\.windowsStoreVersion \?\? null;/);
-    assert.match(source, /<p className="text-xs text-foreground break-all">\s*\{resolvedWebVersion\}\s*<\/p>/);
+    assert.match(source, /<p className="break-all text-xs text-foreground">\s*\{resolvedWebVersion\}\s*<\/p>/);
     assert.doesNotMatch(source, /windowsStoreVersionUnavailable/);
   });
 

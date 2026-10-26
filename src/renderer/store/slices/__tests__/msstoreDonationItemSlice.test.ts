@@ -5,7 +5,7 @@ import reducer, {
   setMsstoreDonationItemState,
   openThankYouAnimation,
   closeThankYouAnimation,
-} from '../msstoreDonationItemSlice';
+} from '../msstoreDonationItemSlice.js';
 
 describe('msstoreDonationItemSlice', () => {
   const idleState: MsstoreDonationItemSliceState = {
