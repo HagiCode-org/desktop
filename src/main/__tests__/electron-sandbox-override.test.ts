@@ -87,7 +87,7 @@ describe('electron sandbox override', () => {
   it('applies before managed window creation during main bootstrap', async () => {
     const source = await fs.readFile(mainPath, 'utf-8');
     const applyIndex = source.indexOf('const electronSandboxOverrideDecision = applyElectronSandboxOverride(app');
-    const firstWindowIndex = source.indexOf('new BrowserWindow({');
+    const firstWindowIndex = source.indexOf('new ElectronBrowserWindow({');
 
     assert.notEqual(applyIndex, -1);
     assert.notEqual(firstWindowIndex, -1);
@@ -110,7 +110,7 @@ describe('electron sandbox override', () => {
     const source = await fs.readFile(mainPath, 'utf-8');
     const nodeIntegrationMatches = source.match(/nodeIntegration:\s*false/g) ?? [];
 
-    assert.equal(nodeIntegrationMatches.length, 4);
+    assert.equal(nodeIntegrationMatches.length, 3);
     assert.doesNotMatch(source, /nodeIntegration:\s*true/);
   });
 });

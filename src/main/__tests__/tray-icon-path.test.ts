@@ -14,7 +14,7 @@ describe('tray icon path integration', () => {
     assert.match(source, /resolveWindowIconPath\(\{/);
     assert.match(source, /isPackaged: app\.isPackaged,/);
     assert.match(source, /resourcesPath: process\.resourcesPath,/);
-    assert.match(source, /new Tray\(icon\.resize\(\{ width: 16, height: 16 \}\)\)/);
+    assert.match(source, /new ElectronTray\(icon\.resize\(\{ width: 16, height: 16 \}\)\)/);
     assert.equal(source.includes("../../resources/icon.png"), false);
   });
 });

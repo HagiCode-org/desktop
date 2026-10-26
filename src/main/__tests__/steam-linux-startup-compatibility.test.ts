@@ -110,7 +110,7 @@ describe('Steam Linux startup compatibility', () => {
   it('keeps Steam host relaunch before the first BrowserWindow is created', async () => {
     const source = await fs.readFile(mainPath, 'utf-8');
     const relaunchIndex = source.indexOf('const steamLinuxHostRelaunchResult = relaunchSteamLinuxOnHostIfNeeded({');
-    const firstWindowIndex = source.indexOf('new BrowserWindow({');
+    const firstWindowIndex = source.indexOf('new ElectronBrowserWindow({');
 
     assert.notEqual(relaunchIndex, -1);
     assert.notEqual(firstWindowIndex, -1);
@@ -120,7 +120,7 @@ describe('Steam Linux startup compatibility', () => {
   it('applies before the first BrowserWindow is created', async () => {
     const source = await fs.readFile(mainPath, 'utf-8');
     const applyIndex = source.indexOf('const steamLinuxStartupCompatibilityDecision = applySteamLinuxStartupCompatibility(app');
-    const firstWindowIndex = source.indexOf('new BrowserWindow({');
+    const firstWindowIndex = source.indexOf('new ElectronBrowserWindow({');
 
     assert.notEqual(applyIndex, -1);
     assert.notEqual(firstWindowIndex, -1);
