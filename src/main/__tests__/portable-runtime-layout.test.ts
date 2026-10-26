@@ -5,7 +5,7 @@ import {
   buildPortableRuntimeSelection,
   resolvePackagedPortableRuntimeSelection,
   resolvePackagedPortableToolchainRoot,
-} from '../portable-runtime-layout';
+} from '../portable-runtime-layout.js';
 
 function createExistsSync(paths: string[]): (targetPath: string) => boolean {
   const knownPaths = new Set(paths.map((entry) => path.normalize(entry)));
