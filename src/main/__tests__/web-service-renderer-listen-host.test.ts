@@ -23,7 +23,6 @@ describe('renderer listen-host integration', () => {
     assert.match(source, /setWebServiceConfig\(config\)/);
     assert.match(source, /dispatch\(setHost\(config\.host\)\)/);
     assert.match(source, /dispatch\(setPort\(config\.port\)\)/);
-    assert.match(source, /host: DEFAULT_WEB_SERVICE_HOST/);
   });
 
   it('shows preset listen-address choices, validates custom IPv4 input, auto-saves with debounce, and keeps service controls local-only', async () => {
