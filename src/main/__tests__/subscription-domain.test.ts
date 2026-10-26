@@ -50,12 +50,12 @@ describe('subscription domain', () => {
         title: 'Monthly subscription',
         isSubscription: true,
         isInUserCollection: true,
-        collectionEndDate: '2026-08-31T00:00:00.000Z',
+        collectionEndDate: '2099-08-31T00:00:00.000Z',
       },
       license: {
         storeId: '9N0BTGWV23M1/0010',
         isActive: true,
-        expirationDate: '2026-08-31T00:00:00.000Z',
+        expirationDate: '2099-08-31T00:00:00.000Z',
       },
       purchaseEligibility: 'license-action-not-applicable',
       errorCode: null,
@@ -68,7 +68,7 @@ describe('subscription domain', () => {
     assert.equal(snapshot.isStale, false);
     assert.equal(snapshot.lastCheckedAt, '2026-06-13T10:42:00.000Z');
     assert.equal(snapshot.lastSuccessfulSyncAt, '2026-06-13T10:42:00.000Z');
-    assert.equal(snapshot.expirationDate, '2026-08-31T00:00:00.000Z');
+    assert.equal(snapshot.expirationDate, '2099-08-31T00:00:00.000Z');
   });
 
   it('derives entitlement flags only for active supported snapshots', () => {
@@ -127,7 +127,7 @@ describe('subscription domain', () => {
             license: {
               storeId: '9N0BTGWV23M1',
               isActive: true,
-              expirationDate: '2026-08-31T00:00:00.000Z',
+              expirationDate: '2099-08-31T00:00:00.000Z',
             },
             purchaseEligibility: 'license-action-not-applicable',
             errorCode: null,
@@ -165,7 +165,7 @@ describe('subscription domain', () => {
         license: {
           storeId: '9N0BTGWV23M1',
           isActive: true,
-          expirationDate: '2026-08-31T00:00:00.000Z',
+          expirationDate: '2099-08-31T00:00:00.000Z',
         },
         purchaseEligibility: 'license-action-not-applicable',
         errorCode: null,
@@ -195,7 +195,7 @@ describe('subscription domain', () => {
         license: {
           storeId: '9N0BTGWV23M1',
           isActive: true,
-          expirationDate: '2026-08-31T00:00:00.000Z',
+          expirationDate: '2099-08-31T00:00:00.000Z',
         },
         purchaseEligibility: 'license-action-not-applicable',
         errorCode: null,
@@ -242,7 +242,7 @@ describe('subscription domain', () => {
         license: {
           storeId: '9N0BTGWV23M1',
           isActive: true,
-          expirationDate: '2026-08-31T00:00:00.000Z',
+          expirationDate: '2099-08-31T00:00:00.000Z',
         },
         purchaseEligibility: 'license-action-not-applicable',
         errorCode: null,
@@ -276,7 +276,7 @@ describe('subscription domain', () => {
         license: {
           storeId: '9N0BTGWV23M1',
           isActive: true,
-          expirationDate: '2026-08-31T00:00:00.000Z',
+          expirationDate: '2099-08-31T00:00:00.000Z',
         },
         purchaseEligibility: 'license-action-not-applicable',
         errorCode: null,
@@ -324,7 +324,7 @@ describe('subscription domain', () => {
           license: {
             storeId: '9N0BTGWV23M1',
             isActive: true,
-            expirationDate: '2026-08-31T00:00:00.000Z',
+            expirationDate: '2099-08-31T00:00:00.000Z',
           },
           purchaseEligibility: 'license-action-not-applicable',
           errorCode: null,
@@ -413,7 +413,7 @@ describe('subscription domain', () => {
         license: {
           storeId: '9N0BTGWV23M1',
           isActive: true,
-          expirationDate: '2026-08-31T00:00:00.000Z',
+          expirationDate: '2099-08-31T00:00:00.000Z',
         },
         purchaseEligibility: 'license-action-not-applicable',
         errorCode: null,
