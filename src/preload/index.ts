@@ -102,6 +102,12 @@ export interface StartWebServiceResult {
   error?: { type: string; details: string };
   warning?: { type: string; missing: any[] };
   startupFailure?: StartupFailurePayload;
+  /** Telemetry-safe failure detail (enumerations and counts only). */
+  telemetry?: {
+    failedPhase?: string;
+    missingDependency?: 'dotnet-runtime' | 'nodejs' | 'java-runtime' | 'claude-code' | 'cli-tool' | 'unknown';
+    missingCount?: number;
+  };
 }
 
 export interface WebServiceProcessInfo {
@@ -226,11 +232,9 @@ interface InterfaceOpenResult {
 interface ElectronAPI {
   cloudTelemetry: {
     status: () => Promise<unknown>;
-    error: (error: unknown, properties?: Record<string, unknown>) => Promise<void>;
+    error: () => Promise<void>;
     event: (name: string, properties?: Record<string, unknown>) => Promise<void>;
-    performance: (name: string, properties?: Record<string, unknown>) => Promise<void>;
     identify: (id: string) => Promise<void>;
-    heartbeat: (properties?: Record<string, unknown>) => Promise<void>;
   };
   bootstrap: {
     getCachedSnapshot: () => DesktopBootstrapSnapshot | null;
@@ -498,11 +502,9 @@ const msstoreDonationItemBridge: MsstoreDonationItemBridge = {
 const electronAPI: ElectronAPI = {
   cloudTelemetry: {
     status: () => ipcRenderer.invoke('cloud-telemetry:status'),
-    error: (error, properties) => ipcRenderer.invoke('cloud-telemetry:error', error, properties),
+    error: () => ipcRenderer.invoke('cloud-telemetry:error'),
     event: (name, properties) => ipcRenderer.invoke('cloud-telemetry:event', name, properties),
-    performance: (name, properties) => ipcRenderer.invoke('cloud-telemetry:performance', name, properties),
     identify: (id) => ipcRenderer.invoke('cloud-telemetry:identify', id),
-    heartbeat: (properties) => ipcRenderer.invoke('cloud-telemetry:heartbeat', properties),
   },
   bootstrap: {
     getCachedSnapshot: () => initialBootstrapSnapshot,

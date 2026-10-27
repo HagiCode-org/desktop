@@ -2,6 +2,7 @@
  * Onboarding wizard types and interfaces
  */
 import type { DistributionModeState } from './distribution-mode.js';
+import type { StartFailureDetail } from '../main/telemetry/start-funnel.js';
 
 /**
  * Onboarding step enumeration
@@ -176,6 +177,8 @@ export interface OnboardingStartServiceResult {
   success: boolean;
   error?: string;
   startupFailure?: StartupFailurePayload;
+  /** Telemetry-safe failure detail (enumerations and counts only); absent on success. */
+  telemetry?: StartFailureDetail;
 }
 
 /**

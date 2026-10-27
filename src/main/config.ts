@@ -51,6 +51,11 @@ export interface AppConfig {
   interfaceOpeningMethod?: InterfaceOpeningMethod;
   serviceRegionPreference?: ServiceRegion;
   anonymousInstallId?: string;
+  /** Written after the single-instance lock is acquired, cleared on normal exit (see telemetry/run-state.ts). */
+  telemetryRunMarker?: { startedAt: number };
+  telemetryFirstLaunchAt?: number;
+  telemetryLastVersion?: string;
+  telemetryFirstServiceEmitted?: boolean;
 }
 
 export const DEFAULT_VERSION_AUTO_UPDATE_SETTINGS: VersionAutoUpdateSettings = {
@@ -266,7 +271,14 @@ export class ConfigManager {
   }
 
   getAll(): AppConfig {
-    const { anonymousInstallId: _anonymousInstallId, ...config } = this.store.store;
+    const {
+      anonymousInstallId: _anonymousInstallId,
+      telemetryRunMarker: _telemetryRunMarker,
+      telemetryFirstLaunchAt: _telemetryFirstLaunchAt,
+      telemetryLastVersion: _telemetryLastVersion,
+      telemetryFirstServiceEmitted: _telemetryFirstServiceEmitted,
+      ...config
+    } = this.store.store;
     return config;
   }
 

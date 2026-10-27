@@ -22,13 +22,15 @@ class ConfiguredProvider implements TelemetryProvider {
   readonly status: ProviderStatus;
   private user: TelemetryUser | null = null;
   private readonly onInit?: () => void | Promise<void>;
+  private readonly onFlush?: () => Promise<void>;
   private readonly onDispose?: () => Promise<void>;
   constructor(
     capabilities: readonly TelemetryEvent['name'][],
     private readonly sender: Sender,
-    lifecycle: { onInit?: () => void; onDispose?: () => Promise<void> } = {},
+    lifecycle: { onInit?: () => void; onFlush?: () => Promise<void>; onDispose?: () => Promise<void> } = {},
   ) {
     this.onInit = lifecycle.onInit;
+    this.onFlush = lifecycle.onFlush;
     this.onDispose = lifecycle.onDispose;
     this.status = { state: 'idle', capabilities: new Set(capabilities) };
   }
@@ -44,6 +46,7 @@ class ConfiguredProvider implements TelemetryProvider {
   }
   async flush(): Promise<void> {
     debug('PostHog flushing');
+    await this.onFlush?.();
   }
   async dispose(): Promise<void> {
     await this.onDispose?.();
@@ -79,6 +82,7 @@ function eventName(event: TelemetryEvent): string {
 function createOverseasSender(config: PublicTelemetryConfig): {
   sender: Sender;
   onInit: () => Promise<void>;
+  onFlush: () => Promise<void>;
   onDispose: () => Promise<void>;
 } {
   const posthog = config.posthog ? new PostHog(config.posthog.apiKey, {
@@ -101,6 +105,9 @@ function createOverseasSender(config: PublicTelemetryConfig): {
         properties: { ...event.context, ...event.properties },
       });
     },
+    onFlush: async () => {
+      await posthog?.flush();
+    },
     onDispose: async () => {
       await posthog?.shutdown(2000);
     },
@@ -113,7 +120,7 @@ export function createOverseasProvider(
 ): TelemetryProvider {
   const sdk = createOverseasSender(config);
   return new ConfiguredProvider(
-    ['error', 'event', 'performance', 'heartbeat'],
+    ['event'],
     sender ?? sdk.sender,
     sender ? {} : sdk,
   );

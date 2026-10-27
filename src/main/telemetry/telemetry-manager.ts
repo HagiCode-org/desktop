@@ -9,12 +9,14 @@ import {
 import type {
   PublicTelemetryConfig,
   TelemetryContext,
+  TelemetryDimensions,
   TelemetryFacade,
   TelemetryProvider,
+  TelemetrySampling,
   TelemetryUser,
   ProviderStatus,
 } from './types.js';
-import { createTelemetryContext, sanitizeProperties } from './privacy.js';
+import { createTelemetryContext, sanitizeDimensions, sanitizeProperties } from './privacy.js';
 import { createProvider } from './providers.js';
 
 const MAX_QUEUE = 100;
@@ -30,6 +32,8 @@ export interface TelemetryManagerOptions {
   sessionId?: string;
   installId?: string;
   random?: () => number;
+  /** Resolved at send time, so a language or region change applies to later events. */
+  getDimensions?: () => Partial<TelemetryDimensions>;
 }
 
 interface SendOptions {
@@ -82,9 +86,26 @@ export class TelemetryManager implements TelemetryFacade {
     this.queue.length = 0;
   }
 
-  async reportError(error: unknown, properties?: Record<string, unknown>): Promise<void> {
-    await this.send('error', { ...properties, name: error instanceof Error ? error.name : 'UnknownError' }, { sampling: 'session' });
+  /**
+   * Waits for the provider to deliver pending events, but never longer than `timeoutMs`.
+   * Resolves in every case; a hanging or rejecting provider flush cannot throw here.
+   */
+  async flush(timeoutMs: number): Promise<void> {
+    const provider = this.provider;
+    if (!provider) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        provider.flush().catch(() => undefined),
+        new Promise<void>((resolve) => { timer = setTimeout(resolve, timeoutMs); }),
+      ]);
+    } catch {
+      /* telemetry never blocks the quit sequence */
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   }
+
   async track(name: string, properties?: Record<string, unknown>): Promise<void> {
     if (!isCatalogEvent(name)) {
       if (telemetryDebugEnabled) {
@@ -95,17 +116,26 @@ export class TelemetryManager implements TelemetryFacade {
     const spec = getEventSpec(name);
     await this.send('event', properties, { sampling: spec.sampling, eventName: name, schema: spec.properties });
   }
-  async recordPerformance(name: string, properties?: Record<string, unknown>): Promise<void> {
-    await this.send('performance', { ...properties, name }, { sampling: 'session' });
-  }
+
   async identify(id: string): Promise<void> {
     this.user = { id, anonymous: true };
     await this.provider?.identify(this.user);
   }
-  async heartbeat(properties?: Record<string, unknown>): Promise<void> {
-    await this.send('heartbeat', properties, { sampling: 'session' });
+
+  /** The single per-launch sampling decision that governs every `session`-class event. */
+  getSampling(): TelemetrySampling {
+    return { sampled: this.sampledIn, sampleRate: this.options.config.sampleRate };
   }
+
   getStatus(): ProviderStatus | null { return this.provider?.status ?? null; }
+
+  private resolveDimensions(): Partial<TelemetryDimensions> {
+    try {
+      return sanitizeDimensions(this.options.getDimensions?.());
+    } catch {
+      return {};
+    }
+  }
 
   private async send(
     name: Parameters<TelemetryProvider['send']>[0]['name'],
@@ -128,7 +158,7 @@ export class TelemetryManager implements TelemetryFacade {
       name,
       eventName: options.eventName,
       properties: sanitizeProperties(properties, options.schema),
-      context: { ...this.context },
+      context: { ...this.context, ...this.resolveDimensions() },
       user: this.user,
       timestamp: Date.now(),
     };

@@ -60,6 +60,8 @@ export interface StartResult {
   parsedResult: ParsedResult;
   url?: string;     // Service URL if started successfully
   port?: number;    // Service port if started successfully
+  /** Startup phase in which a failed start stopped (a StartupPhase value); absent when unknown. */
+  failedPhase?: string;
 }
 
 export interface DesktopCompatibility {

@@ -1,16 +1,28 @@
 import type { TelemetryCatalogEventName } from '../../shared/telemetry-events.js';
+import type { DesktopLanguageCode } from '../../shared/desktop-languages.js';
+import type { DistributionMode } from '../../types/distribution-mode.js';
+import type { ServiceRegion } from '../../types/service-region.js';
 
-export type TelemetryEventName =
-  | 'error'
-  | 'event'
-  | 'performance'
-  | 'heartbeat';
+/** Every event leaving telemetry is a catalogued event; there is no untyped channel. */
+export type TelemetryEventName = 'event';
 
-export interface TelemetryContext {
+/** Coarse, enumerated dimensions attached to every event at send time. */
+export interface TelemetryDimensions {
+  distribution: DistributionMode;
+  serviceRegion: ServiceRegion;
+  language: DesktopLanguageCode;
+}
+
+export interface TelemetryContext extends Partial<TelemetryDimensions> {
   appVersion: string;
   platform: NodeJS.Platform;
   arch: string;
   sessionId: string;
+}
+
+export interface TelemetrySampling {
+  sampled: boolean;
+  sampleRate: number;
 }
 
 export interface TelemetryUser {
@@ -34,6 +46,7 @@ export interface PublicTelemetryConfig {
   posthog: {
     apiKey: string;
     host: string;
+    uiHost: string;
     projectId: string;
     defaults: string;
     personProfiles: 'identified_only' | 'always';
@@ -61,10 +74,9 @@ export interface TelemetryProvider {
 export interface TelemetryFacade {
   init(): Promise<void>;
   close(): Promise<void>;
-  reportError(error: unknown, properties?: Record<string, unknown>): Promise<void>;
+  flush(timeoutMs: number): Promise<void>;
   track(name: string, properties?: Record<string, unknown>): Promise<void>;
-  recordPerformance(name: string, properties?: Record<string, unknown>): Promise<void>;
   identify(id: string): Promise<void>;
-  heartbeat(properties?: Record<string, unknown>): Promise<void>;
+  getSampling(): TelemetrySampling;
   getStatus(): ProviderStatus | null;
 }

@@ -36,12 +36,29 @@ import {
 } from '../slices/webServiceSlice';
 import type { ProcessStatus } from '../slices/webServiceSlice';
 import type { InstallWebServicePackageOptions, InstallWebServicePackageResult } from '../../../types/version-install.js';
+import type { VersionDownloadMode } from '../../../types/version-download.js';
 import { waitForStartupStoreLicenseVerification } from '../startupStoreLicenseVerification.js';
 import { trackEvent } from '../../telemetry';
-import type { TelemetryEventProperties } from '../../../shared/telemetry-events.js';
+import {
+  TELEMETRY_MISSING_DEPENDENCIES,
+  TELEMETRY_STARTUP_PHASES,
+  type TelemetryEventProperties,
+} from '../../../shared/telemetry-events.js';
 
 type OutcomeStatus = 'success' | 'failure';
 type WebServiceStartOutcome = Omit<TelemetryEventProperties<'web_service_start_finished'>, 'duration'>;
+type WebServiceStartTrigger = TelemetryEventProperties<'web_service_start_requested'>['trigger'];
+
+export interface StartWebServiceOptions {
+  trigger?: WebServiceStartTrigger;
+}
+
+// Optional detail the main process attaches to a failed start. Renderer filters it before telemetry.
+export interface StartWebServiceTelemetry {
+  failedPhase?: string;
+  missingDependency?: string;
+  missingCount?: number;
+}
 
 // Types for window electronAPI
 declare global {
@@ -54,6 +71,7 @@ declare global {
         error?: { type: string; details: string };
         warning?: { type: string; missing: any[] };
         startupFailure?: StartupFailurePayload;
+        telemetry?: StartWebServiceTelemetry;
       }>;
       stopWebService: () => Promise<boolean>;
       restartWebService: () => Promise<boolean>;
@@ -126,23 +144,68 @@ function toStartErrorKind(type: string | undefined): NonNullable<WebServiceStart
   }
 }
 
+function trackStartRequested(trigger: WebServiceStartTrigger): void {
+  trackEvent('web_service_start_requested', { trigger });
+}
+
 function trackStartFinished(outcome: WebServiceStartOutcome, startedAt: number): void {
   trackEvent('web_service_start_finished', { ...outcome, duration: Date.now() - startedAt });
 }
 
-function trackVersionInstallFinished(status: OutcomeStatus, startedAt: number, getState: () => unknown): void {
-  const progress = (getState() as { webService: { installProgress: InstallProgress | null } }).webService.installProgress;
-  if (!progress) return;
-  trackEvent('version_install_finished', { status, mode: progress.mode, duration: Date.now() - startedAt });
+function isOneOf<const T extends readonly string[]>(values: T, value: unknown): value is T[number] {
+  return typeof value === 'string' && (values as readonly string[]).includes(value);
+}
+
+/**
+ * Failure detail for web_service_start_finished. Values outside the catalog are dropped;
+ * missingDependency and missingCount are only forwarded for dependencies_missing.
+ */
+function toStartFailureDetail(
+  errorKind: WebServiceStartOutcome['errorKind'],
+  telemetry: StartWebServiceTelemetry | undefined,
+): Pick<WebServiceStartOutcome, 'failedPhase' | 'missingDependency' | 'missingCount'> {
+  const detail: Pick<WebServiceStartOutcome, 'failedPhase' | 'missingDependency' | 'missingCount'> = {};
+  if (isOneOf(TELEMETRY_STARTUP_PHASES, telemetry?.failedPhase)) {
+    detail.failedPhase = telemetry.failedPhase;
+  }
+  if (errorKind === 'dependencies_missing') {
+    if (isOneOf(TELEMETRY_MISSING_DEPENDENCIES, telemetry?.missingDependency)) {
+      detail.missingDependency = telemetry.missingDependency;
+    }
+    const missingCount = telemetry?.missingCount;
+    if (typeof missingCount === 'number' && Number.isFinite(missingCount) && missingCount >= 0 && missingCount <= 100) {
+      detail.missingCount = missingCount;
+    }
+  }
+  return detail;
+}
+
+function trackVersionInstallFinished(status: OutcomeStatus, startedAt: number, mode: VersionDownloadMode): void {
+  trackEvent('version_install_finished', { status, mode, duration: Date.now() - startedAt });
 }
 
 /**
  * Start web service
  * Replaces webServiceSaga/startWebServiceSaga
+ *
+ * Start request paths and their `web_service_start_requested` trigger (audit, telemetry):
+ *
+ * | Path                                              | Trigger        | Emitted from                                   |
+ * | ------------------------------------------------- | -------------- | ---------------------------------------------- |
+ * | Home start button (WebServiceStatusCard)          | home_button    | this thunk (default trigger)                   |
+ * | Start confirmed despite warning                   | home_button    | confirmStartWithWarning (calls IPC directly)   |
+ * | Tray start (store/index.ts)                       | home_button    | this thunk (default trigger)                   |
+ * | Restart (WebServiceStatusCard)                    | restart        | restartWebService thunk                        |
+ * | Data path change restarts a running service       | restart        | main runtimeDataPathHandlers                   |
+ * | Onboarding start (onboarding:start-service)       | onboarding     | main runOnboardingStartService                 |
+ * | Automatic restart after an unexpected exit        | auto           | main, web service manager listener             |
+ *
+ * `onboardingHandlers.ts` and `webServiceHandlers.ts` are not registered, so they are not paths.
  */
 export const startWebService = createAsyncThunk(
   'webService/start',
-  async (_, { dispatch, getState }) => {
+  async (options: StartWebServiceOptions | undefined, { dispatch, getState }) => {
+    trackStartRequested(options?.trigger ?? 'home_button');
     const startedAt = Date.now();
     let startOutcome: WebServiceStartOutcome = { status: 'failure', errorKind: 'other' };
     dispatch(beginStartupBatch());
@@ -156,6 +219,7 @@ export const startWebService = createAsyncThunk(
         success: boolean;
         error?: { type: string; details: string };
         startupFailure?: StartupFailurePayload;
+        telemetry?: StartWebServiceTelemetry;
       } =
         await window.electronAPI.startWebService();
 
@@ -165,7 +229,8 @@ export const startWebService = createAsyncThunk(
         // Keep the card in checking state until the current batch is confirmed healthy.
         await dispatch(fetchWebServiceStatus(batch));
       } else {
-        startOutcome = { status: 'failure', errorKind: toStartErrorKind(result.error?.type) };
+        const errorKind = toStartErrorKind(result.error?.type);
+        startOutcome = { status: 'failure', errorKind, ...toStartFailureDetail(errorKind, result.telemetry) };
         if (result.startupFailure) {
           dispatch(setStartupFailureForBatch({ batch, failure: result.startupFailure }));
         }
@@ -211,6 +276,8 @@ export const startWebService = createAsyncThunk(
 export const confirmStartWithWarning = createAsyncThunk(
   'webService/confirmStartWithWarning',
   async (_, { dispatch, getState }) => {
+    // Calls the IPC directly (not the startWebService thunk), so this is the only requested event for this request.
+    trackStartRequested('home_button');
     const startedAt = Date.now();
     let startOutcome: WebServiceStartOutcome = { status: 'failure', errorKind: 'other' };
     dispatch(beginStartupBatch());
@@ -226,6 +293,7 @@ export const confirmStartWithWarning = createAsyncThunk(
         success: boolean;
         error?: { type: string; details: string };
         startupFailure?: StartupFailurePayload;
+        telemetry?: StartWebServiceTelemetry;
       } =
         await window.electronAPI.startWebService(true);
 
@@ -235,7 +303,8 @@ export const confirmStartWithWarning = createAsyncThunk(
         dispatch(setShowDependencyWarning(true));
         await dispatch(fetchWebServiceStatus(batch));
       } else {
-        startOutcome = { status: 'failure', errorKind: toStartErrorKind(result.error?.type) };
+        const errorKind = toStartErrorKind(result.error?.type);
+        startOutcome = { status: 'failure', errorKind, ...toStartFailureDetail(errorKind, result.telemetry) };
         if (result.startupFailure) {
           dispatch(setStartupFailureForBatch({ batch, failure: result.startupFailure }));
         }
@@ -308,6 +377,7 @@ export const stopWebService = createAsyncThunk(
 export const restartWebService = createAsyncThunk(
   'webService/restart',
   async (_, { dispatch, getState }) => {
+    trackStartRequested('restart');
     const startedAt = Date.now();
     let succeeded = false;
     dispatch(beginStartupBatch({ status: 'stopping', checking: false }));
@@ -521,6 +591,14 @@ async function doInstallPackage(
   getState: () => unknown,
 ) {
   const startedAt = Date.now();
+  // The download path is only known from progress events. A source-fallback download stays reported
+  // even if a later event (for example the switching step) carries http-direct.
+  let mode: VersionDownloadMode = 'http-direct';
+  const unsubscribeProgress = window.electronAPI.onPackageInstallProgress?.((progress) => {
+    if (progress.mode === 'source-fallback') {
+      mode = 'source-fallback';
+    }
+  });
   dispatch(setInstallProgress({
     stage: 'queued',
     mode: 'http-direct',
@@ -531,11 +609,18 @@ async function doInstallPackage(
   }));
   dispatch(setError(null));
 
-  const result = await window.electronAPI.installWebServicePackage(version, options).catch((error: unknown) => {
-    trackVersionInstallFinished('failure', startedAt, getState);
+  let result: InstallWebServicePackageResult;
+  try {
+    result = await window.electronAPI.installWebServicePackage(version, options);
+  } catch (error) {
+    trackVersionInstallFinished('failure', startedAt, mode);
     throw error;
-  });
-  trackVersionInstallFinished(result.success ? 'success' : 'failure', startedAt, getState);
+  } finally {
+    if (typeof unsubscribeProgress === 'function') {
+      unsubscribeProgress();
+    }
+  }
+  trackVersionInstallFinished(result.success ? 'success' : 'failure', startedAt, mode);
 
   if (result.success) {
     dispatch(setInstallState(InstallState.Completed));

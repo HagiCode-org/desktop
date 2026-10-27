@@ -277,6 +277,9 @@ export class PCodeWebServiceManager {
   private stopTimeout: number;
   private pathManager: WebServicePathManager;
   private currentPhase: StartupPhase = StartupPhase.Idle;
+  /** Last non-error phase of the current start attempt; the phase a failure happened in (telemetry). */
+  private lastNonErrorPhase: StartupPhase | null = null;
+  private automaticStartListener: (() => void) | null = null;
   private activeVersionPath: string | null = null; // Path to the active version installation
   private entryPoint: EntryPoint | null = null; // EntryPoint from manifest
   private activeVersionId: string | null = null;
@@ -376,6 +379,14 @@ export class PCodeWebServiceManager {
   setDistributionMode(distributionMode: DistributionMode): void {
     this.distributionMode = distributionMode;
     log.info('[WebService] Distribution mode set:', { distributionMode });
+  }
+
+  /**
+   * Called when the manager starts the service on its own (an unexpected backend exit), so the
+   * telemetry start funnel records a `trigger: auto` request for it.
+   */
+  setAutomaticStartListener(listener: (() => void) | null): void {
+    this.automaticStartListener = listener;
   }
 
   setDependencyManagementService(dependencyManagementService: DependencyManagementService | null): void {
@@ -555,6 +566,7 @@ export class PCodeWebServiceManager {
         port: failure.port,
       },
       port: failure.port,
+      failedPhase: this.lastNonErrorPhase ?? undefined,
     };
   }
 
@@ -715,6 +727,8 @@ export class PCodeWebServiceManager {
    * Emit phase update to renderer
    */
   private emitPhase(phase: StartupPhase, message?: string): void {
+    // Keep the last working phase before an error replaces it, so failures can report it.
+    if (phase !== StartupPhase.Error) this.lastNonErrorPhase = phase;
     // Store phase for getStatus()
     this.currentPhase = phase;
 
@@ -993,6 +1007,7 @@ export class PCodeWebServiceManager {
     await this.ensureSavedConfigInitialized();
     await this.orphanReconciliation;
     this.resetStartupLogBuffer();
+    this.lastNonErrorPhase = null;
     this.appendStartupLogLine(`Starting service with configured host ${this.config.host} and port ${this.config.port}`);
 
     // A manual Desktop start gets a fresh automatic-restart budget.
@@ -1273,6 +1288,11 @@ export class PCodeWebServiceManager {
     this.status = 'starting';
     this.currentPhase = StartupPhase.CheckingVersion;
     this.appendStartupLogLine(`Unexpected backend exit; scheduling automatic restart ${attempt}/${this.maxRestartAttempts}.`);
+    try {
+      this.automaticStartListener?.();
+    } catch {
+      /* telemetry never affects the automatic restart */
+    }
     void this.runLifecycleExclusive(async () => {
       if (this.explicitStopRequested || this.cleanupPromise || this.backendProcessOwner.snapshot) {
         return;

@@ -1,6 +1,7 @@
 import type { PublicTelemetryConfig } from './types.js';
 const DEFAULT_POSTHOG_KEY = 'phc_qiVVihsL925ovhPYNdLJWz4k7aoKVMwYCevgZPE6PER5';
-const DEFAULT_POSTHOG_HOST = 'https://us.i.posthog.com';
+const DEFAULT_POSTHOG_HOST = 'https://t.hagicode.com';
+const DEFAULT_POSTHOG_UI_HOST = 'https://us.posthog.com';
 const DEFAULT_POSTHOG_DEFAULTS = '2026-05-30';
 
 function sampleRate(value: string | undefined): number {
@@ -23,6 +24,7 @@ export function readPublicTelemetryConfig(
     posthog: {
       apiKey: publicValue(env.HAGICODE_POSTHOG_PUBLIC_KEY) ?? DEFAULT_POSTHOG_KEY,
       host: publicValue(env.HAGICODE_POSTHOG_HOST) ?? DEFAULT_POSTHOG_HOST,
+      uiHost: publicValue(env.HAGICODE_POSTHOG_UI_HOST) ?? DEFAULT_POSTHOG_UI_HOST,
       projectId: publicValue(env.HAGICODE_POSTHOG_PROJECT_ID) ?? '',
       defaults: publicValue(env.HAGICODE_POSTHOG_DEFAULTS) ?? DEFAULT_POSTHOG_DEFAULTS,
       personProfiles: env.HAGICODE_POSTHOG_PERSON_PROFILES === 'always' ? 'always' : 'identified_only',

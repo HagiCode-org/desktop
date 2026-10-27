@@ -24,6 +24,7 @@ export function buildOnboardingStartupFailureResult(
     success: false,
     error: startupFailure.summary || 'Failed to start service',
     startupFailure,
+    ...(startResult.failedPhase !== undefined ? { telemetry: { failedPhase: startResult.failedPhase } } : {}),
   };
 }
 

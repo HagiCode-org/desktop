@@ -96,8 +96,21 @@ import {
 } from '../types/turboengine-license.js';
 import { sponsorPlanProductConfig } from '../types/subscription.js';
 import { readPublicTelemetryConfig } from './telemetry/config.js';
-import { resolveInstallId } from './telemetry/identity.js';
+import { resolveInstallIdDetailed } from './telemetry/identity.js';
 import { TelemetryManager } from './telemetry/telemetry-manager.js';
+import { createRunState, type RunState, type RunStateStore } from './telemetry/run-state.js';
+import { createErrorReporter, mapElectronGoneReason } from './telemetry/error-reporter.js';
+import { createExitSequence } from './telemetry/exit-sequence.js';
+import { startHeartbeat, type HeartbeatHandle } from './telemetry/heartbeat.js';
+import { withMainViewDuration } from './telemetry/main-view-timing.js';
+import {
+  classifyMissingStartDependencies,
+  runOnboardingStartService,
+  type WebServiceStartDependencyMissing,
+} from './telemetry/start-funnel.js';
+import type { TelemetryDimensions } from './telemetry/types.js';
+import type { DesktopLanguageCode } from '../shared/desktop-languages.js';
+import { resolveEffectiveServiceRegion } from '../shared/service-region.js';
 import {
   executeWindowsStorePurchaseAddon,
   resolveWindowsStorePurchaseAddonPath,
@@ -227,12 +240,20 @@ if (steamLinuxStartupCompatibilityDecision.compatibilityEnabled) {
   );
 }
 
+// Buffers up to five reports raised before telemetry exists; attached in whenReady.
+const appErrorReporter = createErrorReporter();
+
 process.on('uncaughtException', (error: Error) => {
   log.error('[App] Uncaught exception during startup/runtime:', {
     error,
     electronSandboxOverride: buildElectronSandboxOverrideLogContext(electronSandboxOverrideDecision),
     steamLinuxStartupCompatibility: buildSteamLinuxStartupCompatibilityLogContext(steamLinuxStartupCompatibilityDecision),
   });
+  try {
+    appErrorReporter.report('main_uncaught');
+  } catch {
+    /* a reporter fault must not raise a second uncaught exception */
+  }
 });
 
 process.on('unhandledRejection', (reason: unknown) => {
@@ -240,6 +261,22 @@ process.on('unhandledRejection', (reason: unknown) => {
     reason,
     electronSandboxOverride: buildElectronSandboxOverrideLogContext(electronSandboxOverrideDecision),
   });
+  try {
+    appErrorReporter.report('main_rejection');
+  } catch {
+    /* a reporter fault must not raise a second uncaught exception */
+  }
+});
+
+// Electron gone events report only the closed reason; the process type and name are never sent.
+app.on('render-process-gone', (_event, _webContents, details) => {
+  const reason = mapElectronGoneReason(details?.reason);
+  if (reason) appErrorReporter.report('renderer_gone', reason);
+});
+
+app.on('child-process-gone', (_event, details) => {
+  const reason = mapElectronGoneReason(details?.reason);
+  if (reason) appErrorReporter.report('child_gone', reason);
 });
 
 /**
@@ -339,6 +376,66 @@ let turboEngineLicenseFeatureEnabled = false;
 let msstoreDonationItemFeatureEnabled = false;
 let telemetryManager: TelemetryManager | null = null;
 const telemetrySessionStartedAt = Date.now();
+/** Set only in the instance that holds the single-instance lock and has telemetry enabled. */
+let telemetryLifecycle: { runState: RunState } | null = null;
+let telemetryHeartbeat: HeartbeatHandle | null = null;
+
+function resolveTelemetryDimensions(): Partial<TelemetryDimensions> {
+  try {
+    return {
+      distribution: getDistributionMode(),
+      serviceRegion: resolveEffectiveServiceRegion(
+        configManager?.getServiceRegionPreference(),
+        versionManager?.getCurrentSourceConfig() ?? null,
+      ),
+      language: configManager?.getCurrentLanguage() as DesktopLanguageCode | undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
+function createRunStateStore(): RunStateStore | null {
+  const store = configManager?.getStore() as unknown as Store<Record<string, unknown>> | undefined;
+  if (!store) return null;
+  return {
+    get: (key) => store.get(key) as never,
+    set: (key, value) => store.set(key, value),
+    delete: (key) => store.delete(key),
+  };
+}
+
+/** Classifies the previous exit, sends `app_started`, `app_upgraded`, and starts the heartbeat. */
+async function startTelemetryLifecycle(installIdCreated: boolean): Promise<void> {
+  const manager = telemetryManager;
+  const store = createRunStateStore();
+  if (!manager || !store) return;
+  const runState = createRunState(store);
+  const launch = runState.beginLaunch({ installIdCreated });
+  telemetryLifecycle = { runState };
+  const sampling = manager.getSampling();
+  await manager.track('app_started', {
+    source: 'main_process',
+    kind: 'startup',
+    previousExit: launch.previousExit,
+    sampled: sampling.sampled,
+    sampleRate: sampling.sampleRate,
+    ...(launch.daysSinceFirstLaunch !== undefined ? { daysSinceFirstLaunch: launch.daysSinceFirstLaunch } : {}),
+  });
+  const upgrade = runState.detectUpgrade(app.getVersion());
+  if (upgrade) await manager.track('app_upgraded', { previousVersion: upgrade.previousVersion });
+  telemetryHeartbeat = startHeartbeat({
+    track: (duration) => {
+      void telemetryManager?.track('app_heartbeat', { duration });
+    },
+  });
+}
+
+/** Sends `first_service_started` once per installation, from the main process success sites. */
+function reportFirstServiceStarted(): void {
+  const payload = telemetryLifecycle?.runState.recordFirstServiceStarted();
+  if (payload) void telemetryManager?.track('first_service_started', payload);
+}
 let subscriptionPurchaseSmokeTestStarted = false;
 let lastAppliedTurboEngineDlcProgramOptionSignature = 'null|';
 const notificationService = new NotificationService({
@@ -551,11 +648,13 @@ function buildDependencyReadinessFailureMessage(): string {
 async function validateRequiredManagedDependenciesForWebServiceStart(): Promise<{
   ok: boolean;
   details?: string;
+  missing?: WebServiceStartDependencyMissing;
 }> {
   if (!dependencyManagementService) {
     return {
       ok: false,
       details: 'Desktop managed dependency service is not initialized yet. Restart Desktop and try again.',
+      missing: classifyMissingStartDependencies({ reason: 'service-uninitialized' }),
     };
   }
 
@@ -566,6 +665,8 @@ async function validateRequiredManagedDependenciesForWebServiceStart(): Promise<
     return {
       ok: false,
       details: snapshot.environment.error ?? buildDependencyReadinessFailureMessage(),
+      // The readiness environment is the Node/npm toolchain (nodeRuntimeRoot, nodeVersion).
+      missing: classifyMissingStartDependencies({ reason: 'environment-unavailable' }),
     };
   }
 
@@ -591,6 +692,11 @@ async function validateRequiredManagedDependenciesForWebServiceStart(): Promise<
     details: packageDetails.length > 0
       ? `${buildDependencyReadinessFailureMessage()} ${packageDetails.join('; ')}.`
       : buildDependencyReadinessFailureMessage(),
+    // Required managed npm packages are CLI tools; no category is inferred from message text.
+    missing: classifyMissingStartDependencies({
+      reason: 'required-packages',
+      unsatisfiedCount: unsatisfiedRequiredPackages.length,
+    }),
   };
 }
 
@@ -1056,20 +1162,16 @@ ipcMain.handle('get-msstore-rating-prompt-state', () => {
 });
 
 ipcMain.handle('cloud-telemetry:status', () => telemetryManager?.getStatus() ?? null);
-ipcMain.handle('cloud-telemetry:error', async (_event, error: unknown, properties?: Record<string, unknown>) => {
-  await telemetryManager?.reportError(error, properties);
+// The renderer sends no arguments: the error object, message and stack never cross the bridge.
+ipcMain.handle('cloud-telemetry:error', () => {
+  appErrorReporter.report('renderer_uncaught');
 });
 ipcMain.handle('cloud-telemetry:event', async (_event, name: string, properties?: Record<string, unknown>) => {
-  await telemetryManager?.track(name, properties);
-});
-ipcMain.handle('cloud-telemetry:performance', async (_event, name: string, properties?: Record<string, unknown>) => {
-  await telemetryManager?.recordPerformance(name, properties);
+  const enriched = name === 'main_view_entered' ? withMainViewDuration(properties) : properties;
+  await telemetryManager?.track(name, enriched);
 });
 ipcMain.handle('cloud-telemetry:identify', async (_event, id: string) => {
   await telemetryManager?.identify(id);
-});
-ipcMain.handle('cloud-telemetry:heartbeat', async (_event, properties?: Record<string, unknown>) => {
-  await telemetryManager?.heartbeat(properties);
 });
 
 ipcMain.handle('show-window', () => {
@@ -1233,7 +1335,8 @@ ipcMain.handle('start-web-service', async (_, force?: boolean) => {
       emitWebServiceStartupPhase(StartupPhase.Error, 'No active version found');
       return {
         success: false,
-        error: { type: 'no-active-version', details: 'No active version found. Please install and activate a version first.' }
+        error: { type: 'no-active-version', details: 'No active version found. Please install and activate a version first.' },
+        telemetry: { failedPhase: StartupPhase.CheckingVersion },
       };
     }
 
@@ -1256,6 +1359,10 @@ ipcMain.handle('start-web-service', async (_, force?: boolean) => {
           type: 'dependency-requirements-not-met',
           details: dependencyValidation.details ?? buildDependencyReadinessFailureMessage(),
         },
+        telemetry: {
+          failedPhase: StartupPhase.CheckingDependencies,
+          ...dependencyValidation.missing,
+        },
       };
     }
 
@@ -1275,8 +1382,11 @@ ipcMain.handle('start-web-service', async (_, force?: boolean) => {
           details: startupFailure.summary,
         },
         startupFailure,
+        telemetry: { failedPhase: result.failedPhase },
       };
     }
+
+    reportFirstServiceStarted();
 
     await openPreferredInterface({
       url: status.url,
@@ -2435,22 +2545,29 @@ ipcMain.handle('onboarding:check-dependencies', async (_, versionId: string) => 
   }
 });
 
+// Live onboarding start handler. `src/main/ipc/handlers/onboardingHandlers.ts` is not registered
+// (registerOnboardingHandlers is never called), so this is the only onboarding start path.
 ipcMain.handle('onboarding:start-service', async (_, versionId: string) => {
   if (!onboardingManager) {
     return { success: false, error: 'Onboarding manager not initialized' };
   }
-  try {
-    const result = await onboardingManager.startWebService(versionId, (progress) => {
+  const manager = onboardingManager;
+  return await runOnboardingStartService(versionId, {
+    startWebService: (id, onProgress) => manager.startWebService(id, onProgress),
+    onProgress: (progress) => {
       mainWindow?.webContents.send('onboarding:service-progress', progress);
-    });
-    return result;
-  } catch (error) {
+    },
+    track: (name, properties) => {
+      void telemetryManager?.track(name, properties);
+    },
+    reportFirstServiceStarted,
+  }).catch((error: unknown) => {
     console.error('Failed to start service:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : String(error)
     };
-  }
+  });
 });
 
 ipcMain.handle('onboarding:recover-service-startup', async (_, versionId: string) => {
@@ -2601,16 +2718,22 @@ app.whenReady().then(async () => {
   console.log(`[App] Region detected: ${detection.region} (method: ${detection.method})`);
 
   const telemetryConfig = readPublicTelemetryConfig();
+  const installIdResolution = telemetryConfig.enabled
+    ? resolveInstallIdDetailed(configManager.getStore())
+    : { id: undefined, created: false };
   telemetryManager = new TelemetryManager({
     config: telemetryConfig,
     appVersion: app.getVersion(),
-    installId: telemetryConfig.enabled ? resolveInstallId(configManager.getStore()) : undefined,
+    installId: installIdResolution.id,
+    getDimensions: resolveTelemetryDimensions,
   });
+  appErrorReporter.attach((name, properties) => telemetryManager?.track(name, properties));
   await telemetryManager.init();
-  await telemetryManager.track('app_started', {
-    source: 'main_process',
-    kind: 'startup',
-  });
+  // Run state belongs only to the instance that holds the single-instance lock. A losing instance
+  // must not write the marker, send app_started, or clear the running instance's marker on exit.
+  if (telemetryConfig.enabled && gotSingleInstanceLock) {
+    await startTelemetryLifecycle(installIdResolution.created);
+  }
 
   // Initialize LLM Installation Manager (after ClaudeConfigManager is initialized later)
   // Will be properly initialized after ClaudeConfigManager
@@ -2746,6 +2869,10 @@ app.whenReady().then(async () => {
 
   dependencyManagementService = new DependencyManagementService();
   webServiceManager?.setDependencyManagementService(dependencyManagementService);
+  // An unexpected backend exit restarts the service without a user action: trigger `auto`.
+  webServiceManager?.setAutomaticStartListener(() => {
+    void telemetryManager?.track('web_service_start_requested', { trigger: 'auto' });
+  });
   registerDependencyManagementHandlers({
     dependencyManagementService,
     mainWindow,
@@ -2762,6 +2889,10 @@ app.whenReady().then(async () => {
     mainWindow,
     setServerStatus,
     setServiceUrl,
+    // A data-path change that restarts a running service is a user-requested restart.
+    onServiceRestartRequested: () => {
+      void telemetryManager?.track('web_service_start_requested', { trigger: 'restart' });
+    },
   });
   log.info('[App] runtime data path IPC handlers registered');
   ipcMain.handle('bootstrap:get-snapshot', async () => resolveBootstrapSnapshot(false));
@@ -2864,11 +2995,33 @@ app.on('window-all-closed', () => {
   }
 });
 
-app.on('before-quit', async (event) => {
-  // Prevent default to allow async cleanup
-  event.preventDefault();
-
-  try {
+/**
+ * Quit sequence shared by every exit path. Exit-path audit (telemetry initialization onward):
+ * - window-all-closed (macOS), the tray exit action (tray.ts) and the onboarding quit (onboarding-manager.ts)
+ *   call app.quit(), which reaches before-quit below;
+ * - app.exit(0) in this sequence is the single direct exit after telemetry initialization;
+ * - app.exit()/process.exit() in the Steam Linux host relaunch and the single-instance lock path
+ *   run at module load, before telemetry exists, and need no finalize call.
+ */
+const exitSequence = createExitSequence({
+  lifecycleActive: () => telemetryLifecycle !== null,
+  stopHeartbeat: () => {
+    telemetryHeartbeat?.stop();
+    telemetryHeartbeat = null;
+  },
+  trackExited: async () => {
+    await telemetryManager?.track('app_exited', {
+      status: 'normal',
+      duration: Date.now() - telemetrySessionStartedAt,
+    });
+  },
+  flush: async (timeoutMs) => {
+    await telemetryManager?.flush(timeoutMs);
+  },
+  clearRunMarker: () => {
+    telemetryLifecycle?.runState.clearRunMarker();
+  },
+  cleanup: async () => {
     console.log('[App] Cleaning up before quit...');
     if (stopWebServiceStatusPollingLoop) {
       stopWebServiceStatusPollingLoop();
@@ -2885,12 +3038,6 @@ app.on('before-quit', async (event) => {
     if (webServiceManager) {
       await webServiceManager.cleanup();
     }
-    await telemetryManager?.track('app_exited', {
-      status: 'normal',
-      duration: Date.now() - telemetrySessionStartedAt,
-    });
-    await telemetryManager?.close();
-    telemetryManager = null;
     versionUpdateManager?.dispose();
     subscriptionService?.dispose();
     turboEngineLicenseService?.dispose();
@@ -2899,12 +3046,19 @@ app.on('before-quit', async (event) => {
     disposeTurboEngineLicenseHandlers();
     disposeMsstoreDonationItemHandlers();
     destroyTray();
-  } catch (error) {
-    console.error('[App] Error during cleanup:', error);
-  } finally {
-    // Ensure app quits even if cleanup fails
-    app.exit(0);
-  }
+  },
+  close: async () => {
+    await telemetryManager?.close();
+    telemetryManager = null;
+  },
+  exit: (code) => app.exit(code),
+  log: (message, error) => console.error(message, error),
+});
+
+app.on('before-quit', (event) => {
+  // Prevent default to allow async cleanup; repeated quit triggers join the same run.
+  event.preventDefault();
+  void exitSequence.run();
 });
 
 app.on('activate', () => {

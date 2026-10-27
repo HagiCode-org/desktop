@@ -45,6 +45,8 @@ export function registerRuntimeDataPathHandlers(deps: {
   mainWindow: BrowserWindow | null;
   setServerStatus?: (status: WebServiceStatus, url?: string | null) => void;
   setServiceUrl?: (url: string | null) => void;
+  /** Called when a data-path change restarts a running service (a user-requested restart). */
+  onServiceRestartRequested?: () => void;
 }): void {
   state.configManager = deps.configManager;
   state.pathManager = deps.pathManager;
@@ -75,6 +77,14 @@ export function registerRuntimeDataPathHandlers(deps: {
       webServiceManager: state.webServiceManager,
       isWindowsStore: detectWindowsStore(),
     });
+
+    if (result.restartAttempted) {
+      try {
+        deps.onServiceRestartRequested?.();
+      } catch {
+        /* telemetry never affects the settings change */
+      }
+    }
 
     if (state.webServiceManager && result.restartAttempted) {
       const status = await state.webServiceManager.getStatus();
