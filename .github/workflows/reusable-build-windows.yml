@@ -165,12 +165,15 @@ jobs:
             exit 1
           fi
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: package-lock.json
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -199,7 +202,7 @@ jobs:
             .cache/electron
             build/embedded-runtime/downloads
             .generated/code-server-runtime/downloads
-          key: ${{ runner.os }}-build-downloads-${{ hashFiles('package-lock.json', 'resources/manifest.yml') }}
+          key: ${{ runner.os }}-build-downloads-${{ hashFiles('pnpm-lock.yaml', 'resources/manifest.yml') }}
           restore-keys: |
             ${{ runner.os }}-build-downloads-
 
@@ -212,7 +215,15 @@ jobs:
           npm version "${VERSION}" --no-git-tag-version
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify install and lockfile stability
+        run: |
+          test -d node_modules
+          git diff --exit-code -- pnpm-lock.yaml
+
+      - name: Registry neutrality
+        run: pnpm run check:registry
 
       - name: Resolve Windows SDK for MSIX packaging
         if: success() && matrix.target.id == 'msix'
@@ -254,8 +265,8 @@ jobs:
         shell: cmd
         run: |
           call build.cmd --target Setup
-          call npm run build:win:store -- --artifact-output-dir pkg --metadata-output-path pkg/store-build-metadata.json --overlay-output-path forge.store-config.json --platform-id win-x64
-          call npm run package:smoke-test
+          call pnpm run build:win:store --artifact-output-dir pkg --metadata-output-path pkg/store-build-metadata.json --overlay-output-path forge.store-config.json --platform-id win-x64
+          call pnpm run package:smoke-test
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HAGICODE_EMBEDDED_DOTNET_PLATFORM: win-x64

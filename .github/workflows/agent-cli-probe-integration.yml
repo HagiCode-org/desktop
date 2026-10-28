@@ -84,24 +84,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
-          cache-dependency-path: package-lock.json
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: npm ci --omit=dev --ignore-scripts
+        run: pnpm install --frozen-lockfile --prod --ignore-scripts
 
       - name: Prepare managed npm package definitions
-        run: npm run prepare:managed-npm-packages
+        run: pnpm run prepare:managed-npm-packages
 
       - name: Harness unit tests
         run: node --test scripts/__tests__/agent-cli-probe-harness.test.mjs scripts/__tests__/agent-cli-probe-workflow.test.mjs
 
       - name: Coverage guard
-        run: npm run test:source -- src/main/__tests__/agent-cli-probe-coverage.test.ts
+        run: pnpm run test:source src/main/__tests__/agent-cli-probe-coverage.test.ts
 
       - name: Plan matrix
         id: plan
@@ -145,6 +148,10 @@ jobs:
           echo "AGENT_CLI_RESULTS=$RUNNER_TEMP/agent-cli-probe/results" >> "$GITHUB_ENV"
           echo "HAGICODE_AGENT_CLI_PROBE_STATE=$RUNNER_TEMP/agent-cli-probe/state.json" >> "$GITHUB_ENV"
 
+      - name: Setup pnpm
+        if: ${{ matrix.container == '' }}
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         if: ${{ matrix.container == '' }}
         uses: actions/setup-node@v4
@@ -159,18 +166,25 @@ jobs:
         if: ${{ startsWith(matrix.container, 'alpine') }}
         run: apk add --no-cache nodejs npm git curl bash
 
+      # Distro containers have no pnpm action support guarantee; corepack reads package.json "packageManager".
+      - name: Enable pnpm in distro containers
+        if: ${{ matrix.container != '' }}
+        run: |
+          npm install --global corepack
+          corepack enable
+
       - name: deps
         id: deps
         run: |
-          npm ci --omit=dev --ignore-scripts
-          npm run prepare:managed-npm-packages
+          pnpm install --frozen-lockfile --prod --ignore-scripts
+          pnpm run prepare:managed-npm-packages
 
       - name: control
         id: control
         continue-on-error: true
         env:
           HAGICODE_AGENT_CLI_PROBE_PHASE: control
-        run: npm run test:agent-cli-probe
+        run: pnpm run test:agent-cli-probe
 
       - name: install
         id: install
@@ -199,7 +213,7 @@ jobs:
         if: ${{ always() && steps.refresh.outcome == 'success' }}
         env:
           HAGICODE_AGENT_CLI_PROBE_PHASE: probe
-        run: npm run test:agent-cli-probe
+        run: pnpm run test:agent-cli-probe
 
       - name: classify
         id: classify

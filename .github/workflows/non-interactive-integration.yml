@@ -25,18 +25,29 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
-          cache-dependency-path: package-lock.json
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify install and lockfile stability
+        run: |
+          test -d node_modules
+          git diff --exit-code -- pnpm-lock.yaml
+
+      - name: Registry neutrality
+        run: pnpm run check:registry
 
       - name: Build main-process helpers
-        run: npm run build:tsc
+        run: pnpm run build:tsc
 
       - name: Download Linux AppImage artifact
         env:
@@ -49,7 +60,7 @@ jobs:
             --output-dir pkg
 
       - name: Verify packaged runtime and backend lifecycle when bundled
-        run: npm run package:non-interactive-integration
+        run: pnpm run package:non-interactive-integration
 
   integration-macos:
     name: Non-Interactive Integration (macOS)
@@ -61,18 +72,29 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
-          cache-dependency-path: package-lock.json
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify install and lockfile stability
+        run: |
+          test -d node_modules
+          git diff --exit-code -- pnpm-lock.yaml
+
+      - name: Registry neutrality
+        run: pnpm run check:registry
 
       - name: Build main-process helpers
-        run: npm run build:tsc
+        run: pnpm run build:tsc
 
       - name: Download macOS DMG artifact
         env:
@@ -90,7 +112,7 @@ jobs:
             --output-dir pkg
 
       - name: Verify packaged runtime and backend lifecycle when bundled
-        run: npm run package:non-interactive-integration
+        run: pnpm run package:non-interactive-integration
 
   integration-windows:
     name: Non-Interactive Integration (Windows)
@@ -102,18 +124,29 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
-          cache-dependency-path: package-lock.json
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify install and lockfile stability
+        run: |
+          test -d node_modules
+          git diff --exit-code -- pnpm-lock.yaml
+
+      - name: Registry neutrality
+        run: pnpm run check:registry
 
       - name: Build main-process helpers
-        run: npm run build:tsc
+        run: pnpm run build:tsc
 
       - name: Download Windows portable artifact
         shell: bash
@@ -128,4 +161,4 @@ jobs:
 
       - name: Verify packaged runtime and backend lifecycle when bundled
         shell: bash
-        run: npm run package:non-interactive-integration
+        run: pnpm run package:non-interactive-integration

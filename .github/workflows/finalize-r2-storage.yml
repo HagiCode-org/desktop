@@ -34,8 +34,20 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install -r requirements.lock.txt
 
+    # No version literal: pnpm/action-setup reads package.json "packageManager".
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+
     - name: Install Node dependencies
-      run: npm ci
+      run: pnpm install --frozen-lockfile
+
+    - name: Verify install and lockfile stability
+      run: |
+        test -d node_modules
+        git diff --exit-code -- pnpm-lock.yaml
+
+    - name: Registry neutrality
+      run: pnpm run check:registry
 
     - name: Install global hagiscript
       run: |
