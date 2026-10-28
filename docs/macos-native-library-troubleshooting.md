@@ -116,10 +116,10 @@ The project includes a script to verify native library packaging:
 cd repos/hagicode-desktop
 
 # Verify for current platform
-npm run verify:libs
+pnpm run verify:libs
 
 # Verify with verbose output
-npm run verify:libs:verbose
+pnpm run verify:libs:verbose
 
 # Verify specific platform
 node scripts/verify-native-libs.js --platform osx-arm64
@@ -178,7 +178,7 @@ asarUnpack:
 ### Issue: Verification Shows Missing Libraries
 
 1. **Check build configuration**: Verify `asarUnpack` includes `*.dylib`
-2. **Rebuild**: Run a clean build: `npm run build:prod`
+2. **Rebuild**: Run a clean build: `pnpm run build:prod`
 3. **Check output path**: Verify the correct output directory is being checked
 
 ### Issue: Wrong Platform Libraries Loaded
@@ -200,7 +200,7 @@ To prevent future regressions, integrate native library verification into CI/CD:
 - name: Verify Native Libraries
   run: |
     cd repos/hagicode-desktop
-    npm run verify:libs -- --platform osx-arm64
+    pnpm run verify:libs --platform osx-arm64
 ```
 
 ### Documentation

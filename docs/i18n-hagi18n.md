@@ -31,31 +31,31 @@ Desktop scripts call the globally installed `hagi18n` CLI directly.
 Run these from `repos/hagicode-desktop`:
 
 ```bash
-npm run i18n:audit
-npm run i18n:report
-npm run i18n:doctor
-npm run i18n:sync
-npm run i18n:sync:write
-npm run i18n:prune
-npm run i18n:prune:write
-npm run i18n:generate
-npm run i18n:check
+pnpm run i18n:audit
+pnpm run i18n:report
+pnpm run i18n:doctor
+pnpm run i18n:sync
+pnpm run i18n:sync:write
+pnpm run i18n:prune
+pnpm run i18n:prune:write
+pnpm run i18n:generate
+pnpm run i18n:check
 ```
 
 ## Dry-run-first sync and prune workflow
 
 `sync` and `prune` are preview-only by default.
 
-1. Review drift with `npm run i18n:audit` and `npm run i18n:doctor`.
-2. Preview additions with `npm run i18n:sync` or removals with `npm run i18n:prune`.
-3. Apply the reviewed change with `npm run i18n:sync:write` or `npm run i18n:prune:write`.
-4. Regenerate runtime resources with `npm run i18n:generate`.
-5. Finish with `npm run i18n:check`.
+1. Review drift with `pnpm run i18n:audit` and `pnpm run i18n:doctor`.
+2. Preview additions with `pnpm run i18n:sync` or removals with `pnpm run i18n:prune`.
+3. Apply the reviewed change with `pnpm run i18n:sync:write` or `pnpm run i18n:prune:write`.
+4. Regenerate runtime resources with `pnpm run i18n:generate`.
+5. Finish with `pnpm run i18n:check`.
 
 ## Adding or updating a translation key
 
 1. Edit the YAML source files in `src/renderer/i18n/locales/`, starting with `en-US`.
 2. Update every supported locale namespace so keys, arrays, and `{{placeholder}}` tokens stay aligned.
-3. Run `npm run i18n:audit` and `npm run i18n:doctor`.
-4. Run `npm run i18n:generate`.
-5. Run `npm run i18n:check` before committing.
+3. Run `pnpm run i18n:audit` and `pnpm run i18n:doctor`.
+4. Run `pnpm run i18n:generate`.
+5. Run `pnpm run i18n:check` before committing.

@@ -6,7 +6,7 @@ This document describes how to manually test the channels support feature.
 
 1. Start the Desktop client in development mode:
    ```bash
-   npm run dev
+   pnpm run dev
    ```
 
 2. Open Developer Tools (Ctrl+Shift+I or Cmd+Option+I)
@@ -140,7 +140,7 @@ Example index.json with channels:
 
 To run automated tests (after Jest configuration):
 ```bash
-npm test
+pnpm test
 ```
 
 Test file: `src/main/package-sources/http-index-source.test.ts`

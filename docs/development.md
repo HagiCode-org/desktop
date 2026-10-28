@@ -35,15 +35,15 @@ For development and testing purposes, you can override the default update source
 ```bash
 # Linux/macOS
 export UPDATE_SOURCE_OVERRIDE='{"type":"local-folder","name":"Local Dev Source","path":"/path/to/packages"}'
-npm run dev
+pnpm run dev
 
 # Windows (PowerShell)
 $env:UPDATE_SOURCE_OVERRIDE='{"type":"local-folder","name":"Local Dev Source","path":"C:\\path\\to\\packages"}'
-npm run dev
+pnpm run dev
 
 # Windows (Command Prompt)
 set UPDATE_SOURCE_OVERRIDE={"type":"local-folder","name":"Local Dev Source","path":"C:\\path\\to\\packages"}
-npm run dev
+pnpm run dev
 ```
 
 #### Supported Source Types
@@ -122,7 +122,7 @@ That file is the source of truth for:
 Run the Desktop Store build locally with:
 
 ```bash
-npm run build:win:store -- \
+pnpm run build:win:store \
   --server-payload-path /abs/path/to/server-runtime \
   --artifact-output-dir /abs/path/to/output \
   --metadata-output-path /abs/path/to/store-build-metadata.json \
@@ -148,7 +148,7 @@ Optional PSF injection for MSIX child-process containment uses environment flags
 ```bash
 HAGICODE_ENABLE_PSF=true \
 HAGICODE_PSF_DIR=/absolute/path/to/psf \
-npm run build:win:store -- \
+pnpm run build:win:store \
   --server-payload-path /abs/path/to/server-runtime
 ```
 
@@ -169,7 +169,7 @@ The Store build writes:
 
 ```bash
 # Start all development processes
-npm run dev
+pnpm run dev
 ```
 
 This command:
@@ -178,16 +178,16 @@ This command:
 3. Builds the preload script in watch mode
 4. Launches Electron with the development configuration
 
-`npm run dev` prepares the managed .NET runtime before Electron launches. Desktop does not stage or bundle Node or PM2; host Node/npm remains external and is used only for CLI package management and build tooling.
+`pnpm run dev` prepares the managed .NET runtime before Electron launches. Desktop does not stage or bundle Node or PM2; host Node/npm remains external and is used only for CLI package management and build tooling.
 
 ### Building for Production
 
 ```bash
 # Build all components
-npm run build:all
+pnpm run build:all
 
 # Build and verify
-npm run build:prod
+pnpm run build:prod
 ```
 
 Platform packaging commands (`build:linux`, `build:win`, `build:mac:x64`, `build:mac:arm64`) stage the Desktop .NET runtime inputs through hagiscript before `electron-forge`. Node/npm remains external.
@@ -196,10 +196,10 @@ Platform packaging commands (`build:linux`, `build:win`, `build:mac:x64`, `build
 
 ```bash
 # Quick validation
-npm run smoke-test
+pnpm run smoke-test
 
 # Verbose output
-npm run smoke-test:verbose
+pnpm run smoke-test:verbose
 ```
 
 The smoke test validates the staged and packaged .NET runtime and rejects Desktop-managed Node/PM2 assets; Node/npm is supplied by the host environment.
@@ -229,8 +229,8 @@ This priority only affects the HTTP/source-fallback path. Torrent-first behavior
 When touching desktop download routing, run the targeted main-process checks from `repos/hagicode-desktop`:
 
 ```bash
-npx tsc --noEmit
-npx tsc
+pnpm exec tsc --noEmit
+pnpm exec tsc
 node --test dist/main/__tests__/http-index-source-hybrid.test.js dist/main/__tests__/hybrid-download-coordinator.test.js dist/main/__tests__/region-detector.test.js
 ```
 
@@ -289,15 +289,15 @@ Run from `repos/hagicode-desktop`.
 
 ```bash
 # Linux/macOS development mode
-HAGICODE_DISABLE_ELECTRON_SANDBOX=1 npm run dev
+HAGICODE_DISABLE_ELECTRON_SANDBOX=1 pnpm run dev
 
 # Windows PowerShell development mode
 $env:HAGICODE_DISABLE_ELECTRON_SANDBOX = '1'
-npm run dev
+pnpm run dev
 
 # Windows Command Prompt development mode
 set HAGICODE_DISABLE_ELECTRON_SANDBOX=1
-npm run dev
+pnpm run dev
 ```
 
 If you want to verify the built app path without packaging first, the same variable works with `npm start` because that command builds all desktop components and then launches Electron:
@@ -340,7 +340,7 @@ Disabling Electron sandboxing weakens Chromium's process isolation and security 
 NODE_ENV=development \
 HAGICO_CONFIG_PATH=./local_data_root \
 UPDATE_SOURCE_OVERRIDE='{"type":"local-folder","name":"Local","path":"/path/to/packages"}' \
-npm run dev
+pnpm run dev
 ```
 
 ## Web Service Runtime State
@@ -546,7 +546,7 @@ Desktop does not fall back to a machine-wide `dotnet` installation when that pac
 
 ### Development debugging with the staged runtime
 
-Use `npm run dev` after staging the separate embedded .NET runtime. General-purpose Node.js and npm
+Use `pnpm run dev` after staging the separate embedded .NET runtime. General-purpose Node.js and npm
 are resolved from the external host environment. The backend launches through the managed .NET
 runtime; auxiliary services such as code-server and OmniRoute remain externally managed.
 
@@ -555,15 +555,15 @@ runtime; auxiliary services such as code-server and OmniRoute remain externally 
 Before packaging:
 
 ```bash
-npm run build:all
-npm run smoke-test
+pnpm run build:all
+pnpm run smoke-test
 ```
 
 After packaging Windows/Linux artifacts:
 
 ```bash
-npm run package:smoke-test
-npm run package:non-interactive-integration
+pnpm run package:smoke-test
+pnpm run package:non-interactive-integration
 ```
 
 `package:smoke-test` validates both:
@@ -585,8 +585,8 @@ When the artifact contains a portable backend payload, the lifecycle stage direc
 Useful environment overrides:
 
 ```bash
-HAGICODE_NON_INTERACTIVE_INTEGRATION_TIMEOUT_MS=480000 npm run package:non-interactive-integration
-HAGICODE_NON_INTERACTIVE_INTEGRATION_KEEP_TEMP=1 npm run package:non-interactive-integration
+HAGICODE_NON_INTERACTIVE_INTEGRATION_TIMEOUT_MS=480000 pnpm run package:non-interactive-integration
+HAGICODE_NON_INTERACTIVE_INTEGRATION_KEEP_TEMP=1 pnpm run package:non-interactive-integration
 ```
 
 - `HAGICODE_NON_INTERACTIVE_INTEGRATION_TIMEOUT_MS` raises the per-command timeout used by the packaged harness and the lifecycle polling window inside the Desktop non-interactive verifier.
@@ -624,7 +624,7 @@ The Desktop Windows and Linux packaging jobs now share the same runtime rules as
   - Windows: `HAGICODE_EMBEDDED_DOTNET_PLATFORM=win-x64`
   - Linux: `HAGICODE_EMBEDDED_DOTNET_PLATFORM=linux-x64`
 - build entrypoint: `node scripts/ci-build.js --platform <win|linux>`
-- package validation: `npm run package:smoke-test`
+- package validation: `pnpm run package:smoke-test`
 
 When CI fails, diagnose in this order:
 
@@ -646,7 +646,7 @@ Actions:
 
 1. Re-run `node scripts/prepare-embedded-runtime.js`
 2. Confirm `resources/components/dotnet/runtime/<rid>` exists
-3. Rebuild the package and rerun `npm run package:smoke-test`
+3. Rebuild the package and rerun `pnpm run package:smoke-test`
 
 #### Unofficial runtime source
 
@@ -785,3 +785,12 @@ If the HTTP index source fails:
 - [Channel Testing Guide](./channel-testing-guide.md)
 - [OpenSpec Proposals](../openspec/README.md)
 - [Project README](../README.md)
+
+## Package management (pnpm)
+
+Run `corepack enable` once, then `pnpm install`. The repository pins pnpm in `package.json` (`packageManager`) and keeps `pnpm-lock.yaml` as its only lockfile.
+
+- **Layout:** `pnpm-workspace.yaml` sets `nodeLinker: hoisted`. Electron Forge stops with "node-linker must be set to hoisted" under pnpm's default layout, and its `asar`/`prune` packaging walks a flat `node_modules`. A packaged `linux-unpacked` build was compared against the npm build: the same set of runtime and native packages, the same unpacked files, and `package:smoke-test` passes (88 checks).
+- **Build-script approvals** (`allowBuilds`): `fs-xattr` and `macos-alias` build on macOS only (DMG maker); `core-js` and `fsevents` are denied; Electron has no install script in the lockfile.
+- **Mirror:** configure a local registry mirror in `~/.npmrc` only. `pnpm run check:registry` fails if the lockfile or a tracked file names anything but `registry.npmjs.org`.
+- `scripts/prepare-embedded-runtime.js`, `scripts/generate-managed-npm-packages.js`, `scripts/global-hagiscript.js` and `scripts/agent-cli-probe/` still use `npm` on purpose: they manage the end-user runtime or install npm packages for probing.

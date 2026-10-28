@@ -269,13 +269,13 @@ const NewComponent = () => {
 要添加新的 shadcn/ui 组件，使用以下命令：
 
 ```bash
-npx shadcn@latest add <component-name>
+pnpm dlx shadcn@latest add <component-name>
 ```
 
 例如：
 ```bash
-npx shadcn@latest add sheet
-npx shadcn@latest add toast
+pnpm dlx shadcn@latest add sheet
+pnpm dlx shadcn@latest add toast
 ```
 
 ## 注意事项

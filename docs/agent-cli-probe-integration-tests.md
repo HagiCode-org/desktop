@@ -71,7 +71,7 @@ The expected-location matcher is lexical. It expands `$HOME`, `%USERPROFILE%`, `
 2. If the CLI is new to the catalog, add its id to `catalogCliIds` as well. The coverage guard fails until this is done, and it names the CLI.
 3. For a method that cannot run on a hosted runner, add an entry to `exclusions` with a non-empty `reason` and a `source`. Exclusions are never silent.
 4. Managed npm cases take their install command from `src/shared/npm-managed-packages.ts`, so a version pin change there is picked up without editing the registry.
-5. Run `npm run probe:agent-cli:plan -- --dry-run` and `node --test scripts/__tests__/agent-cli-probe-harness.test.mjs`.
+5. Run `pnpm run probe:agent-cli:plan --dry-run` and `node --test scripts/__tests__/agent-cli-probe-harness.test.mjs`.
 
 ### `knownIssue`
 
@@ -86,7 +86,7 @@ It converts a `probe`-phase `probe-defect` to `xfail`. When the case passes, the
 ## Install safety
 
 - **Execution guard.** `scripts/agent-cli-probe/install-cli.mjs` refuses to run an installer unless `GITHUB_ACTIONS=true` or `HAGICODE_AGENT_CLI_PROBE_ALLOW_INSTALL=1` is set.
-- **Dry run.** `--dry-run` prints the planned commands and executes nothing. Example: `npm run probe:agent-cli:install -- --case claude-code/native-sh --dry-run`.
+- **Dry run.** `--dry-run` prints the planned commands and executes nothing. Example: `pnpm run probe:agent-cli:install --case claude-code/native-sh --dry-run`.
 - **No secrets.** The installer receives an allowlisted environment only. No token or repository secret is passed, and the workflow requests `permissions: contents: read`.
 - **Environment refresh.** On Windows, `post-install-env.mjs` rebuilds PATH from the persisted Machine and User values, so a newly opened terminal would see the same entries. It never adds a directory the install method did not persist. The refreshed value is applied inside the probe test process, as the only `PATH`, and is not exported through `GITHUB_ENV`. On Linux and macOS the runner environment passes through unchanged, and the probe's own login-shell resolution decides.
 - **Retries.** An installer is retried up to 3 times with 15 s and 45 s back-off. npm installs add fetch-retry flags. The attempt count is recorded in `result.json`.
@@ -116,7 +116,7 @@ The report lists one row per CLI and method, with one column per operating syste
 
 ## Reproducing one case locally
 
-Install opt-in and a temporary `HOME` and npm prefix keep the run isolated. Requires Node 24 and `npm ci --omit=dev --ignore-scripts` in this repository.
+Install opt-in and a temporary `HOME` and npm prefix keep the run isolated. Requires Node 24 and `pnpm install --frozen-lockfile --prod --ignore-scripts` in this repository.
 
 **Use a clean PATH.** The probe reads the inherited PATH, so any agent CLI already installed on your machine (for example Claude Code or Codex) is reported as a false positive by the "no other CLI is available" assertion. Put only the Node directory, the temporary npm bin and the system directories on PATH, as the example does.
 
@@ -130,10 +130,10 @@ export HAGICODE_AGENT_CLI_PROBE_CASE=pi/npm
 export HAGICODE_AGENT_CLI_PROBE_STATE="$RUNNER_TEMP/agent-cli-probe/state.json"
 export PATH="$(dirname "$(command -v node)"):$NPM_CONFIG_PREFIX/bin:/usr/bin:/bin"
 
-HAGICODE_AGENT_CLI_PROBE_PHASE=control npm run test:agent-cli-probe   # expects missing
-npm run probe:agent-cli:install -- --case pi/npm
+HAGICODE_AGENT_CLI_PROBE_PHASE=control pnpm run test:agent-cli-probe   # expects missing
+pnpm run probe:agent-cli:install --case pi/npm
 node scripts/agent-cli-probe/verify-installed-cli.mjs --case pi/npm
-HAGICODE_AGENT_CLI_PROBE_PHASE=probe npm run test:agent-cli-probe
+HAGICODE_AGENT_CLI_PROBE_PHASE=probe pnpm run test:agent-cli-probe
 node scripts/agent-cli-probe/classify-result.mjs --case pi/npm --out "$RUNNER_TEMP/agent-cli-probe/results"
 ```
 
