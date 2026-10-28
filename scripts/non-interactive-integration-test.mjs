@@ -94,7 +94,7 @@ async function loadDesktopManagedPathHelpers() {
   );
   if (!pathExists(desktopRuntimePathsModulePath)) {
     fail(
-      "Compiled Desktop runtime path helper is missing under dist/main. Run npm run build:tsc before the packaged integration harness.",
+      "Compiled Desktop runtime path helper is missing under dist/main. Run pnpm run build:tsc before the packaged integration harness.",
     );
   }
 

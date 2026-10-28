@@ -14,13 +14,13 @@ import { toWindowsPackageVersion } from './store-package-config.js';
 
 test('development startup prepares runtime assets before launching Electron', () => {
   const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
-  assert.equal(packageJson.scripts.predev, 'npm run prepare:runtime');
+  assert.equal(packageJson.scripts.predev, 'pnpm run prepare:runtime');
 });
 
 test('Store builds prepare the managed .NET runtime before production assets', () => {
   const scripts = {
     'prepare:runtime': 'node scripts/prepare-embedded-runtime.js',
-    'build:prod': 'npm run build:all',
+    'build:prod': 'pnpm run build:all',
   };
 
   assert.deepEqual(buildStepScripts(scripts), [

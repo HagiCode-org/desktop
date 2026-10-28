@@ -532,8 +532,8 @@ function getBuildSteps() {
   if (config.platform === 'win') {
     const { forgeTargets } = resolveWindowsPackageTargets();
     const steps = [
-      buildStep('npm', ['run', 'prepare:runtime'], 'Prepare embedded runtime'),
-      buildStep('npm', ['run', 'build:prod'], 'Build production assets'),
+      buildStep('pnpm', ['run', 'prepare:runtime'], 'Prepare embedded runtime'),
+      buildStep('pnpm', ['run', 'build:prod'], 'Build production assets'),
     ];
 
     steps.push(
@@ -552,17 +552,17 @@ function getBuildSteps() {
       ),
     );
 
-    steps.push(buildStep('npm', ['run', 'package:smoke-test'], 'Run packaged smoke test'));
+    steps.push(buildStep('pnpm', ['run', 'package:smoke-test'], 'Run packaged smoke test'));
     return steps;
   }
 
   if (config.platform === 'linux') {
     const targets = resolveLinuxPackageTargets();
     const steps = [
-      buildStep('npm', ['run', 'prepare:runtime'], 'Prepare embedded runtime'),
-      buildStep('npm', ['run', 'build:prod'], 'Build production assets'),
+      buildStep('pnpm', ['run', 'prepare:runtime'], 'Prepare embedded runtime'),
+      buildStep('pnpm', ['run', 'build:prod'], 'Build production assets'),
       buildStep('node', ['scripts/run-electron-forge.js', '--platform', 'linux', '--arch', process.arch, '--targets', targets.join(',')], `Package Linux artifacts (${targets.join(', ')})`),
-      buildStep('npm', ['run', 'package:smoke-test'], 'Run packaged smoke test'),
+      buildStep('pnpm', ['run', 'package:smoke-test'], 'Run packaged smoke test'),
     ];
 
     return steps;
@@ -577,14 +577,14 @@ function getBuildSteps() {
     const targets = resolveMacPackageTargets();
     return archs.flatMap((arch) => {
       const steps = [
-        buildStep('npm', ['run', 'prepare:runtime'], 'Prepare embedded runtime'),
-        buildStep('npm', ['run', 'build:prod'], 'Build production assets'),
+        buildStep('pnpm', ['run', 'prepare:runtime'], 'Prepare embedded runtime'),
+        buildStep('pnpm', ['run', 'build:prod'], 'Build production assets'),
         buildStep(
           'node',
           ['scripts/run-electron-forge.js', '--platform', 'darwin', '--arch', arch, '--targets', targets.join(',')],
           `Package macOS artifacts (${arch} / ${targets.join(', ')})`,
         ),
-        buildStep('npm', ['run', `package:smoke-test:mac:${arch}`], `Run packaged smoke test (${arch})`),
+        buildStep('pnpm', ['run', `package:smoke-test:mac:${arch}`], `Run packaged smoke test (${arch})`),
       ];
 
       return steps;

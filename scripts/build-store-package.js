@@ -412,7 +412,7 @@ export async function buildStorePackage(rawOptions = {}) {
 
     for (const scriptName of buildStepScripts(scripts)) {
       await runCommand(
-        process.platform === 'win32' ? 'npm.cmd' : 'npm',
+        process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm',
         ['run', scriptName],
         projectRoot,
         buildStepEnv,

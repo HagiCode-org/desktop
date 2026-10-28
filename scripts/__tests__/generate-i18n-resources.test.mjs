@@ -98,7 +98,7 @@ describe('generate-i18n-resources', () => {
 
     await assert.rejects(
       () => verifyGeneratedI18nResources(fixture),
-      /zh-CN\/common\.json is stale; rerun npm run i18n:generate/,
+      /zh-CN\/common\.json is stale; rerun pnpm run i18n:generate/,
     );
   });
 });

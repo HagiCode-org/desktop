@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
 const packageIdentityName = 'newbe36524.Hagicode';
-const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+const pnpmCommand = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 const windowsCommandShell = process.env.ComSpec || 'cmd.exe';
 
 function parseArgs(argv) {
@@ -134,8 +134,8 @@ function killExistingProcesses() {
 }
 
 function rebuildLocalTestLayout(options) {
-  run(npmCommand, ['run', 'generate:store-bindings']);
-  run(npmCommand, ['run', 'build:all']);
+  run(pnpmCommand, ['run', 'generate:store-bindings']);
+  run(pnpmCommand, ['run', 'build:all']);
   run('node', [
     'scripts/run-electron-forge.js',
     '--platform',

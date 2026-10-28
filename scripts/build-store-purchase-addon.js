@@ -71,7 +71,7 @@ function run(command, args, options = {}) {
 function resolveNodeGypPath() {
   const candidate = path.join(projectRoot, 'node_modules', 'node-gyp', 'bin', 'node-gyp.js');
   if (!fs.existsSync(candidate)) {
-    throw new Error('Unable to locate node-gyp. Run npm install before building the Windows Store purchase addon.');
+    throw new Error('Unable to locate node-gyp. Run pnpm install before building the Windows Store purchase addon.');
   }
 
   return candidate;

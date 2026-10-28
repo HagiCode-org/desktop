@@ -38,9 +38,9 @@ function resolveBuildArchs() {
   return [...new Set(archs)];
 }
 
-function runNpmScript(scriptName) {
-  console.log(`[mac-build] Running npm run ${scriptName}`);
-  const result = spawnSync('npm', ['run', scriptName], {
+function runPnpmScript(scriptName) {
+  console.log(`[mac-build] Running pnpm run ${scriptName}`);
+  const result = spawnSync('pnpm', ['run', scriptName], {
     cwd: process.cwd(),
     env: process.env,
     shell: process.platform === 'win32',
@@ -62,5 +62,5 @@ if (archs.length === 0) {
 
 console.log(`[mac-build] Target architectures: ${archs.join(', ')}`);
 for (const arch of archs) {
-  runNpmScript(`build:mac:${arch}`);
+  runPnpmScript(`build:mac:${arch}`);
 }
