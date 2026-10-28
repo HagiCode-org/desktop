@@ -118,6 +118,7 @@
     "@electron-forge/maker-dmg": "^7.11.2",
     "@electron-forge/maker-msix": "^7.11.2",
     "@electron-forge/maker-zip": "^7.11.2",
+    "@electron/asar": "^3.4.1",
     "@fontsource-variable/jetbrains-mono": "^5.2.8",
     "@hagicode/hagi18n": "^0.2.0",
     "@rabbitholesyndrome/electron-forge-maker-portable": "^0.2.0",
