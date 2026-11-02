@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { resolveGlobalHagiscriptPackageRoot } from '../global-hagiscript.js';
+import { resolveGlobalHagiscriptPackageRoot, resolvePackageRootFromShim } from '../global-hagiscript.js';
 
 test('resolves HagiScript package root from its executable when npm prefix points elsewhere', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'hagicode-global-hagiscript-'));
@@ -40,5 +40,34 @@ test('resolves HagiScript package root from its executable when npm prefix point
         process.env[key] = value;
       }
     }
+  }
+});
+
+test('resolves HagiScript package root from a pnpm global shim', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'hagicode-global-hagiscript-shim-'));
+  const packageRoot = path.join(root, 'global', 'v11', 'abc', 'node_modules', '@hagicode', 'hagiscript');
+  const binRoot = path.join(root, 'bin');
+  const shim = path.join(binRoot, 'hagiscript');
+
+  try {
+    await mkdir(path.join(packageRoot, 'dist'), { recursive: true });
+    await mkdir(binRoot, { recursive: true });
+    await writeFile(path.join(packageRoot, 'package.json'), JSON.stringify({ name: '@hagicode/hagiscript' }));
+    await writeFile(
+      shim,
+      'basedir_abs=/x\nexec node "$basedir_abs/../global/v11/abc/node_modules/@hagicode/hagiscript/dist/cli.js" "$@"\n',
+    );
+
+    assert.equal(resolvePackageRootFromShim(shim), packageRoot);
+
+    const cmdShim = path.join(binRoot, 'hagiscript.cmd');
+    await writeFile(
+      cmdShim,
+      '@node "%dp0%\\..\\global\\v11\\abc\\node_modules\\@hagicode\\hagiscript\\dist\\cli.js" %*\r\n',
+    );
+    assert.equal(resolvePackageRootFromShim(cmdShim), packageRoot);
+    assert.equal(resolvePackageRootFromShim(path.join(binRoot, 'missing')), null);
+  } finally {
+    await rm(root, { recursive: true, force: true });
   }
 });

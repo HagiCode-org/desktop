@@ -265,10 +265,45 @@ function resolvePackageRootFromCommand(command) {
     }
     const parent = path.dirname(directory);
     if (parent === directory) {
-      return null;
+      return resolvePackageRootFromShim(commandPath);
     }
     directory = parent;
   }
+}
+
+// pnpm global installs expose the command as a shell/cmd shim (not a symlink into
+// the package), so the walk above cannot reach the package. The shim embeds the
+// path to the package entry relative to the shim, which we resolve instead.
+export function resolvePackageRootFromShim(shimPath) {
+  let content;
+  try {
+    content = fs.readFileSync(shimPath, 'utf8');
+  } catch {
+    return null;
+  }
+  if (content.includes('\0')) {
+    return null;
+  }
+
+  const match = content.match(/([^"'\s]*?node_modules[\\/]@hagicode[\\/]hagiscript)[\\/]/);
+  if (!match) {
+    return null;
+  }
+
+  const raw = match[1];
+  const relative = raw
+    .replace(/^(?:\$basedir_abs|\$basedir_win|\$basedir|\$\{basedir\}|%~dp0|%dp0%)/, '')
+    .replace(/\\/g, '/')
+    .replace(/^\/+/, '');
+  const candidate = path.isAbsolute(raw)
+    ? path.normalize(raw)
+    : path.resolve(path.dirname(fs.realpathSync(shimPath)), relative);
+  const manifestPath = path.join(candidate, 'package.json');
+  if (!fs.existsSync(manifestPath)) {
+    return null;
+  }
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  return manifest.name === '@hagicode/hagiscript' ? candidate : null;
 }
 
 export function getHagiscriptSpawnOptions(command) {
