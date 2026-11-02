@@ -219,7 +219,13 @@ jobs:
 
     - name: Install global hagiscript
       run: |
-        npm install --global "@hagicode/hagiscript@${HAGISCRIPT_VERSION}"
+        export PNPM_HOME="$RUNNER_TEMP/pnpm-global"
+        mkdir -p "$PNPM_HOME/bin"
+        if command -v cygpath >/dev/null 2>&1; then home_posix="$(cygpath -u "$PNPM_HOME")"; else home_posix="$PNPM_HOME"; fi
+        export PATH="$home_posix:$home_posix/bin:$PATH"
+        pnpm add --global "@hagicode/hagiscript@${HAGISCRIPT_VERSION}"
+        echo "$(pnpm bin --global)" >> "$GITHUB_PATH"
+        hash -r
         hagiscript --version
 
     - name: Write shard asset manifest

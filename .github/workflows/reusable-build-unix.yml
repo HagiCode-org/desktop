@@ -187,12 +187,12 @@ jobs:
       - name: Install global hagiscript
         shell: bash
         run: |
-          npm install --global "@hagicode/hagiscript@${HAGISCRIPT_VERSION}"
-          prefix="$(npm config get prefix)"
-          echo "$prefix" >> "$GITHUB_PATH"
-          if [ -d "$prefix/bin" ]; then
-            echo "$prefix/bin" >> "$GITHUB_PATH"
-          fi
+          export PNPM_HOME="$RUNNER_TEMP/pnpm-global"
+          mkdir -p "$PNPM_HOME/bin"
+          if command -v cygpath >/dev/null 2>&1; then home_posix="$(cygpath -u "$PNPM_HOME")"; else home_posix="$PNPM_HOME"; fi
+          export PATH="$home_posix:$home_posix/bin:$PATH"
+          pnpm add --global "@hagicode/hagiscript@${HAGISCRIPT_VERSION}"
+          echo "$(pnpm bin --global)" >> "$GITHUB_PATH"
           hash -r
           hagiscript --version
 
@@ -213,7 +213,7 @@ jobs:
           set -euo pipefail
           VERSION="${{ inputs.version }}"
           echo "Syncing npm/package.json version to ${VERSION}"
-          npm version "${VERSION}" --no-git-tag-version
+          pnpm version "${VERSION}" --no-git-tag-version --no-git-checks
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
