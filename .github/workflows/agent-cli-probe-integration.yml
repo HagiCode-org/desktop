@@ -138,6 +138,17 @@ jobs:
       AGENT_CLI_STRICT: ${{ matrix.strict }}
       HAGICODE_AGENT_CLI_PROBE_CASE: ${{ matrix.caseId }}
     steps:
+      # Distro containers must get their tools before any bash step runs: the job default shell is
+      # bash, and the Alpine image ships only sh, so its bootstrap step opts into sh explicitly.
+      - name: Setup Node.js in Fedora container
+        if: ${{ startsWith(matrix.container, 'fedora') }}
+        run: dnf install -y nodejs npm git curl
+
+      - name: Setup Node.js in Alpine container
+        if: ${{ startsWith(matrix.container, 'alpine') }}
+        shell: sh
+        run: apk add --no-cache nodejs npm git curl bash
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -157,14 +168,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-
-      - name: Setup Node.js in Fedora container
-        if: ${{ startsWith(matrix.container, 'fedora') }}
-        run: dnf install -y nodejs npm git curl
-
-      - name: Setup Node.js in Alpine container
-        if: ${{ startsWith(matrix.container, 'alpine') }}
-        run: apk add --no-cache nodejs npm git curl bash
 
       # Distro containers have no pnpm action support guarantee; corepack reads package.json "packageManager".
       - name: Enable pnpm in distro containers
