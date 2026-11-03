@@ -170,8 +170,8 @@ importers:
   .:
     dependencies:
       '@hagicode/hagilight-core':
-        specifier: 0.20.0
-        version: 0.20.0
+        specifier: 0.21.0
+        version: 0.21.0
       adm-zip:
         specifier: ^0.5.17
         version: 0.5.18
@@ -872,8 +872,8 @@ packages:
     engines: {node: '>=24.0.0'}
     hasBin: true
 
-  '@hagicode/hagilight-core@0.20.0':
-    resolution: {integrity: sha512-golwLXIqESj8vSqr7L7hAvPohEtIk1SZJ0HTZ24Ljfhy18nPkfo1tTvHqUr9MShMzNQYG7LOYu899fKq0QPbVw==}
+  '@hagicode/hagilight-core@0.21.0':
+    resolution: {integrity: sha512-Fc6ASgm/h7ZRb0ayARzImFnYustSvXGoRZWZuV4yZdj5f/d0aw0TxuZu1reHv1gQom1QZWOWBDT90s9mhj3kWA==}
     peerDependencies:
       astro: '>=7'
     peerDependenciesMeta:
@@ -6547,7 +6547,7 @@ snapshots:
       commander: 14.0.3
       js-yaml: 4.3.2
 
-  '@hagicode/hagilight-core@0.20.0':
+  '@hagicode/hagilight-core@0.21.0':
     dependencies:
       '@astrojs/rss': 4.0.19
 
