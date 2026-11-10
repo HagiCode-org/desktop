@@ -33,6 +33,10 @@ export const runtimeManagedPackageManifestPackages: Readonly<Record<string, Runt
     version: "0.135.0",
     target: "0.135.0",
   },
+  "@opencode/cli": {
+    version: "2.2.7",
+    target: "2.2.7",
+  },
   "@qoder-ai/qodercli": {
     version: "1.0.10",
     target: "1.0.10",
@@ -41,13 +45,9 @@ export const runtimeManagedPackageManifestPackages: Readonly<Record<string, Runt
     version: "2.100.1",
     target: "2.100.1",
   },
-  "opencode-ai": {
-    version: "1.15.13",
-    target: "1.15.13",
-  },
   "reasonix": {
-    version: "1.2.0",
-    target: "1.2.0",
+    version: "2.59.0",
+    target: "2.59.0",
   },
   "skills": {
     version: "1.5.1",
