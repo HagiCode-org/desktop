@@ -249,7 +249,7 @@ dependencyManagement:
     codebuddy:
       description: CodeBuddy CLI は、公式 @tencent-ai/codebuddy-code npm パッケージを通じて配布されます。
     opencode:
-      description: OpenCode Agent CLI は、opencode-ai npm パッケージを通じて配布されます。
+      description: OpenCode Agent CLI は、@opencode/cli npm パッケージを通じて配布されます。
     qoder:
       description: QoderCLI は公式 @qoder-ai/qoderclinpm パッケージを通じて配布されます。
     gemini:

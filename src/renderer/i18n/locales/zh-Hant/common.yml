@@ -249,7 +249,7 @@ dependencyManagement:
     codebuddy:
       description: 透過官方 @tencent-ai/codebuddy-code npm 套件分發的 CodeBuddy CLI。
     opencode:
-      description: 透過 opencode-ai npm 套件分發的 OpenCode Agent CLI。
+      description: 透過 @opencode/cli npm 套件分發的 OpenCode Agent CLI。
     qoder:
       description: 透過官方 @qoder-ai/qodercli npm 包分發的 QoderCLI。
     gemini:

@@ -209,7 +209,7 @@ export const installCases = [
   },
   {
     id: 'opencode/install-script', cliId: 'opencode', method: 'install-script', tier: 'core', os: ['linux', 'macos'],
-    container: null, install: { kind: 'shell', command: 'curl -fsSL https://opencode.ai/install | bash' },
+    container: null, install: { kind: 'shell', command: 'curl -fsSL https://opencode.ai/v2/install | bash' },
     managedPackageId: null, probeSurfaces: ['A'],
     expectedLocation: { linux: ['$HOME/.opencode/bin', '$HOME/bin', '$HOME/.local/bin'], macos: ['$HOME/.opencode/bin', '$HOME/bin', '$HOME/.local/bin'] },
     runnerPreinstalled: [],
@@ -222,7 +222,7 @@ export const installCases = [
   },
   {
     id: 'opencode/homebrew', cliId: 'opencode', method: 'homebrew', tier: 'core', os: ['linux', 'macos'],
-    container: null, install: { kind: 'shell', command: BREW_ENV + 'brew install anomalyco/tap/opencode' },
+    container: null, install: { kind: 'shell', command: BREW_ENV + 'brew install anomalyco/tap/opencode-v2' },
     managedPackageId: null, probeSurfaces: ['A'],
     expectedLocation: { linux: ['brew-bin'], macos: ['brew-bin'] },
     runnerPreinstalled: [], knownIssue: LINUX_BREW_PATH_ISSUE, timeoutMinutes: 15,

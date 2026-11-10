@@ -249,7 +249,7 @@ dependencyManagement:
     codebuddy:
       description: CodeBuddy CLI распространяется через официальный пакет @tencent-ai/codebuddy-code npm.
     opencode:
-      description: Агент OpenCode CLI распространяется через пакет opencode-ai npm.
+      description: Агент OpenCode CLI распространяется через пакет @opencode/cli npm.
     qoder:
       description: QoderCLI распространяется через официальный пакет @qder-ai/qodercli npm.
     gemini:
