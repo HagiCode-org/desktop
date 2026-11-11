@@ -257,6 +257,9 @@ describe('managed package minimum version satisfaction', () => {
     assert.equal(isManagedPackageVersionSatisfied(openspecWithRange('^1.2.0'), '1.13.2'), true);
     assert.equal(isManagedPackageVersionSatisfied(openspecWithRange('^1.2.0'), '2.0.0'), false);
     assert.equal(isManagedPackageVersionSatisfied(openspecWithRange('>=1.0.0 <2.0.0'), '2.0.0'), false);
+    assert.equal(isManagedPackageVersionSatisfied(openspecWithRange('>=1.0.0 <3.0.0'), '1.3.1'), true);
+    assert.equal(isManagedPackageVersionSatisfied(openspecWithRange('>=1.0.0 <3.0.0'), '2.1.0'), true);
+    assert.equal(isManagedPackageVersionSatisfied(openspecWithRange('>=1.0.0 <3.0.0'), '3.0.0'), false);
     assert.equal(isManagedPackageVersionSatisfied(openspecWithRange('=1.3.1'), '1.13.2'), false);
     assert.equal(isManagedPackageVersionSatisfied(openspecWithRange('=1.3.1'), '1.3.1'), true);
   });
