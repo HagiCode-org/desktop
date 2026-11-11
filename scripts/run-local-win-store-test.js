@@ -115,7 +115,7 @@ function quoteWindowsArgument(value) {
 }
 
 function runPowerShell(command, options = {}) {
-  return run('powershell', ['-NoProfile', '-Command', command], options);
+  return run('pwsh', ['-NoProfile', '-Command', command], options);
 }
 
 function ensureWindowsHost() {
