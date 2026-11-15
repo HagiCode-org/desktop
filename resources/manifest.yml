@@ -125,9 +125,6 @@ npmSync:
     "@opencode/cli":
       version: 2.2.7
       target: 2.2.7
-    reasonix:
-      version: 2.59.0
-      target: 2.59.0
     skills:
       version: 1.5.1
       target: 1.5.1

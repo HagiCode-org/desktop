@@ -45,10 +45,6 @@ export const runtimeManagedPackageManifestPackages: Readonly<Record<string, Runt
     version: "2.100.1",
     target: "2.100.1",
   },
-  "reasonix": {
-    version: "2.59.0",
-    target: "2.59.0",
-  },
   "skills": {
     version: "1.5.1",
     target: "1.5.1",
