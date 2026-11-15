@@ -106,17 +106,6 @@ const staticManagedNpmPackages = [
     agentCliId: 'pi',
   },
   {
-    id: 'reasonix',
-    packageName: 'reasonix',
-    displayName: 'Reasonix',
-    descriptionKey: 'dependencyManagement.packages.reasonix.description',
-    binName: 'reasonix',
-    installSpec: 'reasonix@2.59.0',
-    requiredVersionRange: '2.59.0',
-    category: 'agent-cli',
-    agentCliId: 'reasonix',
-  },
-  {
     id: 'github-copilot',
     packageName: '@github/copilot',
     displayName: 'GitHub Copilot',

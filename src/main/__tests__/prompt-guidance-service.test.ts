@@ -41,7 +41,6 @@ describe('PromptGuidanceService', () => {
         'claude-code',
         'codex',
         'pi',
-        'reasonix',
         'copilot',
         'opencode',
         'qoder',

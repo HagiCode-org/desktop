@@ -6,7 +6,6 @@ export type ManagedNpmPackageId =
   | 'claude-code'
   | 'codex'
   | 'pi'
-  | 'reasonix'
   | 'github-copilot'
   | 'codebuddy'
   | 'opencode'

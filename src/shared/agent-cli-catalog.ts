@@ -28,14 +28,6 @@ export const desktopAgentCliCatalog: readonly AgentCliDefinition[] = [
     providerId: 'pi',
   },
   {
-    id: 'reasonix',
-    displayName: 'Reasonix',
-    descriptionKey: 'dependencyManagement.packages.reasonix.description',
-    commandName: 'reasonix',
-    commandCandidates: ['reasonix', 'dsnix'],
-    providerId: 'reasonix',
-  },
-  {
     id: 'copilot',
     displayName: 'GitHub Copilot',
     descriptionKey: 'dependencyManagement.packages.githubCopilot.description',

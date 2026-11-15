@@ -16,7 +16,7 @@ export const RESULT_CLASSES = Object.freeze(['pass', 'probe-defect', 'env-failur
 
 /** Mirror of `desktopAgentCliCatalog` ids. The coverage guard fails if this list drifts. */
 export const catalogCliIds = Object.freeze([
-  'claude-code', 'codex', 'pi', 'reasonix', 'copilot', 'opencode', 'qoder',
+  'claude-code', 'codex', 'pi', 'copilot', 'opencode', 'qoder',
   'kiro-cli', 'kimi', 'gemini', 'deepagents', 'codebuddy', 'hermes',
 ]);
 
@@ -178,14 +178,7 @@ export const installCases = [
     notes: 'Surface B only. Oh My Pi is not a catalog CLI. Installer locations are not pinned; confirm on the first run.',
   },
 
-  // ---- reasonix, codebuddy, qoder, opencode, gemini, copilot ------------
-  {
-    id: 'reasonix/npm', cliId: 'reasonix', method: 'npm', tier: 'core', os: ['linux', 'macos', 'windows'],
-    container: null, install: { kind: 'managed-npm' }, managedPackageId: 'reasonix', probeSurfaces: ['A', 'B'],
-    expectedLocation: { linux: ['npm-global-bin'], macos: ['npm-global-bin'], windows: ['npm-global-bin'] },
-    runnerPreinstalled: [], knownIssue: null, timeoutMinutes: 10,
-    verification: 'managed', verifiedOn: VERIFIED_ON, source: 'src/shared/npm-managed-packages.ts',
-  },
+  // ---- codebuddy, qoder, opencode, gemini, copilot ------------
   {
     id: 'codebuddy/npm', cliId: 'codebuddy', method: 'npm', tier: 'core', os: ['linux', 'macos', 'windows'],
     container: null, install: { kind: 'managed-npm' }, managedPackageId: 'codebuddy', probeSurfaces: ['A', 'B'],
@@ -367,7 +360,6 @@ export const exclusions = [
   { cliId: 'deepagents', method: 'install-powershell', reason: 'No verified native Windows installer in the vendor docs reviewed. The uv and pip routes need a Python toolchain setup. Revisit in a follow-up.', source: DEEPAGENTS_DOCS, verifiedOn: VERIFIED_ON },
   { cliId: 'codebuddy', method: 'other', reason: 'No other install method was verified. The npm case covers the Desktop-managed package.', source: 'src/shared/npm-managed-packages.ts', verifiedOn: VERIFIED_ON },
   { cliId: 'qoder', method: 'other', reason: 'No other install method was verified in task 1.2. The npm case covers the Desktop-managed package.', source: 'src/shared/npm-managed-packages.ts', verifiedOn: VERIFIED_ON },
-  { cliId: 'reasonix', method: 'other', reason: 'No other install method is documented. The npm case covers the Desktop-managed package.', source: 'src/shared/npm-managed-packages.ts', verifiedOn: VERIFIED_ON },
   { cliId: 'pi', method: 'other', reason: 'No other install method is documented. The npm case and the Oh My Pi external installer cover pi.', source: 'src/shared/npm-managed-packages.ts', verifiedOn: VERIFIED_ON },
 ];
 

@@ -242,8 +242,6 @@ dependencyManagement:
       description: OpenAI Codex Agent CLI für Codierungsworkflows.
     pi:
       description: PI Coding-Agent-CLI, verteilt über das offizielle npm-Paket @earendil-works/pi-coding-agent.
-    reasonix:
-      description: Reasonix Coding-Agent-CLI, verteilt über das offizielle npm-Paket reasonix.
     githubCopilot:
       description: GitHub Copilot CLI, verteilt über das offizielle @github/copilot npm-Paket.
     codebuddy:

@@ -242,8 +242,6 @@ dependencyManagement:
       description: ワークフローのコーディング用のエージェント OpenAI Codex。
     pi:
       description: 公式の @earendil-works/pi-coding-agent npm パッケージを通じて配布される PI コーディングエージェント CLI。
-    reasonix:
-      description: 公式の reasonix npm パッケージを通じて配布される Reasonix コーディングエージェント CLI。
     githubCopilot:
       description: GitHub Copilot CLI は公式 @github/copilot npm パッケージを通じて配布されます。
     codebuddy:

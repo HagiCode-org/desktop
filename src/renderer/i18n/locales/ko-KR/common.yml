@@ -242,8 +242,6 @@ dependencyManagement:
       description: OpenAI Codex 코딩 작업흐름을 위한 에이전트 CLI.
     pi:
       description: PI 코딩 에이전트 CLI는 공식 @earendil-works/pi-coding-agent npm 패키지를 통해 배포됩니다.
-    reasonix:
-      description: Reasonix 코딩 에이전트 CLI는 공식 reasonix npm 패키지를 통해 배포됩니다.
     githubCopilot:
       description: GitHub Copilot CLI 공식 @github/copilot npm 패키지를 통해 배포됩니다.
     codebuddy:

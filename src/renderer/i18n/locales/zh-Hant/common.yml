@@ -242,8 +242,6 @@ dependencyManagement:
       description: 用於編碼工作流程的 OpenAI Codex Agent CLI。
     pi:
       description: 透過官方 @earendil-works/pi-coding-agent npm 套件分發的 PI 編碼代理 CLI。
-    reasonix:
-      description: 透過官方 reasonix npm 套件分發的 Reasonix 編碼代理 CLI。
     githubCopilot:
       description: 透過官方 @github/copilot npm 包分發的 GitHub Copilot CLI。
     codebuddy:
