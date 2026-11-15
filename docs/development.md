@@ -212,7 +212,7 @@ On Windows, the dependency-management batch dialog lets users choose Command Pro
 
 Bounded shell chains must opt in with an explicit executable, such as `commandChain: { shell: "powershell.exe" }`, and pass the complete chain as `command` text. The executor validates the supported shell-specific separators and launches the unchanged text once through that executable. Treat this text as trusted shell source: do not interpolate external values into it; pass dynamic values as direct executable arguments instead. Missing or unsupported shell selections and invalid chains fail before spawning. Calls that omit `commandChain`, including `.cmd`/`.bat` wrappers and non-Windows commands, retain their existing behavior.
 
-Direct `child_process` usage remains acceptable when the desktop application must retain ownership of a process handle or lifecycle. Keep direct process management for the Desktop-owned .NET backend, detached terminal handoffs, restart/stop flows, and interactive development helpers where the child process must stay attached to the parent process. Auxiliary services such as code-server and OmniRoute remain externally managed; Desktop does not supervise them.
+Direct `child_process` usage remains acceptable when the desktop application must retain ownership of a process handle or lifecycle. Keep direct process management for the Desktop-owned .NET backend, detached terminal handoffs, restart/stop flows, and interactive development helpers where the child process must stay attached to the parent process. Auxiliary services such as code-server remain externally managed; Desktop does not supervise them.
 
 ### Region-Aware Source Fallback
 
@@ -548,7 +548,7 @@ Desktop does not fall back to a machine-wide `dotnet` installation when that pac
 
 Use `pnpm run dev` after staging the separate embedded .NET runtime. General-purpose Node.js and npm
 are resolved from the external host environment. The backend launches through the managed .NET
-runtime; auxiliary services such as code-server and OmniRoute remain externally managed.
+runtime; auxiliary services such as code-server remain externally managed.
 
 ### Verification commands
 
@@ -578,7 +578,7 @@ pnpm run package:non-interactive-integration
 1. `runtime verify`
 2. `runtime lifecycle`
 
-When the artifact contains a portable backend payload, the lifecycle stage directly starts, health-checks, restarts, and stops it through the managed .NET runtime. Standard Desktop packages that download the backend separately report an explicit lifecycle skip. The stage reports auxiliary service management as external and does not start or supervise code-server or OmniRoute.
+When the artifact contains a portable backend payload, the lifecycle stage directly starts, health-checks, restarts, and stops it through the managed .NET runtime. Standard Desktop packages that download the backend separately report an explicit lifecycle skip. The stage reports auxiliary service management as external and does not start or supervise code-server.
 
 ### Packaged runtime integration debugging
 
