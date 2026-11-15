@@ -69,3 +69,6 @@ resources/code-server
 build
 
 .cache
+
+# Local deja session-rule export (auto-extracted from agent sessions; not committed)
+.deja/
