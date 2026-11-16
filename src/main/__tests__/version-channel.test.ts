@@ -54,3 +54,26 @@ describe('version channel selection', () => {
     assert.equal(pickInstallCandidate([]), undefined);
   });
 });
+
+describe('version channel with a stable 0.2.0 index', () => {
+  // Newest first, as the index lists them: stable 0.2.0 next to the 0.1.0-beta.N train.
+  const index = [v('0.2.0', 'stable'), v('0.1.0-beta.107', 'beta'), v('0.1.0-beta.106', 'beta')];
+
+  it('a prerelease install is offered 0.2.0 as its newest candidate', () => {
+    const candidates = filterUpdateCandidatesByChannel(index, { currentVersion: '0.1.0-beta.107' });
+    assert.equal(candidates.length, 3);
+    assert.equal(candidates[0]?.version, '0.2.0');
+  });
+
+  it('a stable install ignores a newer prerelease of the next line', () => {
+    const withNewerPrerelease = [v('0.2.1-beta.1', 'beta'), v('0.2.0', 'stable'), v('0.1.0-beta.107', 'beta')];
+    const candidates = filterUpdateCandidatesByChannel(withNewerPrerelease, { currentVersion: '0.2.0' });
+    assert.deepEqual(candidates.map((x) => x.version), ['0.2.0']);
+  });
+
+  it('a first install picks 0.2.0, also when a newer prerelease is listed', () => {
+    assert.equal(pickInstallCandidate(index)?.version, '0.2.0');
+    const withNewerPrerelease = [v('0.2.1-beta.1', 'beta'), v('0.2.0', 'stable')];
+    assert.equal(pickInstallCandidate(withNewerPrerelease)?.version, '0.2.0');
+  });
+});
