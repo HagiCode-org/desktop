@@ -11,6 +11,7 @@ import {
   validateStoreMsixRuntimeEntries,
 } from './build-store-package.js';
 import { toWindowsPackageVersion } from './store-package-config.js';
+import { normalizeWindowsVersion } from './msix-config.js';
 
 test('development startup prepares runtime assets before launching Electron', () => {
   const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
@@ -68,6 +69,27 @@ test('resolveStoreRuntimePolicyEnvironment defaults Store builds to external dep
 test('toWindowsPackageVersion accepts tagged Windows Store versions from win_store_packer', () => {
   assert.equal(toWindowsPackageVersion('v0.2.1'), '0.2.1.0');
   assert.equal(toWindowsPackageVersion('V0.2.1-beta.7'), '0.2.1.7');
+});
+
+function compareWindowsPackageVersions(left, right) {
+  const leftParts = left.split('.').map(Number);
+  const rightParts = right.split('.').map(Number);
+  for (let index = 0; index < 4; index += 1) {
+    const difference = leftParts[index] - rightParts[index];
+    if (difference !== 0) {
+      return difference;
+    }
+  }
+  return 0;
+}
+
+test('stable 0.2.0 maps to a Windows package version above every 0.1.0-beta.N mapping', () => {
+  assert.equal(normalizeWindowsVersion('0.2.0'), '0.2.0.0');
+  assert.equal(toWindowsPackageVersion('0.2.0'), '0.2.0.0');
+  assert.equal(normalizeWindowsVersion('0.1.0-beta.107'), '0.1.0.107');
+  assert.equal(toWindowsPackageVersion('0.1.0-beta.107'), '0.1.0.107');
+  assert.ok(compareWindowsPackageVersions(toWindowsPackageVersion('0.2.0'), toWindowsPackageVersion('0.1.0-beta.107')) > 0);
+  assert.ok(compareWindowsPackageVersions(normalizeWindowsVersion('0.2.0'), normalizeWindowsVersion('0.1.0-beta.107')) > 0);
 });
 
 test('createStoreBuildMetadata records external runtime package metadata', () => {
