@@ -246,8 +246,8 @@ importers:
         specifier: ^5.2.8
         version: 5.3.0
       '@hagicode/hagi18n':
-        specifier: ^0.3.0
-        version: 0.3.0
+        specifier: ^0.3.1
+        version: 0.3.1
       '@rabbitholesyndrome/electron-forge-maker-portable':
         specifier: ^0.2.0
         version: 0.2.0(bluebird@3.7.2)(supports-color@8.1.1)
@@ -867,8 +867,8 @@ packages:
   '@gar/promisify@1.1.3':
     resolution: {integrity: sha512-k2Ty1JcVojjJFwrg/ThKi2ujJ7XNLYaFGNB/bWT9wGR+oSMJHMa5w+CUq6p/pVrKeNNgA7pCqEcjSnHVoqJQFw==}
 
-  '@hagicode/hagi18n@0.3.0':
-    resolution: {integrity: sha512-b3Adlxire3/IRulQJRobDzAGvGYXtR2Pw/Gbrzg+tFptgawWInqstIWNk2a4gp19FYrEbS+qjEz7MmDBfEEEtQ==}
+  '@hagicode/hagi18n@0.3.1':
+    resolution: {integrity: sha512-t0L5r7j3jqA/ImnNJTwbLk1glFVyV4j5Uo6/qOX+LK3RnvNT7++zS/bYno6w+ZIyck5uOz6HZHfmkMXFOF3tkA==}
     engines: {node: '>=24.0.0'}
     hasBin: true
 
@@ -6541,7 +6541,7 @@ snapshots:
 
   '@gar/promisify@1.1.3': {}
 
-  '@hagicode/hagi18n@0.3.0':
+  '@hagicode/hagi18n@0.3.1':
     dependencies:
       '@types/js-yaml': 4.0.9
       commander: 14.0.3
