@@ -49,7 +49,7 @@ pnpm run build:linux
 - `config/`, `native/StorePurchaseAddon/`: release/store packaging config and the Windows Store native addon
 - `resources/manifest.yml`: Desktop hagiscript runtime manifest (managed .NET runtime pin); `schemas/`: JSON schemas (e.g. `index.schema.json`)
 - `build.sh`, `build.ps1`, `build.cmd`, `pybuild/`, `pyproject.toml`: Python Invoke build entry (`python -m pybuild.entry <Setup|Build|GenerateR2UploadPlan|GenerateR2Index|PublishToR2>`); `smoke-test` asserts the wrappers dispatch to it
-- `docs/`: development, i18n, telemetry, npm management, agent CLI probe, artifact signing, R2 storage sync, and channel testing guides (plus `docs/release-notes/`)
+- `docs/`: development, i18n, telemetry, npm management, agent CLI probe, artifact signing, R2 storage sync, channel testing, macOS native-library troubleshooting, Microsoft Store rating prompt, and sharing acceleration guides (plus `docs/release-notes/`)
 - `PRODUCT.md`, `DESIGN.md`: product and design context for UI work
 
 ## Agent Guidelines
@@ -63,7 +63,7 @@ pnpm run build:linux
 - There is no `pnpm test` script. Tests for the packaging/runtime scripts live in `scripts/__tests__/*.test.mjs` and `scripts/*.test.js`; run one with `node --test <file>`.
 - New cloud telemetry events must be added to the typed event catalog and documented in `docs/cloud-telemetry.md`.
 - If packaging, runtime bootstrapping, or native dependency behavior changes, run the relevant smoke or verification scripts.
-- CI: `.github/workflows/pr-checks.yml` runs `pnpm install --frozen-lockfile`, `pnpm run build:tsc:check`, `pnpm run build:prod`, and `pnpm run smoke-test` on Node 24; `build.yml` handles release builds and `non-interactive-integration.yml` runs the packaged non-interactive check. Keep the PR checks passing.
+- CI: `.github/workflows/pr-checks.yml` runs `pnpm install --frozen-lockfile`, `pnpm run check:registry`, `pnpm run build:tsc:check`, `pnpm run build:prod`, and `pnpm run smoke-test` on Node 24; `build.yml` handles release builds and `non-interactive-integration.yml` runs the packaged non-interactive check. Keep the PR checks passing.
 - Desktop packages retain the managed .NET runtime and do not bundle Node or PM2 for Desktop-owned process management; external service distributions may still include their own Node tooling.
 
 ## References
