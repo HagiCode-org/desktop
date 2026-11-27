@@ -236,6 +236,8 @@ dependencyManagement:
       description: OpenSpec 제안서, 사양, 작업 흐름 CLI.
     skills:
       description: Codex/상담원 스킬 관리 CLI.
+    hagiCli:
+      description: 터미널에서 HagiCode 프로젝트, 제안서, 세션을 관리하는 HAGI CLI.
     claudeCode:
       description: Claude Code 에이전트 CLI는 AI 지원 코딩 세션을 위한 것입니다.
     codex:

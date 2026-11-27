@@ -236,6 +236,8 @@ dependencyManagement:
       description: OpenSpec propuesta, especificación y flujo de trabajo de tareas CLI.
     skills:
       description: Codex/Gestión de habilidades del agente CLI.
+    hagiCli:
+      description: CLI de HAGI para gestionar proyectos, propuestas y sesiones de HagiCode desde la terminal.
     claudeCode:
       description: Claude Code Agente CLI para sesiones de codificación asistida AI.
     codex:

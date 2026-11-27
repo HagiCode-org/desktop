@@ -72,6 +72,16 @@ const staticManagedNpmPackages = [
     required: true,
   },
   {
+    id: 'hagi-cli',
+    packageName: '@hagicode/cli',
+    displayName: 'HAGI CLI',
+    descriptionKey: 'dependencyManagement.packages.hagiCli.description',
+    binName: 'hagi',
+    installSpec: '@hagicode/cli',
+    category: 'workflow',
+    required: true,
+  },
+  {
     id: 'claude-code',
     packageName: '@anthropic-ai/claude-code',
     displayName: 'Claude Code',

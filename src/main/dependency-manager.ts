@@ -269,6 +269,7 @@ export class DependencyManager {
       'npm': DependencyType.NodeJs, // Treat npm as Node.js dependency
       'openspec': DependencyType.CliTool,
       'skills': DependencyType.CliTool,
+      'hagi-cli': DependencyType.CliTool,
     };
 
     if (keyMapping[key]) {

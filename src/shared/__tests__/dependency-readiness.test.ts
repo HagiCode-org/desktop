@@ -17,6 +17,7 @@ import type {
   ManagedNpmPackageStatusSnapshot,
   DependencyManagementSnapshot,
 } from '../../../dist/types/dependency-management.js';
+import { runtimeManagedPackageManifestPackages } from '../../../dist/shared/generated/managed-package-manifest.js';
 
 function createSnapshot(
   statusOverrides: Partial<Record<ManagedNpmPackageId, ManagedNpmPackageStatus>>,
@@ -319,5 +320,57 @@ describe('impeccable optional, unpinned managed package', () => {
     assert.equal(summary.ready, true);
     assert.equal(summary.missingRequiredPackageIds.includes('impeccable'), false);
     assert.equal(summary.versionMismatchRequiredPackageIds.includes('impeccable'), false);
+  });
+});
+
+describe('HAGI CLI required managed package', () => {
+  it('lists hagi-cli in the required group, not in optional or Agent CLI groups', () => {
+    assert.equal(requiredManagedNpmPackages.some((item) => item.id === 'hagi-cli'), true);
+    assert.equal(optionalManagedNpmPackages.some((item) => item.id === 'hagi-cli'), false);
+    assert.equal(npmInstallableAgentCliPackages.some((item) => item.id === 'hagi-cli'), false);
+
+    const summary = evaluateDependencyReadiness(createSnapshot({}), ['codex']);
+    assert.equal(summary.requiredPackages.some((item) => item.id === 'hagi-cli'), true);
+    assert.equal(summary.optionalPackages.some((item) => item.id === 'hagi-cli'), false);
+  });
+
+  it('blocks readiness and lists hagi-cli when only hagi-cli is not installed', () => {
+    const summary = evaluateDependencyReadiness(createSnapshot({ 'hagi-cli': 'not-installed' }), ['codex']);
+
+    assert.equal(summary.requiredReady, false);
+    assert.equal(summary.ready, false);
+    assert.deepEqual(summary.missingRequiredPackageIds, ['hagi-cli']);
+    assert.deepEqual(summary.versionMismatchRequiredPackageIds, []);
+    const blocking = summary.blockingReasons.find((reason) => reason.code === 'required-packages-missing');
+    assert.deepEqual(blocking?.packageIds, ['hagi-cli']);
+  });
+
+  it('reports a version mismatch for an installed hagi-cli below the pin', () => {
+    const summary = evaluateDependencyReadiness(createSnapshot({}, { 'hagi-cli': '0.11.0' }), ['codex']);
+    const hagiCli = summary.requiredPackages.find((item) => item.id === 'hagi-cli');
+
+    assert.equal(hagiCli?.versionSatisfied, false);
+    assert.deepEqual(summary.versionMismatchRequiredPackageIds, ['hagi-cli']);
+    assert.equal(summary.requiredReady, false);
+    assert.equal(summary.ready, false);
+  });
+
+  it('is ready when hagi-cli is installed at the pinned version', () => {
+    const summary = evaluateDependencyReadiness(createSnapshot({}, { 'hagi-cli': '0.12.0' }), ['codex']);
+    const hagiCli = summary.requiredPackages.find((item) => item.id === 'hagi-cli');
+
+    assert.equal(hagiCli?.versionSatisfied, true);
+    assert.equal(summary.requiredReady, true);
+    assert.equal(summary.ready, true);
+  });
+
+  it('takes installSpec and requiredVersionRange from the runtime manifest pin', () => {
+    const pin = runtimeManagedPackageManifestPackages['@hagicode/cli'];
+    assert.ok(pin, 'runtime manifest must pin @hagicode/cli under npmSync.packages');
+
+    const definition = managedNpmPackages.find((item) => item.id === 'hagi-cli');
+    assert.equal(definition?.installSpec, `@hagicode/cli@${pin.target}`);
+    assert.equal(definition?.requiredVersionRange, pin.version);
+    assert.equal(definition?.binName, 'hagi');
   });
 });
