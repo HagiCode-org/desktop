@@ -204,6 +204,18 @@ pnpm run smoke-test:verbose
 
 The smoke test validates the staged and packaged .NET runtime and rejects Desktop-managed Node/PM2 assets; Node/npm is supplied by the host environment.
 
+### Managed npm packages and the Node version
+
+The required managed package `@hagicode/cli` (executable `hagi`) is pinned in `resources/manifest.yml` under `npmSync.packages`, the same as OpenSpec and Skills; `src/shared/generated/managed-package-manifest.ts` is generated from that pin. Its published `engines.node` is `>=24.0.0`. The managed install runs a bare `npm` from `PATH` and deletes `npm_node_execpath`, so the Node that runs the install is whichever `node` is first on the user's `PATH`.
+
+Observed on 2026-11-27 with `@hagicode/cli@0.12.0` installed into a scratch prefix (`npm install -g --prefix <dir>`):
+
+- Node 22.23.5 with npm 11.21.3: the install exits 0 and prints an `EBADENGINE` warning (`required: { node: '>=24.0.0' }`). `hagi help` then runs and exits 0. Because the install exits 0, the mismatch is only a warning in that run; by the code path in `dependency-management-service.ts`, the package then reads as installed (Desktop itself was not run for this check).
+- Node 24.18.0 (the development Node): the install exits 0 with no engine warning.
+- Not tested: Node 20 and older. `hagi --version` is not a supported flag (`error: unknown option`), so the version comes from the installed package's `package.json`, not from an executable probe.
+
+See [npm management](./npm-management.md) for the catalog and pin rules.
+
 ### CLI Process Execution
 
 Desktop main-process code should use `src/main/utils/cli-executor.ts` for bounded CLI work where the command is expected to finish and return stdout, stderr, an exit code, or a timeout/cancellation result. Use `executeCli` for captured output and `executeCliStreaming` when callers need live stdout/stderr callbacks plus a final normalized result.
