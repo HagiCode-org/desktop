@@ -29,6 +29,10 @@ export const runtimeManagedPackageManifestPackages: Readonly<Record<string, Runt
     version: "0.44.1",
     target: "0.44.1",
   },
+  "@hagicode/cli": {
+    version: "0.12.0",
+    target: "0.12.0",
+  },
   "@openai/codex": {
     version: "0.135.0",
     target: "0.135.0",
